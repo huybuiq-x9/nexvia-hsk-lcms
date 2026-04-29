@@ -27,7 +27,7 @@ const UserModal = ({
   onClose: () => void;
   onSaved: () => void;
 }) => {
-  const { error: toastError, success } = useToast();
+  const { success } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -115,6 +115,7 @@ const UserModal = ({
               disabled={!!user}
               placeholder="email@hsk-lcms.vn"
               className={`input ${user ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+              autoComplete="off"
               required
             />
           </div>
@@ -127,6 +128,7 @@ const UserModal = ({
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
               placeholder="Nhập họ và tên"
               className="input"
+              autoComplete="off"
               required
             />
           </div>
@@ -140,6 +142,7 @@ const UserModal = ({
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 placeholder="Ít nhất 8 ký tự"
                 className="input"
+                autoComplete="new-password"
                 minLength={8}
                 required
               />
@@ -244,8 +247,8 @@ const DeleteModal = ({
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      await userService.updateUser(user.id, { is_active: false });
-      success('Đã vô hiệu hóa tài khoản.');
+      await userService.deleteUser(user.id);
+      success('Đã xóa người dùng.');
       onDeleted();
     } catch {
       // handled
@@ -262,9 +265,9 @@ const DeleteModal = ({
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <Trash2 size={20} className="text-red-600" />
           </div>
-          <h2 className="text-base font-semibold text-slate-900 mb-2">Xác nhận vô hiệu hóa</h2>
+          <h2 className="text-base font-semibold text-slate-900 mb-2">Xác nhận xóa người dùng</h2>
           <p className="text-sm text-slate-500">
-            Bạn có chắc muốn vô hiệu hóa tài khoản <span className="font-medium text-slate-700">{user.full_name}</span>?
+            Bạn có chắc muốn xóa tài khoản <span className="font-medium text-slate-700">{user.full_name}</span>?
           </p>
         </div>
         <div className="flex gap-3 px-6 pb-6">
@@ -278,7 +281,7 @@ const DeleteModal = ({
           >
             {isLoading ? (
               <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : 'Vô hiệu hóa'}
+            ) : 'Xóa'}
           </button>
         </div>
       </div>
@@ -287,7 +290,6 @@ const DeleteModal = ({
 };
 
 export default function UsersPage() {
-  const { success } = useToast();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -296,6 +298,7 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
   const [deleteUser, setDeleteUser] = useState<ApiUserWithRoles | undefined>();
+  const [modalKey, setModalKey] = useState(0);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -334,7 +337,7 @@ export default function UsersPage() {
           <p className="text-sm text-slate-500 mt-0.5">Danh sách tài khoản trong hệ thống.</p>
         </div>
         <button
-          onClick={() => setEditUser({} as ApiUserWithRoles)}
+          onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
           className="btn btn-primary"
         >
           <UserPlus size={15} />
@@ -455,8 +458,7 @@ export default function UsersPage() {
                         <button
                           onClick={() => setDeleteUser(user)}
                           className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                          title="Vô hiệu hóa"
-                          disabled={!user.is_active}
+                          title="Xóa"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -520,7 +522,8 @@ export default function UsersPage() {
       {/* Modals */}
       {editUser !== undefined && (
         <UserModal
-          user={editUser.id ? editUser : undefined}
+          key={editUser ? (editUser.id ? editUser.id : `new-${modalKey}`) : undefined}
+          user={editUser?.id ? editUser : undefined}
           onClose={() => setEditUser(undefined)}
           onSaved={() => { setEditUser(undefined); fetchUsers(); }}
         />

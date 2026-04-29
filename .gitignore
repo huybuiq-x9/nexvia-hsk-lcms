@@ -48,3 +48,5 @@ minio_data/
 
 # Zone identifier files from Windows downloads
 *:Zone.Identifier
+
+lcms-ui-design/

@@ -90,7 +90,7 @@ async def refresh_tokens(
     if not db_token:
         raise InvalidTokenError("Refresh token has been revoked or expired")
 
-    user = await db.get(User, uuid.UUID(user_id))
+    user = await user_service.get_by_id(db, uuid.UUID(user_id))
     if not user or not user.is_active:
         raise InvalidTokenError("User not found or inactive")
 

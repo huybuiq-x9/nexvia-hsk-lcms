@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.security import decode_access_token
 from app.core.config import settings
 from app.modules.users.model import User
@@ -70,7 +71,7 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user or not user.is_active:
@@ -87,7 +88,7 @@ def role_required(*roles: str):
     async def checker(
         current_user: Annotated[User, Depends(get_current_user)],
     ) -> User:
-        user_roles = {ur.value for ur in current_user.roles}
+        user_roles = {r.role for r in current_user.roles if r.revoked_at is None}
         if not any(role in user_roles for role in roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -120,7 +121,7 @@ async def get_optional_current_user(
     if not user_id:
         return None
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(User).options(selectinload(User.roles)).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user or not user.is_active:

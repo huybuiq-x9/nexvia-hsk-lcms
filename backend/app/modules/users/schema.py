@@ -33,7 +33,7 @@ class UserResponse(UserBase):
 
 
 class UserWithRoles(UserResponse):
-    roles: list[str]
+    roles: list[str] = []
 
 
 class AssignRoleRequest(BaseModel):

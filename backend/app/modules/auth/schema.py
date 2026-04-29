@@ -29,10 +29,10 @@ class TokenData(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    user: "UserResponse"
+    user: "UserWithRoles"
     tokens: TokenResponse
 
 
-from app.modules.users.schema import UserResponse
+from app.modules.users.schema import UserWithRoles
 
 AuthResponse.model_rebuild()

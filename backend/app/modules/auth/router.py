@@ -24,8 +24,9 @@ async def login(
     user, tokens = await service.authenticate(
         db, data.email, data.password, user_agent, ip_address
     )
+    roles = [r.role for r in user.roles if r.revoked_at is None]
     return auth_schema.AuthResponse(
-        user=auth_schema.UserResponse(
+        user=auth_schema.UserWithRoles(
             id=user.id,
             email=user.email,
             full_name=user.full_name,
@@ -34,6 +35,7 @@ async def login(
             avatar_url=user.avatar_url,
             created_at=user.created_at,
             updated_at=user.updated_at,
+            roles=roles,
         ),
         tokens=tokens,
     )

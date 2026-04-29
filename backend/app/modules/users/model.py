@@ -60,7 +60,7 @@ class UserRoleAssignment(BaseModel):
         nullable=False,
     )
     role: Mapped[str] = mapped_column(String(50), nullable=False)
-    assigned_at: Mapped[datetime] = mapped_column(nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="roles")

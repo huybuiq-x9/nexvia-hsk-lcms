@@ -2,7 +2,7 @@ from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser, AdminOnly
+from app.core.deps import get_db, CurrentUser
 from app.modules.users import service, schema as user_schema
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/me", response_model=user_schema.UserWithRoles)
 async def get_me(current_user: CurrentUser):
-    return current_user
+    return await service.get_me(current_user)
 
 
 @router.patch("/me", response_model=user_schema.UserResponse)
@@ -41,24 +41,7 @@ async def list_users(
     search: str | None = None,
     role: str | None = None,
 ):
-    users, total = await service.list_users(db, skip, limit, search, role)
-    return user_schema.UserListResponse(
-        total=total,
-        items=[
-            user_schema.UserWithRoles(
-                id=u.id,
-                email=u.email,
-                full_name=u.full_name,
-                is_active=u.is_active,
-                is_superadmin=u.is_superadmin,
-                avatar_url=u.avatar_url,
-                created_at=u.created_at,
-                updated_at=u.updated_at,
-                roles=[r.role for r in u.roles if r.revoked_at is None],
-            )
-            for u in users
-        ],
-    )
+    return await service.list_users(db, skip, limit, search, role)
 
 
 @router.get("/{user_id}", response_model=user_schema.UserWithRoles)
@@ -67,18 +50,7 @@ async def get_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: CurrentUser,
 ):
-    user = await service.get_by_id(db, user_id)
-    return user_schema.UserWithRoles(
-        id=user.id,
-        email=user.email,
-        full_name=user.full_name,
-        is_active=user.is_active,
-        is_superadmin=user.is_superadmin,
-        avatar_url=user.avatar_url,
-        created_at=user.created_at,
-        updated_at=user.updated_at,
-        roles=[r.role for r in user.roles if r.revoked_at is None],
-    )
+    return await service.get_by_id_schema(db, user_id)
 
 
 @router.post("/", response_model=user_schema.UserResponse, status_code=201)
@@ -108,7 +80,8 @@ async def assign_role(
     current_user: CurrentUser,
 ):
     user = await service.assign_role(db, user_id, data.role.value)
-    return {"message": f"Role '{data.role.value}' assigned", "roles": [r.role for r in user.roles if r.revoked_at is None]}
+    roles = [r.role for r in user.roles if r.revoked_at is None]
+    return {"message": f"Role '{data.role.value}' assigned", "roles": roles}
 
 
 @router.delete("/{user_id}/roles/{role}")
@@ -120,3 +93,12 @@ async def revoke_role(
 ):
     await service.revoke_role(db, user_id, role)
     return {"message": f"Role '{role}' revoked"}
+
+
+@router.delete("/{user_id}", status_code=204)
+async def delete_user(
+    user_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: CurrentUser,
+):
+    await service.delete(db, user_id)

@@ -1,6 +1,6 @@
 import asyncio
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 
@@ -110,7 +110,7 @@ async def seed_admin_user() -> None:
                 "id": uuid.uuid4(),
                 "user_id": user_id,
                 "role": UserRole.ADMIN.value,
-                "assigned_at": datetime.utcnow(),
+                "assigned_at": datetime.now(timezone.utc),
             }
 
             if "revoked_at" in role_columns:
