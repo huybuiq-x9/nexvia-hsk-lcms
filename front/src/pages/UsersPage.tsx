@@ -1,0 +1,537 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  UserPlus,
+  X,
+  AlertCircle,
+} from 'lucide-react';
+import { userService } from '../services';
+import { useToast } from '../contexts/ToastContext';
+import type { ApiUserWithRoles, ApiRole, ApiUserCreate } from '../types/api';
+import { ROLE_LABELS } from '../types/api';
+
+const PER_PAGE = 10;
+
+type RoleLabelType = Record<ApiRole, string>;
+
+const UserModal = ({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user?: ApiUserWithRoles;
+  onClose: () => void;
+  onSaved: () => void;
+}) => {
+  const { error: toastError, success } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    email: user?.email ?? '',
+    full_name: user?.full_name ?? '',
+    password: '',
+    roles: user?.roles ?? ([] as ApiRole[]),
+    is_active: user?.is_active ?? true,
+  });
+
+  const toggleRole = (role: ApiRole) => {
+    setForm(f => ({
+      ...f,
+      roles: f.roles.includes(role) ? f.roles.filter(r => r !== role) : [...f.roles, role],
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.email || !form.full_name || (!user && !form.password)) {
+      setError('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      return;
+    }
+    setError('');
+    setIsLoading(true);
+    try {
+      if (user) {
+        await userService.updateUser(user.id, { full_name: form.full_name, is_active: form.is_active });
+        for (const role of (Object.keys(ROLE_LABELS) as ApiRole[])) {
+          const hasRole = user.roles.includes(role);
+          const wantsRole = form.roles.includes(role);
+          if (!hasRole && wantsRole) {
+            await userService.assignRole(user.id, role);
+          } else if (hasRole && !wantsRole) {
+            await userService.revokeRole(user.id, role);
+          }
+        }
+      } else {
+        await userService.createUser({
+          email: form.email,
+          full_name: form.full_name,
+          password: form.password,
+          roles: form.roles,
+        } as ApiUserCreate);
+      }
+      success(user ? 'Cập nhật thành công!' : 'Tạo người dùng thành công!');
+      onSaved();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">
+            {user ? 'Sửa thông tin người dùng' : 'Thêm người dùng mới'}
+          </h2>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+              <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          <div>
+            <label className="label">Email <span className="text-red-500">*</span></label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              disabled={!!user}
+              placeholder="email@hsk-lcms.vn"
+              className={`input ${user ? 'bg-slate-50 cursor-not-allowed' : ''}`}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Họ và tên <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+              placeholder="Nhập họ và tên"
+              className="input"
+              required
+            />
+          </div>
+
+          {!user && (
+            <div>
+              <label className="label">Mật khẩu <span className="text-red-500">*</span></label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="Ít nhất 8 ký tự"
+                className="input"
+                minLength={8}
+                required
+              />
+            </div>
+          )}
+
+          {!user && (
+            <div>
+              <label className="label">Vai trò</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(Object.keys(ROLE_LABELS) as ApiRole[]).map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      form.roles.includes(role)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    {(ROLE_LABELS as RoleLabelType)[role]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user && (
+            <div className="flex items-center gap-2">
+              <label className="label mb-0">Trạng thái</label>
+              <button
+                type="button"
+                onClick={() => setForm(f => ({ ...f, is_active: !f.is_active }))}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  form.is_active ? 'bg-blue-600' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                    form.is_active ? 'translate-x-[18px]' : 'translate-x-[5px]'
+                  }`}
+                />
+              </button>
+              <span className={`text-xs font-medium ${form.is_active ? 'text-green-600' : 'text-slate-400'}`}>
+                {form.is_active ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}
+              </span>
+            </div>
+          )}
+
+          {user && (
+            <div>
+              <label className="label">Vai trò</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(Object.keys(ROLE_LABELS) as ApiRole[]).map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleRole(role)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      form.roles.includes(role)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    {(ROLE_LABELS as RoleLabelType)[role]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : user ? 'Lưu thay đổi' : 'Tạo người dùng'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const DeleteModal = ({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: ApiUserWithRoles;
+  onClose: () => void;
+  onDeleted: () => void;
+}) => {
+  const { success } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleDelete = async () => {
+    setIsLoading(true);
+    try {
+      await userService.updateUser(user.id, { is_active: false });
+      success('Đã vô hiệu hóa tài khoản.');
+      onDeleted();
+    } catch {
+      // handled
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <Trash2 size={20} className="text-red-600" />
+          </div>
+          <h2 className="text-base font-semibold text-slate-900 mb-2">Xác nhận vô hiệu hóa</h2>
+          <p className="text-sm text-slate-500">
+            Bạn có chắc muốn vô hiệu hóa tài khoản <span className="font-medium text-slate-700">{user.full_name}</span>?
+          </p>
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="btn btn-secondary flex-1 justify-center">
+            Hủy
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={isLoading}
+            className="btn btn-danger flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : 'Vô hiệu hóa'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function UsersPage() {
+  const { success } = useToast();
+  const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<ApiRole | ''>('');
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
+  const [deleteUser, setDeleteUser] = useState<ApiUserWithRoles | undefined>();
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await userService.listUsers({
+        skip: (page - 1) * PER_PAGE,
+        limit: PER_PAGE,
+        search: search || undefined,
+        role: roleFilter || undefined,
+      });
+      setUsers(res.items);
+      setTotal(res.total);
+    } catch {
+      // handled
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, search, roleFilter]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter]);
+
+  const totalPages = Math.ceil(total / PER_PAGE);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Quản lý người dùng</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Danh sách tài khoản trong hệ thống.</p>
+        </div>
+        <button
+          onClick={() => setEditUser({} as ApiUserWithRoles)}
+          className="btn btn-primary"
+        >
+          <UserPlus size={15} />
+          Thêm người dùng
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="card p-4 flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-48">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm theo tên hoặc email..."
+            className="input pl-8"
+          />
+        </div>
+        <select
+          value={roleFilter}
+          onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
+          className="input w-auto min-w-36"
+        >
+          <option value="">Tất cả vai trò</option>
+          {(Object.keys(ROLE_LABELS) as ApiRole[]).map(r => (
+            <option key={r} value={r}>{(ROLE_LABELS as RoleLabelType)[r]}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Người dùng</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Vai trò</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Trạng thái</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ngày tạo</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                    <div className="flex justify-center">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                    Không tìm thấy người dùng nào.
+                  </td>
+                </tr>
+              ) : (
+                users.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-800">{user.full_name}</p>
+                          <p className="text-xs text-slate-400">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.length > 0 ? (
+                          user.roles.map(role => (
+                            <span
+                              key={role}
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                role === 'admin'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : role === 'expert'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : role === 'converter'
+                                  ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}
+                            >
+                              {(ROLE_LABELS as RoleLabelType)[role as ApiRole]}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+                        user.is_active ? 'text-green-600' : 'text-slate-400'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-slate-300'}`} />
+                        {user.is_active ? 'Hoạt động' : 'Đã vô hiệu hóa'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-400">
+                      {new Date(user.created_at).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => setEditUser(user)}
+                          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                          title="Sửa"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteUser(user)}
+                          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                          title="Vô hiệu hóa"
+                          disabled={!user.is_active}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              Hiển thị {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, total)} của {total} người dùng
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, i, arr) => {
+                  if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-xs text-slate-400">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition-colors ${
+                        page === p ? 'bg-blue-600 text-white' : 'hover:bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {editUser !== undefined && (
+        <UserModal
+          user={editUser.id ? editUser : undefined}
+          onClose={() => setEditUser(undefined)}
+          onSaved={() => { setEditUser(undefined); fetchUsers(); }}
+        />
+      )}
+      {deleteUser && (
+        <DeleteModal
+          user={deleteUser}
+          onClose={() => setDeleteUser(undefined)}
+          onDeleted={() => { setDeleteUser(undefined); fetchUsers(); }}
+        />
+      )}
+    </div>
+  );
+}

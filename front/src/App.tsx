@@ -1,0 +1,61 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import UsersPage from './pages/UsersPage';
+import CoursesPage from './pages/CoursesPage';
+import QuestionBankPage from './pages/QuestionBankPage';
+import NotificationsPage from './pages/NotificationsPage';
+import DashboardLayout from './components/layouts/DashboardLayout';
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-500">Đang tải...</p>
+      </div>
+    </div>
+  );
+}
+
+function AppRoutes() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingScreen />;
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <Routes>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/question-bank" element={<QuestionBankPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </DashboardLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
