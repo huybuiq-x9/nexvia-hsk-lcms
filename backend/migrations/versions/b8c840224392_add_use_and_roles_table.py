@@ -1,8 +1,8 @@
-"""initial migration
+"""add use and roles table
 
-Revision ID: 9a663902a6ff
+Revision ID: b8c840224392
 Revises: 
-Create Date: 2026-04-27 09:07:49.654856
+Create Date: 2026-04-29 14:08:03.640280
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9a663902a6ff'
+revision: str = 'b8c840224392'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -31,6 +31,9 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.UUID(), nullable=True),
+    sa.Column('updated_by', sa.UUID(), nullable=True),
+    sa.Column('deleted_by', sa.UUID(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -45,6 +48,9 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.UUID(), nullable=True),
+    sa.Column('updated_by', sa.UUID(), nullable=True),
+    sa.Column('deleted_by', sa.UUID(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -53,11 +59,15 @@ def upgrade() -> None:
     op.create_table('user_role_assignments',
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('role', sa.String(length=50), nullable=False),
-    sa.Column('assigned_at', sa.DateTime(), nullable=False),
+    sa.Column('assigned_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('revoked_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.UUID(), nullable=True),
+    sa.Column('updated_by', sa.UUID(), nullable=True),
+    sa.Column('deleted_by', sa.UUID(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
