@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
@@ -318,32 +318,25 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
   const [deleteUser, setDeleteUser] = useState<ApiUserWithRoles | undefined>();
   const [modalKey, setModalKey] = useState(0);
+  const isFirst = useRef(true);
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await userService.listUsers({
-        skip: (page - 1) * PER_PAGE,
-        limit: PER_PAGE,
-        search: search || undefined,
-        role: roleFilter || undefined,
-      });
-      setUsers(res.items);
-      setTotal(res.total);
-    } catch {
-      // handled
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false;
+      return;
     }
-  }, [page, search, roleFilter]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  useEffect(() => {
     setPage(1);
   }, [search, roleFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    userService
+      .listUsers({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: search || undefined, role: roleFilter || undefined })
+      .then(res => { if (!cancelled) { setUsers(res.items); setTotal(res.total); } })
+      .catch(() => { if (!cancelled) setUsers([]); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; setIsLoading(false); };
+  }, [page, search, roleFilter]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
@@ -605,14 +598,14 @@ export default function UsersPage() {
           key={editUser ? (editUser.id ? editUser.id : `new-${modalKey}`) : undefined}
           user={editUser?.id ? editUser : undefined}
           onClose={() => setEditUser(undefined)}
-          onSaved={() => { setEditUser(undefined); fetchUsers(); }}
+          onSaved={() => { setEditUser(undefined); setPage(1); }}
         />
       )}
       {deleteUser && (
         <DeleteModal
           user={deleteUser}
           onClose={() => setDeleteUser(undefined)}
-          onDeleted={() => { setDeleteUser(undefined); fetchUsers(); }}
+          onDeleted={() => { setDeleteUser(undefined); setPage(1); }}
         />
       )}
     </div>
