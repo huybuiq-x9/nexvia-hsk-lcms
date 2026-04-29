@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Plus,
 } from 'lucide-react';
 import { userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
@@ -91,19 +92,20 @@ const UserModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
+
+        <div className="sticky top-0 z-10 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 bg-white">
           <h2 className="text-base font-semibold text-slate-900">
             {user ? t('users.modal.editTitle') : t('users.modal.createTitle')}
           </h2>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={onClose} className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0">
             <X size={15} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {error && (
             <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
               <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
@@ -274,9 +276,9 @@ const DeleteModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
         <div className="p-6 text-center">
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <Trash2 size={20} className="text-red-600" />
@@ -346,56 +348,60 @@ export default function UsersPage() {
   const totalPages = Math.ceil(total / PER_PAGE);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{t('users.title')}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('users.title')}</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
         </div>
         <button
           onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
-          className="btn btn-primary"
+          className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
         >
-          <UserPlus size={15} />
-          {t('users.add')}
+          <Plus size={15} className="sm:hidden" />
+          <UserPlus size={15} className="hidden sm:block" />
+          <span className="sm:hidden">{t('users.add')}</span>
+          <span className="hidden sm:inline">{t('users.add')}</span>
         </button>
       </div>
 
       {/* Filters */}
-      <div className="card p-4 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t('users.search')}
-            className="input pl-8"
-          />
+      <div className="card p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t('users.search')}
+              className="input pl-8 pr-3"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
+            className="input sm:w-auto w-full"
+          >
+            <option value="">{t('users.allRoles')}</option>
+            {ROLES.map(r => (
+              <option key={r} value={r}>{t(`roles.${r}`)}</option>
+            ))}
+          </select>
         </div>
-        <select
-          value={roleFilter}
-          onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
-          className="input w-auto min-w-36"
-        >
-          <option value="">{t('users.allRoles')}</option>
-          {ROLES.map(r => (
-            <option key={r} value={r}>{t(`roles.${r}`)}</option>
-          ))}
-        </select>
       </div>
 
-      {/* Table */}
+      {/* Table — desktop / card list — mobile */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnUser')}</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnRoles')}</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnStatus')}</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnCreatedAt')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">{t('users.columnCreatedAt')}</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnActions')}</th>
               </tr>
             </thead>
@@ -422,9 +428,9 @@ export default function UsersPage() {
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                           <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-800">{user.full_name}</p>
-                          <p className="text-xs text-slate-400">{user.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-800 truncate">{user.full_name}</p>
+                          <p className="text-xs text-slate-400 truncate">{user.email}</p>
                         </div>
                       </div>
                     </td>
@@ -452,7 +458,7 @@ export default function UsersPage() {
                         {user.is_active ? t('users.active') : t('users.inactive')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-400">
+                    <td className="px-4 py-3 text-xs text-slate-400 hidden lg:table-cell">
                       {new Date(user.created_at).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
@@ -480,13 +486,78 @@ export default function UsersPage() {
           </table>
         </div>
 
+        {/* Mobile card list */}
+        <div className="sm:hidden">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : users.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-slate-400">{t('users.noResults')}</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {users.map(user => (
+                <div key={user.id} className="p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium text-slate-800 text-sm truncate">{user.full_name}</p>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => setEditUser(user)}
+                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                            title={t('users.edit')}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteUser(user)}
+                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                            title={t('users.delete')}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {user.roles.length > 0 ? (
+                          user.roles.map(role => (
+                            <span
+                              key={role}
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${ROLE_COLORS[role as ApiRole]}`}
+                            >
+                              {t(`roles.${role}`)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+                          user.is_active ? 'text-green-600' : 'text-slate-400'
+                        } ml-auto`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          {user.is_active ? t('users.active') : t('users.inactive')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-xs text-slate-400">
+          <div className="px-3 sm:px-4 py-3 border-t border-slate-200 flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
+            <p className="text-xs text-slate-400 text-center xs:text-left">
               {t('users.showing', { from: (page - 1) * PER_PAGE + 1, to: Math.min(page * PER_PAGE, total), total })}
             </p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-center xs:justify-end gap-1">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
