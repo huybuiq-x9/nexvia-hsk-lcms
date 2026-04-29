@@ -5,6 +5,7 @@ import type {
   ApiUserWithRoles,
   ApiUserCreate,
   ApiUserListResponse,
+  ApiSystemStats,
 } from '../types/api';
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -72,5 +73,14 @@ export const userService = {
 
   async deleteUser(userId: string): Promise<void> {
     await client.delete(`/users/${userId}`);
+  },
+};
+
+// ─── System ───────────────────────────────────────────────────────────────────
+
+export const systemService = {
+  async getStats(): Promise<ApiSystemStats> {
+    const res = await client.get<ApiSystemStats>('/system/stats');
+    return res.data;
   },
 };

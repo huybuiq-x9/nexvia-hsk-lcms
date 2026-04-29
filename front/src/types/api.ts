@@ -59,3 +59,17 @@ export interface ApiUserListResponse {
 export interface ApiError {
   detail: string;
 }
+
+export interface ApiSystemStats {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_used_mb: number;
+  memory_total_mb: number;
+  disk_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+  active_users: number;
+  total_users: number;
+  uptime_seconds: number;
+  timestamp: string;
+}
