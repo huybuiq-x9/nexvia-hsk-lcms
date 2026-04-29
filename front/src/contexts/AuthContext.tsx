@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authService, userService } from '../services';
 import type { ApiRole, ApiUserWithRoles } from '../types/api';
 
@@ -20,6 +21,7 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -28,7 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedRole, setSelectedRole] = useState<ApiRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore session on mount
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -60,11 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || 'Đăng nhập thất bại. Vui lòng thử lại.';
+        || t('auth.loginFailed');
       setError(msg);
       throw new Error(msg);
     }
-  }, []);
+  }, [t]);
 
   const logout = useCallback(async () => {
     try {

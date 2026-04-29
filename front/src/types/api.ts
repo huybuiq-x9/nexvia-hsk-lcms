@@ -2,20 +2,13 @@
 
 export type ApiRole = 'admin' | 'teacher' | 'expert' | 'converter';
 
-export const ROLE_LABELS: Record<ApiRole, string> = {
-  admin: 'Quản trị viên',
-  teacher: 'Giáo viên',
-  expert: 'Chuyên gia',
-  converter: 'Converter',
-};
-
 export type RoleLabelType = Record<ApiRole, string>;
 
 export const ROLE_COLORS: Record<ApiRole, string> = {
-  admin:    'bg-blue-50 text-blue-700',
-  teacher:  'bg-blue-50 text-blue-700',
-  expert:   'bg-purple-50 text-purple-700',
-  converter:'bg-cyan-50 text-cyan-700',
+  admin:    'bg-blue-50 text-blue-700 border-blue-200',
+  teacher:  'bg-blue-50 text-blue-700 border-blue-200',
+  expert:   'bg-purple-50 text-purple-700 border-purple-200',
+  converter: 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
 export interface ApiUserResponse {

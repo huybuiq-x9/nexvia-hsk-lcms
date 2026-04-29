@@ -1,0 +1,111 @@
+{
+  "app": {
+    "loading": "Loading...",
+    "brand": "HSK LCMS",
+    "brandShort": "LCMS",
+    "brandSub": "HSK Hanoi",
+    "footer": "HSK LCMS — Learning Content Management System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "courses": "Course Management",
+    "questionBank": "Question Bank Management",
+    "users": "User Management",
+    "notifications": "Notifications",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "auth": {
+    "loginTitle": "Sign in to continue",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "email@hsk-lcms.vn",
+    "passwordPlaceholder": "Enter password",
+    "login": "Sign in",
+    "loggingIn": "Signing in...",
+    "loginSuccess": "Login successful!",
+    "loginFailed": "Login failed. Please try again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back to HSK LCMS.",
+    "courses": "Courses",
+    "active": "Active",
+    "questions": "Question Bank",
+    "totalQuestions": "Total questions",
+    "users": "Users",
+    "activeAccounts": "Active accounts",
+    "notifications": "Notifications",
+    "unread": "Unread",
+    "recentActivity": "Recent Activity",
+    "noActivity": "No recent activity.",
+    "systemInfo": "System Information",
+    "version": "Version",
+    "status": "Status",
+    "operational": "Operational",
+    "hskLevel": "HSK Level",
+    "levels": "1 – 6"
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "List of accounts in the system.",
+    "add": "Add User",
+    "search": "Search by name or email...",
+    "allRoles": "All roles",
+    "columnUser": "User",
+    "columnRoles": "Roles",
+    "columnStatus": "Status",
+    "columnCreatedAt": "Created At",
+    "columnActions": "Actions",
+    "noResults": "No users found.",
+    "active": "Active",
+    "inactive": "Disabled",
+    "showing": "Showing {{from}}–{{to}} of {{total}} users",
+    "edit": "Edit",
+    "delete": "Delete",
+    "modal": {
+      "editTitle": "Edit User Information",
+      "createTitle": "Add New User",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Enter full name",
+      "passwordPlaceholder": "At least 8 characters",
+      "roles": "Roles",
+      "status": "Status",
+      "submitEdit": "Save Changes",
+      "submitCreate": "Create User",
+      "validationRequired": "Please fill in all required fields.",
+      "errorGeneric": "An error occurred. Please try again.",
+      "updateSuccess": "Updated successfully!",
+      "createSuccess": "User created successfully!"
+    },
+    "deleteModal": {
+      "title": "Confirm User Deletion",
+      "confirm": "Are you sure you want to delete the account {{name}}?",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "success": "User deleted."
+    }
+  },
+  "stub": {
+    "courses": "Course management page is under development. Please check back later.",
+    "questionBank": "Question bank management page is under development. Please check back later.",
+    "notifications": "Notifications page is under development. Please check back later."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "expert": "Expert",
+    "converter": "Converter"
+  },
+  "header": {
+    "user": "User",
+    "logout": "Sign out"
+  },
+  "language": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "switch": "Language",
+    "switchToEn": "Switch to English",
+    "switchToVi": "Chuyển sang Tiếng Việt"
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "app": {
+    "loading": "Đang tải...",
+    "brand": "HSK LCMS",
+    "brandShort": "LCMS",
+    "brandSub": "HSK Hà Nội",
+    "footer": "HSK LCMS — Hệ thống Quản lý Nội dung Học tập"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "courses": "Quản lý khóa học",
+    "questionBank": "Quản lý ngân hàng câu hỏi",
+    "users": "Quản lý người dùng",
+    "notifications": "Thông báo",
+    "expand": "Mở rộng",
+    "collapse": "Thu gọn"
+  },
+  "auth": {
+    "loginTitle": "Đăng nhập để tiếp tục",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "emailPlaceholder": "email@hsk-lcms.vn",
+    "passwordPlaceholder": "Nhập mật khẩu",
+    "login": "Đăng nhập",
+    "loggingIn": "Đang đăng nhập...",
+    "loginSuccess": "Đăng nhập thành công!",
+    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại."
+  },
+  "dashboard": {
+    "title": "Tổng quan",
+    "welcome": "Chào mừng bạn quay trở lại HSK LCMS.",
+    "courses": "Khóa học",
+    "active": "Đang hoạt động",
+    "questions": "Ngân hàng câu hỏi",
+    "totalQuestions": "Tổng số câu hỏi",
+    "users": "Người dùng",
+    "activeAccounts": "Tài khoản đã kích hoạt",
+    "notifications": "Thông báo",
+    "unread": "Chưa đọc",
+    "recentActivity": "Hoạt động gần đây",
+    "noActivity": "Chưa có hoạt động nào.",
+    "systemInfo": "Thông tin hệ thống",
+    "version": "Phiên bản",
+    "status": "Trạng thái",
+    "operational": "Đang hoạt động",
+    "hskLevel": "HSK Level",
+    "levels": "1 – 6"
+  },
+  "users": {
+    "title": "Quản lý người dùng",
+    "subtitle": "Danh sách tài khoản trong hệ thống.",
+    "add": "Thêm người dùng",
+    "search": "Tìm theo tên hoặc email...",
+    "allRoles": "Tất cả vai trò",
+    "columnUser": "Người dùng",
+    "columnRoles": "Vai trò",
+    "columnStatus": "Trạng thái",
+    "columnCreatedAt": "Ngày tạo",
+    "columnActions": "Thao tác",
+    "noResults": "Không tìm thấy người dùng nào.",
+    "active": "Hoạt động",
+    "inactive": "Đã vô hiệu hóa",
+    "showing": "Hiển thị {{from}}–{{to}} trong {{total}} người dùng",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "modal": {
+      "editTitle": "Sửa thông tin người dùng",
+      "createTitle": "Thêm người dùng mới",
+      "fullName": "Họ và tên",
+      "fullNamePlaceholder": "Nhập họ và tên",
+      "passwordPlaceholder": "Ít nhất 8 ký tự",
+      "roles": "Vai trò",
+      "status": "Trạng thái",
+      "submitEdit": "Lưu thay đổi",
+      "submitCreate": "Tạo người dùng",
+      "validationRequired": "Vui lòng điền đầy đủ thông tin bắt buộc.",
+      "errorGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
+      "updateSuccess": "Cập nhật thành công!",
+      "createSuccess": "Tạo người dùng thành công!"
+    },
+    "deleteModal": {
+      "title": "Xác nhận xóa người dùng",
+      "confirm": "Bạn có chắc muốn xóa tài khoản {{name}}?",
+      "cancel": "Hủy",
+      "confirmDelete": "Xóa",
+      "success": "Đã xóa người dùng."
+    }
+  },
+  "stub": {
+    "courses": "Trang quản lý khóa học đang được phát triển. Vui lòng quay lại sau.",
+    "questionBank": "Trang quản lý ngân hàng câu hỏi đang được phát triển. Vui lòng quay lại sau.",
+    "notifications": "Trang thông báo đang được phát triển. Vui lòng quay lại sau."
+  },
+  "roles": {
+    "admin": "Quản trị viên",
+    "teacher": "Giáo viên",
+    "expert": "Chuyên gia",
+    "converter": "Converter"
+  },
+  "header": {
+    "user": "Người dùng",
+    "logout": "Đăng xuất"
+  },
+  "language": {
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "switch": "Ngôn ngữ",
+    "switchToEn": "Chuyển sang English",
+    "switchToVi": "Chuyển sang Tiếng Việt"
+  }
+}

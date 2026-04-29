@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { login, error, clearError } = useAuth();
   const { success } = useToast();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +22,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(email, password);
-      success('Đăng nhập thành công!');
+      success(t('auth.loginSuccess'));
       navigate('/home');
     } catch {
       // error shown via AuthContext
@@ -37,8 +40,8 @@ export default function LoginPage() {
           <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-md">
             <span className="text-white font-bold text-lg">HSK</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">HSK LCMS</h1>
-          <p className="text-sm text-slate-500 mt-1">Đăng nhập để tiếp tục</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('app.brand')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('auth.loginTitle')}</p>
         </div>
 
         {/* Form card */}
@@ -52,14 +55,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">Email</label>
+              <label className="label">{t('auth.email')}</label>
               <div className="relative">
                 <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="email"
                   value={email}
                   onChange={e => { setEmail(e.target.value); clearError(); }}
-                  placeholder="email@hsk-lcms.vn"
+                  placeholder={t('auth.emailPlaceholder')}
                   className="input pl-9"
                   required
                   autoFocus
@@ -68,17 +71,25 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="label">Mật khẩu</label>
+              <label className="label">{t('auth.password')}</label>
               <div className="relative">
                 <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); clearError(); }}
-                  placeholder="Nhập mật khẩu"
-                  className="input pl-9"
+                  placeholder={t('auth.passwordPlaceholder')}
+                  className="input pl-9 pr-9"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
               </div>
             </div>
 
@@ -88,16 +99,16 @@ export default function LoginPage() {
               className="btn btn-primary w-full justify-center py-2.5 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Đang đăng nhập...</>
+                <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> {t('auth.loggingIn')}</>
               ) : (
-                'Đăng nhập'
+                t('auth.login')
               )}
             </button>
           </form>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          HSK LCMS — Learning Content Management System
+          {t('app.footer')}
         </p>
       </div>
     </div>

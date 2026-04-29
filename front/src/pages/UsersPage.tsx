@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Search,
   ChevronLeft,
@@ -8,15 +9,17 @@ import {
   UserPlus,
   X,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
 import type { ApiUserWithRoles, ApiRole, ApiUserCreate } from '../types/api';
-import { ROLE_LABELS } from '../types/api';
+import { ROLE_COLORS } from '../types/api';
 
 const PER_PAGE = 10;
 
-type RoleLabelType = Record<ApiRole, string>;
+const ROLES: ApiRole[] = ['admin', 'teacher', 'expert', 'converter'];
 
 const UserModal = ({
   user,
@@ -27,8 +30,10 @@ const UserModal = ({
   onClose: () => void;
   onSaved: () => void;
 }) => {
+  const { t } = useTranslation();
   const { success } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     email: user?.email ?? '',
@@ -48,7 +53,7 @@ const UserModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.full_name || (!user && !form.password)) {
-      setError('Vui lòng điền đầy đủ thông tin bắt buộc.');
+      setError(t('users.modal.validationRequired'));
       return;
     }
     setError('');
@@ -56,7 +61,7 @@ const UserModal = ({
     try {
       if (user) {
         await userService.updateUser(user.id, { full_name: form.full_name, is_active: form.is_active });
-        for (const role of (Object.keys(ROLE_LABELS) as ApiRole[])) {
+        for (const role of ROLES) {
           const hasRole = user.roles.includes(role);
           const wantsRole = form.roles.includes(role);
           if (!hasRole && wantsRole) {
@@ -73,12 +78,12 @@ const UserModal = ({
           roles: form.roles,
         } as ApiUserCreate);
       }
-      success(user ? 'Cập nhật thành công!' : 'Tạo người dùng thành công!');
+      success(user ? t('users.modal.updateSuccess') : t('users.modal.createSuccess'));
       onSaved();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+        || t('users.modal.errorGeneric');
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -91,7 +96,7 @@ const UserModal = ({
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="text-base font-semibold text-slate-900">
-            {user ? 'Sửa thông tin người dùng' : 'Thêm người dùng mới'}
+            {user ? t('users.modal.editTitle') : t('users.modal.createTitle')}
           </h2>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={15} />
@@ -107,13 +112,13 @@ const UserModal = ({
           )}
 
           <div>
-            <label className="label">Email <span className="text-red-500">*</span></label>
+            <label className="label">{t('auth.email')} <span className="text-red-500">*</span></label>
             <input
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               disabled={!!user}
-              placeholder="email@hsk-lcms.vn"
+              placeholder={t('auth.emailPlaceholder')}
               className={`input ${user ? 'bg-slate-50 cursor-not-allowed' : ''}`}
               autoComplete="off"
               required
@@ -121,12 +126,12 @@ const UserModal = ({
           </div>
 
           <div>
-            <label className="label">Họ và tên <span className="text-red-500">*</span></label>
+            <label className="label">{t('users.modal.fullName')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="Nhập họ và tên"
+              placeholder={t('users.modal.fullNamePlaceholder')}
               className="input"
               autoComplete="off"
               required
@@ -135,25 +140,35 @@ const UserModal = ({
 
           {!user && (
             <div>
-              <label className="label">Mật khẩu <span className="text-red-500">*</span></label>
-              <input
-                type="password"
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="Ít nhất 8 ký tự"
-                className="input"
-                autoComplete="new-password"
-                minLength={8}
-                required
-              />
+              <label className="label">{t('auth.password')} <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder={t('users.modal.passwordPlaceholder')}
+                  className="input pr-9"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
           )}
 
           {!user && (
             <div>
-              <label className="label">Vai trò</label>
+              <label className="label">{t('users.modal.roles')}</label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {(Object.keys(ROLE_LABELS) as ApiRole[]).map(role => (
+                {ROLES.map(role => (
                   <button
                     key={role}
                     type="button"
@@ -164,7 +179,7 @@ const UserModal = ({
                         : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
                     }`}
                   >
-                    {(ROLE_LABELS as RoleLabelType)[role]}
+                    {t(`roles.${role}`)}
                   </button>
                 ))}
               </div>
@@ -173,7 +188,7 @@ const UserModal = ({
 
           {user && (
             <div className="flex items-center gap-2">
-              <label className="label mb-0">Trạng thái</label>
+              <label className="label mb-0">{t('users.modal.status')}</label>
               <button
                 type="button"
                 onClick={() => setForm(f => ({ ...f, is_active: !f.is_active }))}
@@ -188,16 +203,16 @@ const UserModal = ({
                 />
               </button>
               <span className={`text-xs font-medium ${form.is_active ? 'text-green-600' : 'text-slate-400'}`}>
-                {form.is_active ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}
+                {form.is_active ? t('users.active') : t('users.inactive')}
               </span>
             </div>
           )}
 
           {user && (
             <div>
-              <label className="label">Vai trò</label>
+              <label className="label">{t('users.modal.roles')}</label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {(Object.keys(ROLE_LABELS) as ApiRole[]).map(role => (
+                {ROLES.map(role => (
                   <button
                     key={role}
                     type="button"
@@ -208,7 +223,7 @@ const UserModal = ({
                         : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
                     }`}
                   >
-                    {(ROLE_LABELS as RoleLabelType)[role]}
+                    {t(`roles.${role}`)}
                   </button>
                 ))}
               </div>
@@ -223,7 +238,7 @@ const UserModal = ({
             >
               {isLoading ? (
                 <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : user ? 'Lưu thay đổi' : 'Tạo người dùng'}
+              ) : user ? t('users.modal.submitEdit') : t('users.modal.submitCreate')}
             </button>
           </div>
         </form>
@@ -241,6 +256,7 @@ const DeleteModal = ({
   onClose: () => void;
   onDeleted: () => void;
 }) => {
+  const { t } = useTranslation();
   const { success } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -248,7 +264,7 @@ const DeleteModal = ({
     setIsLoading(true);
     try {
       await userService.deleteUser(user.id);
-      success('Đã xóa người dùng.');
+      success(t('users.deleteModal.success'));
       onDeleted();
     } catch {
       // handled
@@ -265,14 +281,14 @@ const DeleteModal = ({
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <Trash2 size={20} className="text-red-600" />
           </div>
-          <h2 className="text-base font-semibold text-slate-900 mb-2">Xác nhận xóa người dùng</h2>
+          <h2 className="text-base font-semibold text-slate-900 mb-2">{t('users.deleteModal.title')}</h2>
           <p className="text-sm text-slate-500">
-            Bạn có chắc muốn xóa tài khoản <span className="font-medium text-slate-700">{user.full_name}</span>?
+            {t('users.deleteModal.confirm', { name: user.full_name })}
           </p>
         </div>
         <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose} className="btn btn-secondary flex-1 justify-center">
-            Hủy
+            {t('users.deleteModal.cancel')}
           </button>
           <button
             onClick={handleDelete}
@@ -281,7 +297,7 @@ const DeleteModal = ({
           >
             {isLoading ? (
               <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : 'Xóa'}
+            ) : t('users.deleteModal.confirmDelete')}
           </button>
         </div>
       </div>
@@ -290,6 +306,7 @@ const DeleteModal = ({
 };
 
 export default function UsersPage() {
+  const { t, i18n } = useTranslation();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -333,15 +350,15 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Quản lý người dùng</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Danh sách tài khoản trong hệ thống.</p>
+          <h1 className="text-xl font-bold text-slate-900">{t('users.title')}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
         </div>
         <button
           onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
           className="btn btn-primary"
         >
           <UserPlus size={15} />
-          Thêm người dùng
+          {t('users.add')}
         </button>
       </div>
 
@@ -353,7 +370,7 @@ export default function UsersPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm theo tên hoặc email..."
+            placeholder={t('users.search')}
             className="input pl-8"
           />
         </div>
@@ -362,9 +379,9 @@ export default function UsersPage() {
           onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
           className="input w-auto min-w-36"
         >
-          <option value="">Tất cả vai trò</option>
-          {(Object.keys(ROLE_LABELS) as ApiRole[]).map(r => (
-            <option key={r} value={r}>{(ROLE_LABELS as RoleLabelType)[r]}</option>
+          <option value="">{t('users.allRoles')}</option>
+          {ROLES.map(r => (
+            <option key={r} value={r}>{t(`roles.${r}`)}</option>
           ))}
         </select>
       </div>
@@ -375,11 +392,11 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Người dùng</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Vai trò</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Trạng thái</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ngày tạo</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Thao tác</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnUser')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnRoles')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnStatus')}</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnCreatedAt')}</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('users.columnActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -394,7 +411,7 @@ export default function UsersPage() {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
-                    Không tìm thấy người dùng nào.
+                    {t('users.noResults')}
                   </td>
                 </tr>
               ) : (
@@ -417,17 +434,9 @@ export default function UsersPage() {
                           user.roles.map(role => (
                             <span
                               key={role}
-                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
-                                role === 'admin'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : role === 'expert'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                  : role === 'converter'
-                                  ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                                  : 'bg-blue-50 text-blue-700 border-blue-200'
-                              }`}
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${ROLE_COLORS[role as ApiRole]}`}
                             >
-                              {(ROLE_LABELS as RoleLabelType)[role as ApiRole]}
+                              {t(`roles.${role}`)}
                             </span>
                           ))
                         ) : (
@@ -440,25 +449,25 @@ export default function UsersPage() {
                         user.is_active ? 'text-green-600' : 'text-slate-400'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-slate-300'}`} />
-                        {user.is_active ? 'Hoạt động' : 'Đã vô hiệu hóa'}
+                        {user.is_active ? t('users.active') : t('users.inactive')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">
-                      {new Date(user.created_at).toLocaleDateString('vi-VN')}
+                      {new Date(user.created_at).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setEditUser(user)}
                           className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                          title="Sửa"
+                          title={t('users.edit')}
                         >
                           <Pencil size={13} />
                         </button>
                         <button
                           onClick={() => setDeleteUser(user)}
                           className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                          title="Xóa"
+                          title={t('users.delete')}
                         >
                           <Trash2 size={13} />
                         </button>
@@ -475,7 +484,7 @@ export default function UsersPage() {
         {totalPages > 1 && (
           <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
             <p className="text-xs text-slate-400">
-              Hiển thị {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, total)} của {total} người dùng
+              {t('users.showing', { from: (page - 1) * PER_PAGE + 1, to: Math.min(page * PER_PAGE, total), total })}
             </p>
             <div className="flex items-center gap-1">
               <button
