@@ -54,7 +54,7 @@ Hệ thống sử dụng **Role-Based Access Control (RBAC)** — mỗi người
 > **Admin không sản xuất nội dung hay thẩm định/phê duyệt.** Khi tạo khóa học, Admin gán **đúng 1 Expert** duy nhất để kiểm duyệt khóa học đó. Mỗi khóa học chỉ có một Expert phụ trách kiểm duyệt.
 
 #### Teacher (Giáo viên)
-- Quản lý khóa học, Lesson, Sub-Lesson mà mình sở hữu hoặc được assign
+- Quản lý Lesson, Sub-Lesson trong Lesson mà mình được gán phụ trách
 - Upload, xem, tải, xóa tài liệu (Content) trong Sub-Lesson mình phụ trách
 - Tạo và quản lý ngân hàng câu hỏi (Question Bank) cho Sub-Lesson mình phụ trách
 - Gửi phê duyệt nội dung
@@ -62,14 +62,14 @@ Hệ thống sử dụng **Role-Based Access Control (RBAC)** — mỗi người
 #### Expert (Chuyên gia)
 - Xem (chỉ đọc) toàn bộ Lesson và Sub-Lesson trong Course được gán kiểm duyệt
 - Xem và tải tài liệu trong Sub-Lesson
-- Phê duyệt / từ chối nội dung và SCORM
+- Phê duyệt / từ chối nội dung và SCORM cho toàn bộ Sub-Lesson trong Course
 - Xem (chỉ đọc) ngân hàng câu hỏi và bài thi
 
 > **Phạm vi xem của Expert:** Expert chỉ được gán kiểm duyệt 1 Course duy nhất, nên Expert nhìn thấy toàn bộ nội dung trong Course đó (tất cả Lesson và Sub-Lesson), không nhìn thấy các Course khác.
 
 #### Converter (Người chuyển đổi học liệu)
-- Xem (chỉ đọc) khóa học được assign
-- Xem nội dung, tải tài liệu và upload SCORM cho Sub-Lesson được assign
+- Xem (chỉ đọc) khóa học được gán
+- Xem nội dung, tải tài liệu và upload SCORM cho Sub-Lesson trong Lesson mà mình được gán phụ trách
 
 ---
 
@@ -88,9 +88,12 @@ Hệ thống sử dụng **Role-Based Access Control (RBAC)** — mỗi người
 #### Bước 1 — Admin tạo khóa học & gán Expert
 
 - Admin đăng nhập → tạo Course mới
-- Thông tin Course: tên, mô tả, cấp độ HSK (HSK 1–6), ngôn ngữ
+- Thông tin Course: tên, mô tả
 - **Admin gán đúng 1 Expert duy nhất** để kiểm duyệt khóa học này
-- Sau khi tạo, Admin tạo các Lesson và gán **Teacher** vào các Lesson cụ thể. Mỗi Teacher được phân công phụ trách các Sub-Lesson trong Lesson mình được gán.
+- Sau khi tạo, Admin tạo các Lesson. Mỗi Lesson được gán:
+  - **Đúng 1 Teacher** để sản xuất nội dung học liệu cho các Sub-Lesson trong Lesson đó
+  - **Đúng 1 Converter** để chuyển đổi SCORM cho các Sub-Lesson trong Lesson đó
+- Mỗi Lesson chỉ có một Teacher và một Converter phụ trách, không thay đổi trong quá trình sản xuất
 
 #### Bước 2 — Teacher sản xuất nội dung
 
@@ -99,16 +102,22 @@ Hệ thống sử dụng **Role-Based Access Control (RBAC)** — mỗi người
 ```
 Course (Khóa học HSK)
 └── Lesson 1: Chủ đề Gia đình và Bạn Bè (Family)
-    ├── Sub-Lesson 1.1: Gia đình (Family)
-    │   ├── Content (Tài liệu)
-    │   │   ├── bai-giang-gia-dinh.pptx
-    │   │   ├── bai-tap-gia-dinh.pdf
-    │   │   └── tu-vung-gia-dinh.docx
-    │   └── Question Bank (Ngân hàng câu hỏi)
-    │       └── Questions...
-    ├── Sub-Lesson 1.2: Bạn bè (Friends)
-    │   ├── Content
-    │   └── Question Bank
+│   ├── Teacher: [Giáo viên A]  ← gán theo Lesson
+│   ├── Converter: [Chuyên viên A]  ← gán theo Lesson
+│   ├── Sub-Lesson 1.1: Gia đình (Family)
+│   │   ├── Content (Tài liệu)
+│   │   │   ├── bai-giang-gia-dinh.pptx
+│   │   │   ├── bai-tap-gia-dinh.pdf
+│   │   │   └── tu-vung-gia-dinh.docx
+│   │   └── Question Bank (Ngân hàng câu hỏi)
+│   │       └── Questions...
+│   ├── Sub-Lesson 1.2: Bạn bè (Friends)
+│   │   ├── Content
+│   │   └── Question Bank
+│   └── ...
+└── Lesson 2: Chủ đề Trường học (School)
+    ├── Teacher: [Giáo viên B]  ← gán theo Lesson
+    ├── Converter: [Chuyên viên B]  ← gán theo Lesson
     └── ...
 ```
 
@@ -133,11 +142,10 @@ Course (Khóa học HSK)
 - Teacher có thể thêm ghi chú kèm theo
 - Hệ thống gửi **email thông báo** tới Expert
 
-**3.3.5 Cộng tác nhiều Teacher**
+**3.3.5 Cộng tác nhiều Teacher / Converter**
 
-- Một Course có thể có **nhiều Teacher** cùng tham gia
-- Mỗi Teacher được Admin gán vào các Lesson cụ thể, phụ trách các Sub-Lesson trong Lesson đó
-- Admin có thể thêm/bớt Teacher khỏi Lesson
+- Mỗi Lesson có **đúng 1 Teacher** và **đúng 1 Converter** được gán, không thay đổi trong quá trình sản xuất
+- Các Lesson khác nhau có thể được gán Teacher / Converter khác nhau, mỗi người có thể phụ trách nhiều Lesson
 - Lịch sử chỉnh sửa được ghi lại (audit log)
 
 #### Bước 3 — Expert kiểm duyệt nội dung
@@ -380,16 +388,17 @@ Hệ thống phân biệt rõ Quiz và Question:
 |---|---|---|---|
 | 1 | Teacher gửi phê duyệt | Expert | Có Sub-Lesson mới cần kiểm duyệt, link tới Sub-Lesson |
 | 2 | Expert Reject Sub-Lesson | Teacher | Sub-Lesson bị từ chối, danh sách issue, comment |
-| 3 | Expert Approve (REVIEWING → APPROVED) | Converter | Sub-Lesson content/câu hỏi đã phê duyệt, cần chuyển đổi SCORM |
+| 3 | Expert Approve content | Converter (Lesson) | Sub-Lesson content/câu hỏi đã phê duyệt, cần chuyển đổi SCORM |
 | 4 | Converter upload SCORM | Expert | Có SCORM mới cần kiểm duyệt lần 2 |
-| 5 | Expert Reject SCORM | Converter | SCORM bị từ chối, comment |
-| 6 | Expert Approve SCORM (SCORM_REVIEWING → APPROVED) | Admin, Teacher | Sub-Lesson hoàn thành, sẵn sàng xuất bản |
-| 7 | Admin publish Course | Admin, Teacher, Expert | Toàn bộ Course đã được xuất bản |
+| 5 | Expert Reject SCORM | Converter (Lesson) | SCORM bị từ chối, comment |
+| 6 | Expert Approve SCORM | Admin, Teacher, Converter (Lesson) | Sub-Lesson hoàn thành, sẵn sàng xuất bản |
+| 7 | Admin publish Course | Admin, Teacher, Expert, Converter (Lesson) | Toàn bộ Course đã được xuất bản |
 | 8 | Teacher gửi phê duyệt Exam | Expert | Có bài thi mới cần kiểm duyệt, link tới Exam |
 | 9 | Expert Reject Exam | Teacher | Exam bị từ chối, danh sách issue, comment |
 | 10 | Expert Approve Exam | Admin, Teacher | Exam đã phê duyệt, sẵn sàng xuất bản |
-| 11 | Thêm Teacher vào Course | Teacher mới | Đã được thêm vào khóa học X |
-| 12 | Gán Expert kiểm duyệt | Expert mới | Đã được gán kiểm duyệt khóa học Y |
+| 11 | Thêm Teacher vào Lesson | Teacher mới | Đã được gán vào Lesson X của khóa học Y |
+| 12 | Thêm Converter vào Lesson | Converter mới | Đã được gán vào Lesson X của khóa học Y để chuyển đổi SCORM |
+| 13 | Gán Expert kiểm duyệt | Expert mới | Đã được gán kiểm duyệt khóa học Y |
 
 ### 7.2 Mẫu email
 
@@ -434,7 +443,7 @@ Mỗi người dùng có thể được gán **nhiều vai trò**. Quyền hạn
 
 ---
 
-*Document version: 1.8*
+*Document version: 1.9*
 *Created: 2026-04-18*
-*Last updated: 2026-04-24*
+*Last updated: 2026-04-29*
 *Project: nexvia-hsk-lcms*

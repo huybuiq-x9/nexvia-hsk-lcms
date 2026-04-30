@@ -6,6 +6,9 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import CoursesPage from './pages/CoursesPage';
+import CourseDetailPage from './pages/CourseDetailPage';
+import SubLessonDetailPage from './pages/SubLessonDetailPage';
+import CourseFormPage from './pages/CourseFormPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import NotificationsPage from './pages/NotificationsPage';
 import DashboardLayout from './components/layouts/DashboardLayout';
@@ -41,6 +44,10 @@ function AppRoutes() {
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/courses/create" element={<CourseFormPage />} />
+        <Route path="/courses/edit/:courseId" element={<CourseFormPage />} />
+        <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+        <Route path="/sub-lessons/:subLessonId" element={<SubLessonDetailPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />

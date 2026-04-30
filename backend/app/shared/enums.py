@@ -31,6 +31,7 @@ class SubLessonStatus(str, enum.Enum):
     SCORM_UPLOADED = "scorm_uploaded"
     SCORM_REVIEWING = "scorm_reviewing"
     APPROVED = "approved"
+    PUBLISHED = "published"
 
 
 class ExamStatus(str, enum.Enum):

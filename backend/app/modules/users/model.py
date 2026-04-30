@@ -43,6 +43,20 @@ class User(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    expert_courses: Mapped[list["Course"]] = relationship(
+        "Course",
+        back_populates="assigned_expert",
+    )
+    teacher_lessons: Mapped[list["Lesson"]] = relationship(
+        "Lesson",
+        back_populates="assigned_teacher",
+        foreign_keys="Lesson.assigned_teacher_id",
+    )
+    converter_lessons: Mapped[list["Lesson"]] = relationship(
+        "Lesson",
+        back_populates="assigned_converter",
+        foreign_keys="Lesson.assigned_converter_id",
+    )
 
     def has_role(self, role: UserRole) -> bool:
         return any(
