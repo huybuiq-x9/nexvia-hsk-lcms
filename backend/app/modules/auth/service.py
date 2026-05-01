@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth import schema as auth_schema
 from app.modules.auth.model import RefreshToken
 from app.modules.users.model import User
-from app.modules.users import service as user_service
+from app.modules.users.service import UserService
 from app.modules.users import schema as user_schema
 from app.core.security import (
     create_access_token,
@@ -25,7 +25,8 @@ async def authenticate(
     user_agent: str | None = None,
     ip_address: str | None = None,
 ) -> tuple[User, auth_schema.TokenResponse]:
-    user = await user_service.get_by_email(db, email)
+    user_svc = UserService(db)
+    user = await user_svc.get_by_email(email)
     if not user or not verify_password(password, user.hashed_password):
         raise InvalidCredentialsError()
 
@@ -90,7 +91,8 @@ async def refresh_tokens(
     if not db_token:
         raise InvalidTokenError("Refresh token has been revoked or expired")
 
-    user = await user_service.get_by_id(db, uuid.UUID(user_id))
+    user_svc = UserService(db)
+    user = await user_svc.get_by_id(uuid.UUID(user_id))
     if not user or not user.is_active:
         raise InvalidTokenError("User not found or inactive")
 
