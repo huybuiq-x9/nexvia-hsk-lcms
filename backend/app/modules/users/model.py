@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Boolean, Table, Column, ForeignKey, DateTime
+from sqlalchemy import String, Boolean, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -10,17 +10,6 @@ from app.shared.enums import UserRole
 
 if TYPE_CHECKING:
     from app.modules.auth.model import RefreshToken
-
-
-# Association table for user roles
-user_roles = Table(
-    "user_roles",
-    Base.metadata,
-    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    Column("role", String(50), primary_key=True),
-    Column("assigned_at", DateTime(timezone=True), nullable=False),
-    Column("revoked_at", DateTime(timezone=True), nullable=True),
-)
 
 
 class User(BaseModel):
