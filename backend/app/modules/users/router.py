@@ -2,7 +2,7 @@ from typing import Annotated
 import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser
+from app.core.deps import get_db, CurrentUser, AdminOnly
 from app.modules.users import schema as user_schema
 from app.modules.users.service import UserService
 
@@ -62,7 +62,7 @@ async def get_user(
 async def create_user(
     data: user_schema.UserCreate,
     svc: Annotated[UserService, Depends(get_user_service)],
-    current_user: CurrentUser,
+    _: AdminOnly,
 ):
     return await svc.create(data)
 
@@ -72,21 +72,9 @@ async def update_user(
     user_id: uuid.UUID,
     data: user_schema.UserUpdate,
     svc: Annotated[UserService, Depends(get_user_service)],
-    current_user: CurrentUser,
+    _: AdminOnly,
 ):
     return await svc.update(user_id, data)
-
-
-@router.post("/{user_id}/roles")
-async def assign_role(
-    user_id: uuid.UUID,
-    data: user_schema.AssignRoleRequest,
-    svc: Annotated[UserService, Depends(get_user_service)],
-    current_user: CurrentUser,
-):
-    user = await svc.assign_role(user_id, data.role.value)
-    roles = [r.role for r in user.roles if r.revoked_at is None]
-    return {"message": f"Role '{data.role.value}' assigned", "roles": roles}
 
 
 @router.delete("/{user_id}/roles/{role}")
@@ -94,7 +82,7 @@ async def revoke_role(
     user_id: uuid.UUID,
     role: str,
     svc: Annotated[UserService, Depends(get_user_service)],
-    current_user: CurrentUser,
+    _: AdminOnly,
 ):
     await svc.revoke_role(user_id, role)
     return {"message": f"Role '{role}' revoked"}
@@ -104,6 +92,6 @@ async def revoke_role(
 async def delete_user(
     user_id: uuid.UUID,
     svc: Annotated[UserService, Depends(get_user_service)],
-    current_user: CurrentUser,
+    _: AdminOnly,
 ):
     await svc.delete(user_id)

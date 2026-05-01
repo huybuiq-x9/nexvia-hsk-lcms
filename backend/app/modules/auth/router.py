@@ -32,7 +32,6 @@ async def login(
             full_name=user.full_name,
             is_active=user.is_active,
             is_superadmin=user.is_superadmin,
-            avatar_url=user.avatar_url,
             created_at=user.created_at,
             updated_at=user.updated_at,
             roles=roles,

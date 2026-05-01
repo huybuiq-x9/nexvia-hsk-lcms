@@ -20,7 +20,6 @@ class User(BaseModel):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_superadmin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     roles: Mapped[list["UserRoleAssignment"]] = relationship(
         "UserRoleAssignment",

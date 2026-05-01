@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import type { ApiUserWithRoles, ApiRole, ApiUserCreate } from '../types/api';
 import { ROLE_COLORS } from '../types/api';
 
@@ -61,16 +62,14 @@ const UserModal = ({
     setIsLoading(true);
     try {
       if (user) {
-        await userService.updateUser(user.id, { full_name: form.full_name, is_active: form.is_active });
-        for (const role of ROLES) {
-          const hasRole = user.roles.includes(role);
-          const wantsRole = form.roles.includes(role);
-          if (!hasRole && wantsRole) {
-            await userService.assignRole(user.id, role);
-          } else if (hasRole && !wantsRole) {
-            await userService.revokeRole(user.id, role);
-          }
-        }
+        const rolesToAdd = ROLES.filter(r => !user.roles.includes(r) && form.roles.includes(r));
+        const rolesToRemove = ROLES.filter(r => user.roles.includes(r) && !form.roles.includes(r));
+        await userService.updateUser(user.id, {
+          full_name: form.full_name,
+          is_active: form.is_active,
+          roles: rolesToAdd.length ? rolesToAdd : undefined,
+          remove_roles: rolesToRemove.length ? rolesToRemove : undefined,
+        });
       } else {
         await userService.createUser({
           email: form.email,
@@ -309,6 +308,7 @@ const DeleteModal = ({
 
 export default function UsersPage() {
   const { t, i18n } = useTranslation();
+  const { isAdmin } = useAuth();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -365,15 +365,17 @@ export default function UsersPage() {
           <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('users.title')}</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
         </div>
-        <button
-          onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
-          className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
-        >
-          <Plus size={15} className="sm:hidden" />
-          <UserPlus size={15} className="hidden sm:block" />
-          <span className="sm:hidden">{t('users.add')}</span>
-          <span className="hidden sm:inline">{t('users.add')}</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
+            className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
+          >
+            <Plus size={15} className="sm:hidden" />
+            <UserPlus size={15} className="hidden sm:block" />
+            <span className="sm:hidden">{t('users.add')}</span>
+            <span className="hidden sm:inline">{t('users.add')}</span>
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -473,20 +475,24 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => setEditUser(user)}
-                          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                          title={t('users.edit')}
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteUser(user)}
-                          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                          title={t('users.delete')}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => setEditUser(user)}
+                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                              title={t('users.edit')}
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteUser(user)}
+                              className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                              title={t('users.delete')}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -516,20 +522,24 @@ export default function UsersPage() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-medium text-slate-800 text-sm truncate">{user.full_name}</p>
                         <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => setEditUser(user)}
-                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                            title={t('users.edit')}
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteUser(user)}
-                            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                            title={t('users.delete')}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => setEditUser(user)}
+                                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                title={t('users.edit')}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteUser(user)}
+                                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                                title={t('users.delete')}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                       <p className="text-xs text-slate-400 truncate mt-0.5">{user.email}</p>

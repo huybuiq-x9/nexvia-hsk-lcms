@@ -26,7 +26,7 @@ function LoadingScreen() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin } = useAuth();
 
   if (isLoading) return <LoadingScreen />;
 
@@ -49,7 +49,7 @@ function AppRoutes() {
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
         <Route path="/sub-lessons/:subLessonId" element={<SubLessonDetailPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
-        <Route path="/users" element={<UsersPage />} />
+        {isAdmin && <Route path="/users" element={<UsersPage />} />}
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

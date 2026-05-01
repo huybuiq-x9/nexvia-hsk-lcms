@@ -22,15 +22,15 @@ function Sidebar({
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
-  const { user, selectedRole } = useAuth();
+  const { user, selectedRole, isAdmin } = useAuth();
 
   const navItems = [
     { to: '/dashboard', icon: <LayoutDashboard size={18} />, labelKey: 'nav.dashboard' },
     { to: '/courses', icon: <BookOpen size={18} />, labelKey: 'nav.courses' },
     { to: '/question-bank', icon: <HelpCircle size={18} />, labelKey: 'nav.questionBank' },
-    { to: '/users', icon: <Users size={18} />, labelKey: 'nav.users' },
+    { to: '/users', icon: <Users size={18} />, labelKey: 'nav.users', adminOnly: true },
     { to: '/notifications', icon: <Bell size={18} />, labelKey: 'nav.notifications' },
-  ];
+  ].filter(item => !item.adminOnly || isAdmin);
 
   return (
     <aside

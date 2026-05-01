@@ -14,6 +14,7 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   selectRole: (role: ApiRole) => void;
   selectedRole: ApiRole | null;
+  isAdmin: boolean;
   error: string | null;
   clearError: () => void;
 }
@@ -84,6 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const selectRole = useCallback((role: ApiRole) => setSelectedRole(role), []);
   const clearError = useCallback(() => setError(null), []);
 
+  const isAdmin = state.user?.roles.includes('admin') ?? false;
+
   return (
     <AuthContext.Provider
       value={{
@@ -92,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         selectRole,
+        isAdmin,
         error,
         clearError,
       }}

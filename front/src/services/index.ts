@@ -4,6 +4,7 @@ import type {
   ApiTokenResponse,
   ApiUserWithRoles,
   ApiUserCreate,
+  ApiUserUpdate,
   ApiUserListResponse,
   ApiSystemStats,
   ApiCourseCreate,
@@ -66,14 +67,9 @@ export const userService = {
 
   async updateUser(
     userId: string,
-    data: { full_name?: string; is_active?: boolean }
+    data: ApiUserUpdate
   ): Promise<ApiUserWithRoles> {
     const res = await client.patch<ApiUserWithRoles>(`/users/${userId}`, data);
-    return res.data;
-  },
-
-  async assignRole(userId: string, role: string): Promise<{ roles: string[] }> {
-    const res = await client.post<{ roles: string[] }>(`/users/${userId}/roles`, { role });
     return res.data;
   },
 

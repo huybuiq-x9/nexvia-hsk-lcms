@@ -17,8 +17,9 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     full_name: Annotated[str | None, Field(min_length=1, max_length=255)] = None
-    avatar_url: str | None = None
     is_active: bool | None = None
+    roles: list[UserRole] | None = None
+    remove_roles: list[UserRole] | None = None
 
 
 class UserResponse(UserBase):
@@ -27,17 +28,12 @@ class UserResponse(UserBase):
     id: uuid.UUID
     is_active: bool
     is_superadmin: bool
-    avatar_url: str | None
     created_at: datetime
     updated_at: datetime
 
 
 class UserWithRoles(UserResponse):
     roles: list[str] = []
-
-
-class AssignRoleRequest(BaseModel):
-    role: UserRole
 
 
 class ChangePasswordRequest(BaseModel):
