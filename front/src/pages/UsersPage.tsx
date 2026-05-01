@@ -318,25 +318,42 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
   const [deleteUser, setDeleteUser] = useState<ApiUserWithRoles | undefined>();
   const [modalKey, setModalKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const isFirst = useRef(true);
+  const refreshRef = useRef(refreshKey);
+
+  // Keep refreshRef in sync
+  useEffect(() => { refreshRef.current = refreshKey; }, [refreshKey]);
 
   useEffect(() => {
     if (isFirst.current) {
       isFirst.current = false;
       return;
     }
-    setPage(1);
   }, [search, roleFilter]);
 
   useEffect(() => {
     let cancelled = false;
+    const currentRefresh = refreshRef.current;
     userService
-      .listUsers({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: search || undefined, role: roleFilter || undefined })
-      .then(res => { if (!cancelled) { setUsers(res.items); setTotal(res.total); } })
-      .catch(() => { if (!cancelled) setUsers([]); })
+      .listUsers({
+        skip: (page - 1) * PER_PAGE,
+        limit: PER_PAGE,
+        search: search || undefined,
+        role: roleFilter || undefined,
+      })
+      .then(res => {
+        if (!cancelled && currentRefresh === refreshRef.current) {
+          setUsers(res.items);
+          setTotal(res.total);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && currentRefresh === refreshRef.current) setUsers([]);
+      })
       .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; setIsLoading(false); };
-  }, [page, search, roleFilter]);
+    return () => { cancelled = true; };
+  }, [page, search, roleFilter, refreshKey]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
@@ -598,14 +615,14 @@ export default function UsersPage() {
           key={editUser ? (editUser.id ? editUser.id : `new-${modalKey}`) : undefined}
           user={editUser?.id ? editUser : undefined}
           onClose={() => setEditUser(undefined)}
-          onSaved={() => { setEditUser(undefined); setPage(1); }}
+          onSaved={() => { setEditUser(undefined); setRefreshKey(k => k + 1); }}
         />
       )}
       {deleteUser && (
         <DeleteModal
           user={deleteUser}
           onClose={() => setDeleteUser(undefined)}
-          onDeleted={() => { setDeleteUser(undefined); setPage(1); }}
+          onDeleted={() => { setDeleteUser(undefined); setRefreshKey(k => k + 1); }}
         />
       )}
     </div>
