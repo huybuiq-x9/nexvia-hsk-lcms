@@ -16,35 +16,14 @@ ADMIN_FULL_NAME = "Nexvia Admin"
 
 DEMO_USERS = [
     {"email": "admin@nexvia.vn", "password": "Admin123@", "full_name": "Nexvia Admin", "role": UserRole.ADMIN},
-    {"email": "teacher01@nexvia.vn", "password": "Teacher123@", "full_name": "Nguyễn Văn An", "role": UserRole.TEACHER},
-    {"email": "teacher02@nexvia.vn", "password": "Teacher123@", "full_name": "Trần Thị Bình", "role": UserRole.TEACHER},
-    {"email": "teacher03@nexvia.vn", "password": "Teacher123@", "full_name": "Lê Hoàng Cường", "role": UserRole.TEACHER},
-    {"email": "teacher04@nexvia.vn", "password": "Teacher123@", "full_name": "Phạm Minh Đức", "role": UserRole.TEACHER},
-    {"email": "teacher05@nexvia.vn", "password": "Teacher123@", "full_name": "Hoàng Thu Hà", "role": UserRole.TEACHER},
-    {"email": "teacher06@nexvia.vn", "password": "Teacher123@", "full_name": "Đặng Quang Huy", "role": UserRole.TEACHER},
-    {"email": "teacher07@nexvia.vn", "password": "Teacher123@", "full_name": "Vũ Thị Lan", "role": UserRole.TEACHER},
     {"email": "teacher08@nexvia.vn", "password": "Teacher123@", "full_name": "Bùi Đình Nam", "role": UserRole.TEACHER},
     {"email": "teacher09@nexvia.vn", "password": "Teacher123@", "full_name": "Ngô Thị Phương", "role": UserRole.TEACHER},
     {"email": "teacher10@nexvia.vn", "password": "Teacher123@", "full_name": "Trịnh Gia Khánh", "role": UserRole.TEACHER},
     {"email": "expert01@nexvia.vn", "password": "Expert123@", "full_name": "Lý Minh Tuấn", "role": UserRole.EXPERT},
     {"email": "expert02@nexvia.vn", "password": "Expert123@", "full_name": "Phan Thị Mai Anh", "role": UserRole.EXPERT},
     {"email": "expert03@nexvia.vn", "password": "Expert123@", "full_name": "Đỗ Đức Minh", "role": UserRole.EXPERT},
-    {"email": "expert04@nexvia.vn", "password": "Expert123@", "full_name": "Cao Thị Hương Giang", "role": UserRole.EXPERT},
-    {"email": "expert05@nexvia.vn", "password": "Expert123@", "full_name": "Nguyễn Đình Long", "role": UserRole.EXPERT},
-    {"email": "expert06@nexvia.vn", "password": "Expert123@", "full_name": "Trương Thanh Sơn", "role": UserRole.EXPERT},
-    {"email": "expert07@nexvia.vn", "password": "Expert123@", "full_name": "Lê Thu Hồng", "role": UserRole.EXPERT},
-    {"email": "expert08@nexvia.vn", "password": "Expert123@", "full_name": "Chu Văn Thắng", "role": UserRole.EXPERT},
-    {"email": "expert09@nexvia.vn", "password": "Expert123@", "full_name": "Đinh Thị Thu Trang", "role": UserRole.EXPERT},
-    {"email": "expert10@nexvia.vn", "password": "Expert123@", "full_name": "Hồ Anh Tuấn", "role": UserRole.EXPERT},
     {"email": "converter01@nexvia.vn", "password": "Converter123@", "full_name": "Võ Thị Kim Oanh", "role": UserRole.CONVERTER},
     {"email": "converter02@nexvia.vn", "password": "Converter123@", "full_name": "Đinh Quang Vũ", "role": UserRole.CONVERTER},
-    {"email": "converter03@nexvia.vn", "password": "Converter123@", "full_name": "Bạch Thị Hà My", "role": UserRole.CONVERTER},
-    {"email": "converter04@nexvia.vn", "password": "Converter123@", "full_name": "Trần Văn Bảo", "role": UserRole.CONVERTER},
-    {"email": "converter05@nexvia.vn", "password": "Converter123@", "full_name": "Phạm Thị Ngọc Mai", "role": UserRole.CONVERTER},
-    {"email": "converter06@nexvia.vn", "password": "Converter123@", "full_name": "Lưu Đức Hùng", "role": UserRole.CONVERTER},
-    {"email": "converter07@nexvia.vn", "password": "Converter123@", "full_name": "Tạ Thị Minh Châu", "role": UserRole.CONVERTER},
-    {"email": "converter08@nexvia.vn", "password": "Converter123@", "full_name": "Phan Văn Đạt", "role": UserRole.CONVERTER},
-    {"email": "converter09@nexvia.vn", "password": "Converter123@", "full_name": "Nguyễn Thị Thanh Thảo", "role": UserRole.CONVERTER},
     {"email": "converter10@nexvia.vn", "password": "Converter123@", "full_name": "Hoàng Văn Minh", "role": UserRole.CONVERTER},
 ]
 
@@ -73,11 +52,11 @@ async def _seed_single_user(
                 """
                 INSERT INTO users (
                     id, email, hashed_password, full_name,
-                    is_active, is_superadmin, avatar_url, deleted_at
+                    is_active, is_superadmin, deleted_at
                 )
                 VALUES (
                     :id, :email, :hashed_password, :full_name,
-                    TRUE, :is_superadmin, NULL, NULL
+                    TRUE, :is_superadmin, NULL
                 )
                 """
             ),

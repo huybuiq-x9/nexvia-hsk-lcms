@@ -8,6 +8,8 @@ from app.core.exceptions import LCMSException
 # Import all models to register them with SQLAlchemy Base
 from app.modules.auth.model import RefreshToken  # noqa: F401
 from app.modules.users.model import User, UserRoleAssignment  # noqa: F401
+from app.modules.courses.model import Course, Lesson, SubLesson  # noqa: F401
+from app.modules.documents.model import Document  # noqa: F401
 
 app = FastAPI(
     title="LCMS API",

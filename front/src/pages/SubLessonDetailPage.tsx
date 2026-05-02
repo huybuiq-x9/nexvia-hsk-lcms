@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
@@ -8,7 +8,6 @@ import {
   Check,
   XCircle,
   Upload,
-  Eye,
   FileText,
   HelpCircle,
   Package,
@@ -16,11 +15,20 @@ import {
   Plus,
   AlertCircle,
   X,
+  Trash2,
+  Download,
+  Eye,
+  FileSpreadsheet,
+  Presentation,
+  File,
 } from 'lucide-react';
-import { courseService, userService } from '../services';
+import { courseService, documentService } from '../services';
 import { useToast } from '../contexts/ToastContext';
-import type { ApiSubLessonResponse } from '../types/api';
-import { LESSON_STATUS_COLORS } from '../types/api';
+import type {
+  ApiSubLessonResponse,
+  ApiDocumentWithUploader,
+} from '../types/api';
+import { FILE_TYPE_COLORS } from '../types/api';
 
 type Tab = 'documents' | 'questions' | 'scorm' | 'history';
 
@@ -28,12 +36,12 @@ const SUBLESSON_STATUS_COLORS: Record<string, string> = {
   draft:            'bg-slate-50 text-slate-600 border-slate-200',
   in_progress:      'bg-blue-50 text-blue-700 border-blue-200',
   submitted:        'bg-amber-50 text-amber-700 border-amber-200',
-  reviewing:       'bg-orange-50 text-orange-700 border-orange-200',
+  reviewing:        'bg-orange-50 text-orange-700 border-orange-200',
   in_conversion:   'bg-violet-50 text-violet-700 border-violet-200',
   scorm_uploaded:  'bg-violet-50 text-violet-700 border-violet-200',
   scorm_reviewing: 'bg-orange-50 text-orange-700 border-orange-200',
-  approved:        'bg-green-50 text-green-700 border-green-200',
-  published:       'bg-green-50 text-green-700 border-green-200',
+  approved:         'bg-green-50 text-green-700 border-green-200',
+  published:        'bg-green-50 text-green-700 border-green-200',
 };
 
 const WORKFLOW_STEPS = [
@@ -45,18 +53,40 @@ const WORKFLOW_STEPS = [
   { key: 'approved',       label: 'Đã duyệt' },
 ];
 
+const FILE_TYPE_ICON_MAP: Record<string, React.ReactNode> = {
+  pdf:  <FileText size={18} className="text-red-500" />,
+  pptx: <Presentation size={18} className="text-orange-500" />,
+  ppt:  <Presentation size={18} className="text-orange-500" />,
+  docx: <FileText size={18} className="text-blue-500" />,
+  doc:  <FileText size={18} className="text-blue-500" />,
+  xlsx: <FileSpreadsheet size={18} className="text-green-600" />,
+  xls:  <FileSpreadsheet size={18} className="text-green-600" />,
+};
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 // ─── Action Modal ──────────────────────────────────────────────────────────────
 
 type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
 
 const ActionModal = ({
   type,
-  subLessonId,
   onClose,
   onDone,
 }: {
   type: ModalType;
-  subLessonId: string;
+  subLessonId?: string;
   onClose: () => void;
   onDone: (newStatus?: string) => void;
 }) => {
@@ -73,7 +103,6 @@ const ActionModal = ({
       if (type === 'reject') {
         if (!note.trim()) { setError(t('courses.modal.rejectNoteRequired')); setIsSaving(false); return; }
       }
-      // TODO: call backend API when endpoints are available
       success(t('courses.modal.actionSuccess') || 'Action completed');
       onDone();
     } catch (err: unknown) {
@@ -200,13 +229,244 @@ const WorkflowStepper = ({ currentStatus }: { currentStatus: string }) => {
   );
 };
 
+// ─── Documents Tab ──────────────────────────────────────────────────────────────
+
+const ALLOWED_EXTENSIONS = ['pdf', 'pptx', 'ppt', 'docx', 'doc', 'xlsx', 'xls'];
+const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
+
+const DocumentsTab = ({
+  subLessonId,
+  onRefresh,
+}: {
+  subLessonId: string;
+  onRefresh: () => void;
+}) => {
+  const { t } = useTranslation();
+  const { success, error: toastError } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [documents, setDocuments] = useState<ApiDocumentWithUploader[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const loadDocuments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await documentService.listDocuments(subLessonId);
+      setDocuments(res.items);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [subLessonId]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
+  const handleFile = async (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      toastError(t('documents.allowedTypes'));
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toastError(t('documents.fileTooBig'));
+      return;
+    }
+    setUploading(true);
+    try {
+      await documentService.uploadDocument(subLessonId, file);
+      success(t('documents.uploadSuccess'));
+      window.location.reload();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        || t('documents.uploadError');
+      toastError(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      await documentService.deleteDocument(deleteId);
+      success(t('documents.deleteSuccess'));
+      setDeleteId(null);
+      loadDocuments();
+      onRefresh();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        || t('courses.modal.errorGeneric');
+      toastError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDownload = async (doc: ApiDocumentWithUploader) => {
+    try {
+      const url = await documentService.getDownloadUrl(doc.id);
+      window.open(url, '_blank');
+    } catch {
+      toastError(t('courses.modal.errorGeneric'));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Upload area */}
+      <div
+        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+          dragActive
+            ? 'border-blue-400 bg-blue-50'
+            : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+        }`}
+        onDragOver={e => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept={ALLOWED_EXTENSIONS.map(e => `.${e}`).join(',')}
+          onChange={handleInputChange}
+        />
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-blue-600 font-medium">{t('documents.uploading')}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <Upload size={24} className={dragActive ? 'text-blue-500' : 'text-slate-400'} />
+            <p className={`text-sm font-medium ${dragActive ? 'text-blue-600' : 'text-slate-600'}`}>
+              {dragActive ? t('documents.dragActive') : t('documents.dropzone')}
+            </p>
+            <p className="text-xs text-slate-400">{t('documents.dropzoneHint')}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Document list */}
+      {documents.length === 0 ? (
+        <div className="text-center py-10 text-slate-400 space-y-1">
+          <FileText size={36} className="mx-auto opacity-40" />
+          <p className="text-sm">{t('documents.noDocuments')}</p>
+          <p className="text-xs">{t('documents.noDocumentsHint')}</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {documents.map(doc => (
+            <div
+              key={doc.id}
+              className="flex items-center gap-3 py-3 px-1 hover:bg-slate-50 rounded-lg transition-colors group"
+            >
+              {/* Icon */}
+              <div className={`shrink-0 w-9 h-9 rounded-lg border flex items-center justify-center ${
+                FILE_TYPE_COLORS[doc.file_extension] || 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}>
+                {FILE_TYPE_ICON_MAP[doc.file_extension] || <File size={18} className="text-slate-500" />}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{doc.original_name}</p>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                  <span>{formatFileSize(doc.file_size)}</span>
+                  <span>·</span>
+                  <span>{formatDate(doc.created_at)}</span>
+                  <span>·</span>
+                  <span>{doc.uploader.full_name}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleDownload(doc)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
+                  title={t('documents.download')}
+                >
+                  <Download size={15} />
+                </button>
+                <button
+                  onClick={() => setDeleteId(doc.id)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                  title={t('documents.delete')}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteId(null)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto p-5">
+            <h3 className="text-base font-semibold text-slate-900 mb-2">{t('documents.deleteConfirm')}</h3>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setDeleteId(null)} className="btn btn-secondary">{t('courses.modal.cancel')}</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="btn btn-danger disabled:opacity-50"
+              >
+                {deleting
+                  ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : t('documents.delete')
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-  { key: 'documents',  label: 'Tài liệu',       icon: <FileText size={16} /> },
-  { key: 'questions',   label: 'Ngân hàng câu hỏi', icon: <HelpCircle size={16} /> },
-  { key: 'scorm',       label: 'SCORM',          icon: <Package size={16} /> },
-  { key: 'history',     label: 'Lịch sử',         icon: <History size={16} /> },
+  { key: 'documents', label: 'Tài liệu',    icon: <FileText size={16} /> },
+  { key: 'questions', label: 'Ngân hàng câu hỏi', icon: <HelpCircle size={16} /> },
+  { key: 'scorm',     label: 'SCORM',        icon: <Package size={16} /> },
+  { key: 'history',   label: 'Lịch sử',      icon: <History size={16} /> },
 ];
 
 export default function SubLessonDetailPage() {
@@ -218,7 +478,6 @@ export default function SubLessonDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
-  const [teacher, setTeacher] = useState<string | null>(null);
   const [lessonInfo, setLessonInfo] = useState<{ id: string; title: string; course_id: string } | null>(null);
   const [courseInfo, setCourseInfo] = useState<{ id: string; title: string } | null>(null);
 
@@ -240,7 +499,6 @@ export default function SubLessonDetailPage() {
       .finally(() => { setIsLoading(false); });
   }, [subLessonId, loadSubLesson]);
 
-  // When subLesson loads, get parent lesson info
   useEffect(() => {
     if (!subLesson?.lesson_id) return;
     courseService.getLesson(subLesson.lesson_id).then(lesson => {
@@ -354,23 +612,19 @@ export default function SubLessonDetailPage() {
 
         <div className="p-5">
           {activeTab === 'documents' && (
-            <div className="text-center py-12 text-slate-400 space-y-3">
-              <FileText size={40} className="mx-auto opacity-50" />
-              <p className="text-sm">{t('courses.modal.noDocuments')}</p>
-              <button className="btn btn-secondary flex items-center gap-2 mx-auto">
-                <Upload size={14} />
-                {t('courses.modal.uploadDocument')}
-              </button>
-            </div>
+            <DocumentsTab
+              subLessonId={subLesson.id}
+              onRefresh={loadSubLesson}
+            />
           )}
 
           {activeTab === 'questions' && (
             <div className="text-center py-12 text-slate-400 space-y-3">
               <HelpCircle size={40} className="mx-auto opacity-50" />
-              <p className="text-sm">{t('courses.modal.noQuestions')}</p>
+              <p className="text-sm">{t('courses.noQuestions')}</p>
               <button className="btn btn-secondary flex items-center gap-2 mx-auto">
                 <Plus size={14} />
-                {t('courses.modal.createQuestion')}
+                {t('courses.createQuestion')}
               </button>
             </div>
           )}
@@ -378,14 +632,14 @@ export default function SubLessonDetailPage() {
           {activeTab === 'scorm' && (
             <div className="text-center py-12 text-slate-400 space-y-3">
               <Package size={40} className="mx-auto opacity-50" />
-              <p className="text-sm">{t('courses.modal.noScorm')}</p>
+              <p className="text-sm">{t('courses.noScorm')}</p>
             </div>
           )}
 
           {activeTab === 'history' && (
             <div className="text-center py-12 text-slate-400">
               <History size={40} className="mx-auto mb-3 opacity-50" />
-              <p className="text-sm">{t('courses.modal.noHistory')}</p>
+              <p className="text-sm">{t('courses.noHistory')}</p>
             </div>
           )}
         </div>

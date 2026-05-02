@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.core.security import decode_access_token
 from app.core.config import settings
 from app.modules.users.model import User
+from app.modules.courses.model import SubLesson, Lesson
 
 bearer = HTTPBearer()
 
@@ -131,3 +133,62 @@ async def get_optional_current_user(
 
 
 OptionalUser = Annotated[User | None, Depends(get_optional_current_user)]
+
+
+async def teacher_assigned_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    user_roles = {r.role for r in current_user.roles if r.revoked_at is None}
+    if "admin" in user_roles:
+        return current_user
+
+    result = await db.execute(
+        select(SubLesson)
+        .options(selectinload(SubLesson.lesson))
+        .where(SubLesson.id == sublesson_id)
+    )
+    sublesson = result.scalar_one_or_none()
+    if not sublesson:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SubLesson not found")
+
+    lesson = sublesson.lesson
+    if lesson.assigned_teacher_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this Sub-Lesson",
+        )
+    return current_user
+
+
+async def teacher_assigned_to_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    from app.modules.documents.model import Document
+    user_roles = {r.role for r in current_user.roles if r.revoked_at is None}
+    if "admin" in user_roles:
+        return current_user
+
+    result = await db.execute(
+        select(Document)
+        .options(selectinload(Document.sub_lesson).selectinload(SubLesson.lesson))
+        .where(Document.id == document_id)
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    lesson = doc.sub_lesson.lesson
+    if lesson.assigned_teacher_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not assigned to this document",
+        )
+    return current_user
+
+
+TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
+TeacherAssignedToDocument = Annotated[User, Depends(teacher_assigned_to_document)]

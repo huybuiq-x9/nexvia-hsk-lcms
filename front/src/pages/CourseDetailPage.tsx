@@ -31,7 +31,7 @@ const CreateSubLessonModal = ({
   const { t } = useTranslation();
   const { success } = useToast();
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -50,7 +50,8 @@ const CreateSubLessonModal = ({
         order_index: 0,
       });
       success(t('courses.modal.createSubLessonSuccess') || 'Sub-lesson created');
-      onCreated(sl as unknown as ApiLessonWithSubLessons);
+      onClose();
+      window.location.reload();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -96,9 +97,9 @@ const CreateSubLessonModal = ({
           </div>
 
           <div>
-            <label className="label">{t('courses.modal.description')}</label>
+            <label className="label">{t('courses.modal.description') || 'Mô tả'}</label>
             <textarea
-              value={description}
+              value={String(description ?? '')}
               onChange={e => setDescription(e.target.value)}
               placeholder={t('courses.modal.descriptionPlaceholder')}
               className="input resize-none"

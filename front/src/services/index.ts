@@ -17,6 +17,8 @@ import type {
   ApiLessonAssign,
   ApiSubLessonCreate,
   ApiSubLessonResponse,
+  ApiDocumentListResponse,
+  ApiDocumentUploadResponse,
 } from '../types/api';
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -181,5 +183,34 @@ export const systemService = {
   async getStats(): Promise<ApiSystemStats> {
     const res = await client.get<ApiSystemStats>('/system/stats');
     return res.data;
+  },
+};
+
+// ─── Documents ─────────────────────────────────────────────────────────────────
+
+export const documentService = {
+  async listDocuments(sublessonId: string, params?: { skip?: number; limit?: number }): Promise<ApiDocumentListResponse> {
+    const res = await client.get<ApiDocumentListResponse>(`/documents/sub-lessons/${sublessonId}/documents`, { params });
+    return res.data;
+  },
+
+  async uploadDocument(sublessonId: string, file: File): Promise<ApiDocumentUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiDocumentUploadResponse>(
+      `/documents/sub-lessons/${sublessonId}/documents`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async deleteDocument(documentId: string): Promise<void> {
+    await client.delete(`/documents/${documentId}`);
+  },
+
+  async getDownloadUrl(documentId: string): Promise<string> {
+    const res = await client.get<{ url: string }>(`/documents/${documentId}/download`);
+    return res.data.url;
   },
 };

@@ -37,3 +37,8 @@ class InvalidTokenError(LCMSException):
 class InvalidStatusTransitionError(LCMSException):
     def __init__(self, message: str):
         super().__init__(message=message, status_code=400)
+
+
+class ForbiddenError(LCMSException):
+    def __init__(self, message: str = "You don't have permission to perform this action"):
+        super().__init__(message=message, status_code=403)

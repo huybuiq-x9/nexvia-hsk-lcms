@@ -11,6 +11,7 @@ from app.shared.enums import CourseStatus, LessonStatus, SubLessonStatus
 
 if TYPE_CHECKING:
     from app.modules.users.model import User
+    from app.modules.documents.model import Document
 
 
 class Course(BaseModel):
@@ -107,3 +108,9 @@ class SubLesson(BaseModel):
     )
 
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="sub_lessons")
+    documents: Mapped[list["Document"]] = relationship(
+        "Document",
+        back_populates="sub_lesson",
+        cascade="all, delete-orphan",
+        order_by="Document.created_at",
+    )

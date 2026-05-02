@@ -71,7 +71,7 @@ export default function CourseFormPage() {
       .then(course => {
         setForm({
           title: course.title,
-          description: course.description ?? '',
+          description: typeof course.description === 'string' ? course.description : '',
           expert_id: course.assigned_expert_id,
           lessons: course.lessons.map(l => ({
             _key: l.id,
