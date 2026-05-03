@@ -154,9 +154,15 @@
     "columnStatus": "Status",
     "columnCreatedAt": "Created At",
     "columnActions": "Actions",
+    "create": {
+      "subtitle": "Create a new course and assign responsible persons.",
+      "addLessonHint": "You can add lessons now or later after course creation.",
+      "expertLocked": "Expert cannot be changed after course creation.",
+      "lessonsLocked": "Lessons can be added after publishing."
+    },
     "edit": "Edit",
     "delete": "Delete",
-    "create": "Create Course",
+    "createTop": "Create Course",
     "update": "Update Course",
     "modal": {
       "titleCreate": "Create New Course",
@@ -183,6 +189,7 @@
       "addLesson": "Add Lesson",
       "addSubLesson": "Add Sub-Lesson",
       "removeLesson": "Remove Lesson",
+      "dragToReorder": "Drag to reorder",
       "removeSubLesson": "Remove Sub-Lesson",
       "submitCreate": "Create Course",
       "submitUpdate": "Save Changes",

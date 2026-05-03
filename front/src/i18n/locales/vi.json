@@ -154,9 +154,15 @@
     "columnStatus": "Trạng thái",
     "columnCreatedAt": "Ngày tạo",
     "columnActions": "Thao tác",
+    "create": {
+      "subtitle": "Tạo khóa học mới và gán người phụ trách.",
+      "addLessonHint": "Bạn có thể thêm bài học ngay hoặc sau khi tạo khóa học.",
+      "expertLocked": "Không thể thay đổi chuyên gia sau khi tạo khóa học.",
+      "lessonsLocked": "Có thể thêm bài học sau khi xuất bản."
+    },
     "edit": "Sửa",
     "delete": "Xóa",
-    "create": "Tạo khóa học",
+    "createTop": "Tạo khóa học",
     "update": "Cập nhật khóa học",
     "modal": {
       "titleCreate": "Tạo khóa học mới",
@@ -183,6 +189,7 @@
       "addLesson": "Thêm bài học",
       "addSubLesson": "Thêm tiết học",
       "removeLesson": "Xóa bài học",
+      "dragToReorder": "Kéo để sắp xếp thứ tự",
       "removeSubLesson": "Xóa tiết học",
       "submitCreate": "Tạo khóa học",
       "submitUpdate": "Lưu thay đổi",

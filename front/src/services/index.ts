@@ -8,6 +8,7 @@ import type {
   ApiUserListResponse,
   ApiSystemStats,
   ApiCourseCreate,
+  ApiCourseUpdate,
   ApiCourseListResponse,
   ApiCourseWithLessons,
   ApiCourseResponse,
@@ -108,7 +109,7 @@ export const courseService = {
 
   async updateCourse(
     courseId: string,
-    data: { title?: string; description?: string | null; order_index?: number }
+    data: ApiCourseUpdate
   ): Promise<ApiCourseResponse> {
     const res = await client.patch<ApiCourseResponse>(`/courses/${courseId}`, data);
     return res.data;

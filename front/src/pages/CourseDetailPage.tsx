@@ -21,15 +21,17 @@ import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS } from '../types/api';
 
 const CreateSubLessonModal = ({
   lessonId,
+  lessonTitle,
   onClose,
   onCreated,
 }: {
   lessonId: string;
+  lessonTitle: string;
   onClose: () => void;
   onCreated: (newSubLesson: ApiLessonWithSubLessons) => void;
 }) => {
   const { t } = useTranslation();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -38,7 +40,7 @@ const CreateSubLessonModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setFormError(t('courses.modal.subLessonNamePlaceholder') || 'Please enter sub-lesson name');
+      setFormError(t('courses.modal.validationLessonName'));
       return;
     }
     setFormError('');
@@ -49,14 +51,15 @@ const CreateSubLessonModal = ({
         description: description.trim() || null,
         order_index: 0,
       });
-      success(t('courses.modal.createSubLessonSuccess') || 'Sub-lesson created');
+      success(t('courses.modal.createSubLessonSuccess'));
       onClose();
-      window.location.reload();
+      const data = await courseService.getLesson(lessonId);
+      onCreated(data);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         || t('courses.modal.errorGeneric');
-      setFormError(msg);
+      toastError(t('courses.modal.errorGeneric'), msg);
     } finally { setIsSaving(false); }
   };
 
@@ -65,7 +68,7 @@ const CreateSubLessonModal = ({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">{t('courses.modal.titleAddSubLesson')}</h2>
+          <h2 className="text-base font-semibold text-slate-900">{lessonTitle}</h2>
           <button
             onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 text-lg leading-none"
@@ -400,7 +403,7 @@ export default function CourseDetailPage() {
         </div>
         <button
           onClick={() => navigate(`/courses/edit/${course.id}`)}
-          className="btn btn-secondary flex items-center gap-1.5 text-sm shrink-0"
+          className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
         >
           <Pencil size={14} />
           {t('courses.edit')}
@@ -492,7 +495,7 @@ export default function CourseDetailPage() {
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
                       {lesson.status}
                     </span>
-                    <span className="text-xs text-slate-400 shrink-0">{subLessons.length} {t('courses.subLessons')}</span>
+                    <span className="text-xs text-slate-400 shrink-0">{lesson.sub_lessons_count ?? 0} {t('courses.subLessons')}</span>
                   </button>
 
                   {/* Sub-lessons panel */}
@@ -598,11 +601,12 @@ export default function CourseDetailPage() {
       {createSubLessonFor && (
         <CreateSubLessonModal
           lessonId={createSubLessonFor}
+          lessonTitle={course?.lessons.find(l => l.id === createSubLessonFor)?.title ?? ''}
           onClose={() => setCreateSubLessonFor(null)}
           onCreated={(newData) => {
             setCreateSubLessonFor(null);
             setLessonsData(prev => ({ ...prev, [createSubLessonFor]: newData }));
-            // Also refresh course to update sub_lessons_count
+            setOpenLessons(prev => new Set([...prev, createSubLessonFor]));
             if (courseId) {
               courseService.getCourse(courseId).then(c => setCourse(c)).catch(() => {});
             }

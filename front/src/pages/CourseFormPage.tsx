@@ -9,13 +9,15 @@ import {
   BookOpen,
   User,
   Users,
+  GripVertical,
 } from 'lucide-react';
 import { courseService, userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
-import type { ApiCourseCreate, ApiUserWithRoles } from '../types/api';
+import type { ApiCourseCreate, ApiCourseUpdate, ApiUserWithRoles } from '../types/api';
 
 interface LessonDraft {
   _key: string;
+  _isDeleted?: boolean;
   title: string;
   description: string;
   order_index: number;
@@ -49,6 +51,9 @@ export default function CourseFormPage() {
     expert_id: '',
     lessons: [] as LessonDraft[],
   });
+  const [deletedLessonIds, setDeletedLessonIds] = useState<string[]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropZoneIdx, setDropZoneIdx] = useState<number | null>(null);
 
   // Load all user lists
   useEffect(() => {
@@ -109,13 +114,62 @@ export default function CourseFormPage() {
   };
 
   const removeLesson = (idx: number) => {
-    setForm(f => ({ ...f, lessons: f.lessons.filter((_, i) => i !== idx) }));
+    // Existing lessons (UUID _key) are soft-deleted; new lessons (random _key) are removed.
+    const lesson = form.lessons[idx];
+    if (lesson._key.length === 36 && lesson._key.includes('-')) {
+      setForm(f => ({
+        ...f,
+        lessons: f.lessons.map((l, i) => i === idx ? { ...l, _isDeleted: true } : l),
+      }));
+      setDeletedLessonIds(prev => [...prev, lesson._key]);
+    } else {
+      setForm(f => ({ ...f, lessons: f.lessons.filter((_, i) => i !== idx) }));
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDropZoneIdx(idx);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX, y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDropZoneIdx(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragIdx === null) return;
+    if (dragIdx === dropIdx || dragIdx === dropIdx - 1) {
+      setDragIdx(null);
+      setDropZoneIdx(null);
+      return;
+    }
+    const reordered = [...form.lessons];
+    const [moved] = reordered.splice(dragIdx, 1);
+    reordered.splice(dropIdx, 0, moved);
+    const reindexed = reordered.map((l, i) => ({ ...l, order_index: i }));
+    setForm(f => ({ ...f, lessons: reindexed }));
+    setDragIdx(null);
+    setDropZoneIdx(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) { setFormError(t('courses.modal.validationCourseName')); return; }
     if (!form.expert_id && !isEditing) { setFormError(t('courses.modal.expertRequired')); return; }
+    if (!form.expert_id && isEditing) { setFormError(t('courses.modal.expertRequired')); return; }
     for (const lesson of form.lessons) {
       if (!lesson.title.trim()) { setFormError(t('courses.modal.validationLessonName')); return; }
     }
@@ -124,10 +178,37 @@ export default function CourseFormPage() {
     setIsSaving(true);
     try {
       if (isEditing && courseId) {
+        // Existing lessons (UUID _key, not deleted) — update; new lessons (random _key) — create; all marked deleted removed from list.
+        const existingLessons = form.lessons.filter(l => l._isDeleted !== true && l._key.length === 36 && l._key.includes('-'));
+        const newLessons = form.lessons.filter(l => l._isDeleted !== true && !(l._key.length === 36 && l._key.includes('-')));
+
         await courseService.updateCourse(courseId, {
           title: form.title.trim(),
           description: form.description.trim() || null,
-        });
+          assigned_expert_id: form.expert_id,
+          lessons: [
+            ...existingLessons
+              .filter(l => l.title.trim())
+              .map((l, idx) => ({
+                id: l._key,
+                title: l.title.trim(),
+                description: l.description.trim() || null,
+                order_index: idx,
+                teacher_id: l.teacher_id || null,
+                converter_id: l.converter_id || null,
+              })),
+            ...newLessons
+              .filter(l => l.title.trim())
+              .map((l, idx) => ({
+                title: l.title.trim(),
+                description: l.description.trim() || null,
+                order_index: existingLessons.filter(x => x.title.trim()).length + idx,
+                teacher_id: l.teacher_id || null,
+                converter_id: l.converter_id || null,
+              })),
+          ],
+          delete_lesson_ids: deletedLessonIds,
+        } as ApiCourseUpdate);
         success(t('courses.modal.updateSuccess'));
       } else {
         const payload: ApiCourseCreate = {
@@ -155,6 +236,8 @@ export default function CourseFormPage() {
       setFormError(msg);
     } finally { setIsSaving(false); }
   };
+
+  const visibleLessons = form.lessons.filter(l => !l._isDeleted).sort((a, b) => a.order_index - b.order_index);
 
   const isLoading = isLoadingUsers || isLoadingCourse;
 
@@ -236,8 +319,7 @@ export default function CourseFormPage() {
                 value={form.expert_id}
                 onChange={e => setForm(f => ({ ...f, expert_id: e.target.value }))}
                 className="input"
-                disabled={isEditing}
-                required={!isEditing}
+                required
               >
                 <option value="">{t('courses.modal.selectExpert')}</option>
                 {experts.map(u => (
@@ -245,153 +327,156 @@ export default function CourseFormPage() {
                 ))}
               </select>
             )}
-            {isEditing && (
-              <p className="text-xs text-slate-400 mt-1">{t('courses.create.expertLocked')}</p>
-            )}
           </div>
         </div>
 
-        {/* Lessons builder — only when creating */}
-        {!isEditing && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="label mb-0">{t('courses.lessons')}</label>
-              <button
-                type="button"
-                onClick={addLesson}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors"
-              >
-                <Plus size={13} />
-                {t('courses.modal.addLesson')}
-              </button>
+        {/* Lessons builder */}
+        <div className="space-y-3">
+          <label className="label mb-0">{t('courses.lessons')}</label>
+
+          {visibleLessons.length === 0 ? (
+            <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-lg">
+              <BookOpen size={28} className="text-slate-300 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">{t('courses.noLessons')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('courses.create.addLessonHint')}</p>
             </div>
+          ) : (
+            <div>
+              {/* Top drop zone */}
+              <div
+                onDragOver={e => handleDragOver(e, 0)}
+                onDragLeave={handleDragLeave}
+                onDrop={e => handleDrop(e, 0)}
+                className={`relative h-1 rounded-full bg-transparent transition-all duration-150 mb-1 ${
+                  dropZoneIdx === 0 && dragIdx !== null && dragIdx !== 0
+                    ? 'h-2 bg-blue-500'
+                    : ''
+                }`}
+              />
 
-            {form.lessons.length === 0 && (
-              <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-lg">
-                <BookOpen size={28} className="text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">{t('courses.noLessons')}</p>
-                <p className="text-xs text-slate-400 mt-1">{t('courses.create.addLessonHint')}</p>
-              </div>
-            )}
+              {visibleLessons.map((lesson) => {
+                const actualIdx = form.lessons.indexOf(lesson);
+                const isDragging = dragIdx === actualIdx;
+                return (
+                  <div key={lesson._key}>
+                    {/* Lesson card */}
+                    <div
+                      draggable
+                      onDragStart={e => handleDragStart(e, actualIdx)}
+                      onDragOver={e => handleDragOver(e, actualIdx)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={e => handleDrop(e, actualIdx)}
+                      className={`border rounded-xl p-4 bg-slate-50 space-y-4 transition-all ${
+                        isDragging ? 'opacity-40 border-slate-300' : 'border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          draggable="false"
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600 shrink-0 mt-1 cursor-grab active:cursor-grabbing"
+                          title={t('courses.modal.dragToReorder')}
+                        >
+                          <GripVertical size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <input
+                            type="text"
+                            value={lesson.title}
+                            onChange={e => updateLesson(actualIdx, { title: e.target.value })}
+                            placeholder={t('courses.modal.lessonNamePlaceholder')}
+                            className="input"
+                          />
+                          <textarea
+                            value={lesson.description}
+                            onChange={e => updateLesson(actualIdx, { description: e.target.value })}
+                            placeholder={t('courses.modal.descriptionPlaceholder')}
+                            className="input resize-none text-sm"
+                            rows={2}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeLesson(actualIdx)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors shrink-0 mt-1"
+                          title={t('courses.modal.removeLesson')}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
 
-            {form.lessons.map((lesson, idx) => (
-              <div key={lesson._key} className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-4">
-                {/* Lesson header */}
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-xs font-bold text-blue-600 shrink-0 mt-1">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0 space-y-3">
-                    <input
-                      type="text"
-                      value={lesson.title}
-                      onChange={e => updateLesson(idx, { title: e.target.value })}
-                      placeholder={t('courses.modal.lessonNamePlaceholder')}
-                      className="input"
+                      <div className="pl-10 space-y-3">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          {t('courses.modal.assignLabel')}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="label">
+                              <span className="flex items-center gap-1">
+                                <Users size={12} />
+                                {t('courses.modal.teacher')}
+                              </span>
+                            </label>
+                            <select
+                              value={lesson.teacher_id}
+                              onChange={e => updateLesson(actualIdx, { teacher_id: e.target.value })}
+                              className="input"
+                            >
+                              <option value="">{t('courses.modal.selectTeacher')}</option>
+                              {teachers.map(u => (
+                                <option key={u.id} value={u.id}>{u.full_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="label">
+                              <span className="flex items-center gap-1">
+                                <User size={12} />
+                                {t('courses.modal.converter')}
+                              </span>
+                            </label>
+                            <select
+                              value={lesson.converter_id}
+                              onChange={e => updateLesson(actualIdx, { converter_id: e.target.value })}
+                              className="input"
+                            >
+                              <option value="">{t('courses.modal.selectConverter')}</option>
+                              {converters.map(u => (
+                                <option key={u.id} value={u.id}>{u.full_name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gap drop zone after this lesson */}
+                    <div
+                      onDragOver={e => handleDragOver(e, actualIdx + 1)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={e => handleDrop(e, actualIdx + 1)}
+                      className={`relative h-1 rounded-full bg-transparent transition-all duration-150 mt-1 ${
+                        dropZoneIdx === actualIdx + 1 && dragIdx !== null && dragIdx !== actualIdx + 1
+                          ? 'h-2 bg-blue-500'
+                          : ''
+                      }`}
                     />
-                    <textarea
-                      value={lesson.description}
-                      onChange={e => updateLesson(idx, { description: e.target.value })}
-                      placeholder={t('courses.modal.descriptionPlaceholder')}
-                      className="input resize-none text-sm"
-                      rows={2}
-                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeLesson(idx)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors shrink-0 mt-1"
-                    title={t('courses.modal.removeLesson')}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-
-                {/* Teacher + Converter assignment */}
-                <div className="pl-10 space-y-3">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    {t('courses.modal.assignLabel')}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="label">
-                        <span className="flex items-center gap-1">
-                          <Users size={12} />
-                          {t('courses.modal.teacher')}
-                        </span>
-                      </label>
-                      <select
-                        value={lesson.teacher_id}
-                        onChange={e => updateLesson(idx, { teacher_id: e.target.value })}
-                        className="input"
-                      >
-                        <option value="">{t('courses.modal.selectTeacher')}</option>
-                        {teachers.map(u => (
-                          <option key={u.id} value={u.id}>{u.full_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="label">
-                        <span className="flex items-center gap-1">
-                          <User size={12} />
-                          {t('courses.modal.converter')}
-                        </span>
-                      </label>
-                      <select
-                        value={lesson.converter_id}
-                        onChange={e => updateLesson(idx, { converter_id: e.target.value })}
-                        className="input"
-                      >
-                        <option value="">{t('courses.modal.selectConverter')}</option>
-                        {converters.map(u => (
-                          <option key={u.id} value={u.id}>{u.full_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Edit mode: lessons as read-only */}
-        {isEditing && !isLoadingCourse && form.lessons.length > 0 && (
-          <div className="space-y-2">
-            <label className="label mb-0">{t('courses.lessons')} ({form.lessons.length})</label>
-            <div className="space-y-2">
-              {form.lessons.map((lesson, idx) => (
-                <div key={lesson._key} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-xs font-bold text-slate-500 shrink-0">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{lesson.title}</p>
-                    {lesson.description && (
-                      <p className="text-xs text-slate-400 truncate">{lesson.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <Users size={11} />
-                      {lesson.teacher_id && teachers.find(u => u.id === lesson.teacher_id)?.full_name
-                        ? teachers.find(u => u.id === lesson.teacher_id)?.full_name
-                        : '—'}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <User size={11} />
-                      {lesson.converter_id && converters.find(u => u.id === lesson.converter_id)?.full_name
-                        ? converters.find(u => u.id === lesson.converter_id)?.full_name
-                        : '—'}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <p className="text-xs text-slate-400">{t('courses.create.lessonsLocked')}</p>
+          )}
+
+          <div>
+            <button
+              type="button"
+              onClick={addLesson}
+              className="w-full py-2 text-sm font-medium text-blue-600 border border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Plus size={13} />
+              {t('courses.modal.addLesson')}
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">

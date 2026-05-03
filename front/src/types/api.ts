@@ -128,6 +128,7 @@ export interface ApiLessonWithSubLessons extends ApiLessonResponse {
 }
 
 export interface ApiLessonCreate {
+  id?: string;
   title: string;
   description?: string | null;
   order_index?: number;
@@ -153,6 +154,14 @@ export interface ApiCourseResponse {
 
 export interface ApiCourseWithLessons extends ApiCourseResponse {
   lessons: ApiLessonBrief[];
+}
+
+export interface ApiCourseUpdate {
+  title?: string;
+  description?: string | null;
+  assigned_expert_id?: string;
+  lessons?: ApiLessonCreate[];
+  delete_lesson_ids?: string[];
 }
 
 export interface ApiCourseCreate {

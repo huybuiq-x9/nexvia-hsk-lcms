@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -53,6 +54,7 @@ def _to_sublesson_response(sl: SubLesson) -> course_schema.SubLessonResponse:
 
 
 def _lesson_brief(lesson: Lesson) -> course_schema.LessonBrief:
+    active_sub_lessons = [sl for sl in (lesson.sub_lessons or []) if sl.deleted_at is None]
     return course_schema.LessonBrief(
         id=lesson.id,
         title=lesson.title,
@@ -61,7 +63,7 @@ def _lesson_brief(lesson: Lesson) -> course_schema.LessonBrief:
         order_index=lesson.order_index,
         assigned_teacher_id=lesson.assigned_teacher_id,
         assigned_converter_id=lesson.assigned_converter_id,
-        sub_lessons_count=0,
+        sub_lessons_count=len(active_sub_lessons),
     )
 
 
@@ -75,14 +77,14 @@ def _to_course_with_lessons(course: Course) -> course_schema.CourseWithLessonsRe
         order_index=course.order_index,
         created_at=course.created_at,
         updated_at=course.updated_at,
-        lessons=[_lesson_brief(l) for l in (course.lessons or [])],
+        lessons=sorted([_lesson_brief(l) for l in (course.lessons or []) if l.deleted_at is None], key=lambda l: l.order_index),
     )
 
 
 async def _get_course_orm(db: AsyncSession, course_id: uuid.UUID) -> Course:
     result = await db.execute(
         select(Course)
-        .options(selectinload(Course.lessons))
+        .options(selectinload(Course.lessons).selectinload(Lesson.sub_lessons))
         .where(Course.id == course_id)
     )
     course = result.scalar_one_or_none()
@@ -131,7 +133,7 @@ async def list_courses(
 ) -> course_schema.CourseListResponse:
     query = (
         select(Course)
-        .options(selectinload(Course.lessons))
+        .options(selectinload(Course.lessons).selectinload(Lesson.sub_lessons))
         .where(Course.deleted_at.is_(None))
     )
 
@@ -207,6 +209,43 @@ async def update_course(
         course.description = data.description
     if data.order_index is not None:
         course.order_index = data.order_index
+    if data.assigned_expert_id is not None:
+        await _get_user_orm(db, data.assigned_expert_id)
+        course.assigned_expert_id = data.assigned_expert_id
+
+    if data.delete_lesson_ids:
+        for lid in data.delete_lesson_ids:
+            result = await db.execute(select(Lesson).where(Lesson.id == lid, Lesson.course_id == course_id))
+            lesson = result.scalar_one_or_none()
+            if lesson:
+                lesson.deleted_at = datetime.now(timezone.utc)
+
+    if data.lessons is not None:
+        for lesson_data in data.lessons:
+            if lesson_data.teacher_id:
+                await _get_user_orm(db, lesson_data.teacher_id)
+            if lesson_data.converter_id:
+                await _get_user_orm(db, lesson_data.converter_id)
+            if lesson_data.id:
+                result = await db.execute(select(Lesson).where(Lesson.id == lesson_data.id, Lesson.course_id == course_id))
+                lesson = result.scalar_one_or_none()
+                if lesson:
+                    lesson.title = lesson_data.title
+                    lesson.description = lesson_data.description
+                    lesson.order_index = lesson_data.order_index
+                    lesson.assigned_teacher_id = lesson_data.teacher_id
+                    lesson.assigned_converter_id = lesson_data.converter_id
+            else:
+                lesson = Lesson(
+                    course_id=course.id,
+                    title=lesson_data.title,
+                    description=lesson_data.description,
+                    order_index=lesson_data.order_index,
+                    assigned_teacher_id=lesson_data.teacher_id,
+                    assigned_converter_id=lesson_data.converter_id,
+                )
+                db.add(lesson)
+
     await db.commit()
     await db.refresh(course)
     return _to_course_response(course)
@@ -214,7 +253,7 @@ async def update_course(
 
 async def delete_course(db: AsyncSession, course_id: uuid.UUID) -> None:
     course = await _get_course_orm(db, course_id)
-    course.deleted_at = uuid.uuid4()  # type: ignore[assignment]
+    course.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
 
@@ -316,7 +355,7 @@ async def update_lesson(
 
 async def delete_lesson(db: AsyncSession, lesson_id: uuid.UUID) -> None:
     lesson = await _get_lesson_orm(db, lesson_id)
-    lesson.deleted_at = uuid.uuid4()  # type: ignore[assignment]
+    lesson.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
 
@@ -367,5 +406,5 @@ async def update_sublesson(
 
 async def delete_sublesson(db: AsyncSession, sublesson_id: uuid.UUID) -> None:
     sl = await _get_sublesson_orm(db, sublesson_id)
-    sl.deleted_at = uuid.uuid4()  # type: ignore[assignment]
+    sl.deleted_at = datetime.now(timezone.utc)
     await db.commit()

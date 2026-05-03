@@ -42,6 +42,7 @@ class LessonCreate(BaseModel):
     order_index: int = 0
     teacher_id: uuid.UUID | None = None
     converter_id: uuid.UUID | None = None
+    id: uuid.UUID | None = None  # if set, update existing lesson instead of creating
 
 
 class LessonUpdate(BaseModel):
@@ -87,6 +88,9 @@ class CourseUpdate(BaseModel):
     title: Annotated[str | None, Field(min_length=1, max_length=500)] = None
     description: str | None = None
     order_index: int | None = None
+    assigned_expert_id: uuid.UUID | None = None
+    lessons: list[LessonCreate] | None = None  # replaces full lesson list
+    delete_lesson_ids: list[uuid.UUID] | None = None
 
 
 class CourseResponse(CourseBase):
