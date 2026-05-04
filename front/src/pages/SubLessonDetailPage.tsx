@@ -542,7 +542,9 @@ export default function SubLessonDetailPage() {
         )}
         {lessonInfo && (
           <>
-            <span className="truncate max-w-[200px]">{lessonInfo.title}</span>
+            <Link to={`/lessons/${lessonInfo.id}`} className="hover:text-slate-700 transition-colors truncate max-w-[200px]">
+              {lessonInfo.title}
+            </Link>
             <ChevronRight size={14} />
           </>
         )}
