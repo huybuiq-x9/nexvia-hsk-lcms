@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,9 +17,11 @@ import { LanguageSwitcher } from '../LanguageSwitcher';
 function Sidebar({
   collapsed,
   onToggle,
+  sidebarWidth,
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  sidebarWidth: number;
 }) {
   const { t } = useTranslation();
   const { user, selectedRole, isAdmin } = useAuth();
@@ -34,9 +36,11 @@ function Sidebar({
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-white border-r border-slate-200 transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-56'
-      }`}
+      className="fixed top-0 left-0 h-full z-30 flex flex-col border-r border-slate-200/60 transition-all duration-200"
+      style={{
+        width: collapsed ? '4rem' : `${sidebarWidth}px`,
+        background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 60%, #bfdbfe 100%)',
+      }}
     >
       {/* Logo */}
       <div className="h-14 flex items-center justify-between px-3 border-b border-slate-100 shrink-0">
@@ -74,10 +78,10 @@ function Sidebar({
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              `flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
               } ${collapsed ? 'justify-center' : ''}`
             }
           >
@@ -175,16 +179,59 @@ function Header() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(224);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (collapsed) return;
+    isResizing.current = true;
+    startX.current = e.clientX;
+    startWidth.current = sidebarWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isResizing.current) return;
+    const diff = e.clientX - startX.current;
+    const newWidth = Math.min(Math.max(startWidth.current + diff, 160), 320);
+    setSidebarWidth(newWidth);
+  };
+
+  const onMouseUp = () => {
+    if (!isResizing.current) return;
+    isResizing.current = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [sidebarWidth]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} />
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} sidebarWidth={sidebarWidth} />
 
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          collapsed ? 'ml-16' : 'ml-56'
-        }`}
+        className="flex-1 flex flex-col transition-all duration-200"
+        style={{ marginLeft: collapsed ? '4rem' : `${sidebarWidth}px` }}
       >
+        {!collapsed && (
+          <div
+            onMouseDown={onMouseDown}
+            className="absolute top-0 bottom-0 z-40 w-1 cursor-col-resize hover:bg-blue-300 active:bg-blue-400 transition-colors"
+            style={{ left: collapsed ? '4rem' : `${sidebarWidth}px` }}
+          />
+        )}
+
         <Header />
         <main className="flex-1 p-6 overflow-auto">
           {children}
