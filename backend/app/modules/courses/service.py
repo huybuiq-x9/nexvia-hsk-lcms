@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -263,6 +263,12 @@ async def get_lesson(
     db: AsyncSession, lesson_id: uuid.UUID
 ) -> course_schema.LessonWithSubLessonsResponse:
     lesson = await _get_lesson_orm(db, lesson_id)
+    active_sub_lessons = [
+        _to_sublesson_response(sl)
+        for sl in (lesson.sub_lessons or [])
+        if sl.deleted_at is None
+    ]
+    active_sub_lessons.sort(key=lambda sl: sl.order_index)
     return course_schema.LessonWithSubLessonsResponse(
         id=lesson.id,
         course_id=lesson.course_id,
@@ -274,7 +280,7 @@ async def get_lesson(
         assigned_converter_id=lesson.assigned_converter_id,
         created_at=lesson.created_at,
         updated_at=lesson.updated_at,
-        sub_lessons=[_to_sublesson_response(sl) for sl in (lesson.sub_lessons or [])],
+        sub_lessons=active_sub_lessons,
     )
 
 
@@ -407,4 +413,21 @@ async def update_sublesson(
 async def delete_sublesson(db: AsyncSession, sublesson_id: uuid.UUID) -> None:
     sl = await _get_sublesson_orm(db, sublesson_id)
     sl.deleted_at = datetime.now(timezone.utc)
+    await db.commit()
+
+
+async def delete_sublesson_batch(
+    db: AsyncSession,
+    lesson_id: uuid.UUID,
+    ids: list[uuid.UUID],
+) -> None:
+    if not ids:
+        return
+    stmt = (
+        update(SubLesson)
+        .where(SubLesson.id.in_(ids))
+        .where(SubLesson.lesson_id == lesson_id)
+        .values(deleted_at=datetime.now(timezone.utc))
+    )
+    await db.execute(stmt)
     await db.commit()

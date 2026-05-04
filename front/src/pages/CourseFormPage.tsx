@@ -15,6 +15,14 @@ import { courseService, userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
 import type { ApiCourseCreate, ApiCourseUpdate, ApiUserWithRoles } from '../types/api';
 
+interface SubLessonDraft {
+  _key: string;
+  _isDeleted?: boolean;
+  title: string;
+  description: string;
+  order_index: number;
+}
+
 interface LessonDraft {
   _key: string;
   _isDeleted?: boolean;
@@ -23,6 +31,7 @@ interface LessonDraft {
   order_index: number;
   teacher_id: string;
   converter_id: string;
+  sub_lessons: SubLessonDraft[];
 }
 
 function makeKey() {
@@ -72,27 +81,54 @@ export default function CourseFormPage() {
   // Load existing course when editing
   useEffect(() => {
     if (!courseId) return;
-    courseService.getCourse(courseId)
-      .then(course => {
+    (async () => {
+      setIsLoadingCourse(true);
+      try {
+        const course = await courseService.getCourse(courseId);
+        const lessonsWithSubLessons = await Promise.all(
+          course.lessons.map(async l => {
+            try {
+              const fullLesson = await courseService.getLesson(l.id);
+              return {
+                _key: l.id,
+                title: l.title,
+                description: l.description ?? '',
+                order_index: l.order_index,
+                teacher_id: l.assigned_teacher_id ?? '',
+                converter_id: l.assigned_converter_id ?? '',
+                sub_lessons: fullLesson.sub_lessons.map(sl => ({
+                  _key: sl.id,
+                  title: sl.title,
+                  description: sl.description ?? '',
+                  order_index: sl.order_index,
+                })),
+              };
+            } catch {
+              return {
+                _key: l.id,
+                title: l.title,
+                description: l.description ?? '',
+                order_index: l.order_index,
+                teacher_id: l.assigned_teacher_id ?? '',
+                converter_id: l.assigned_converter_id ?? '',
+                sub_lessons: [] as SubLessonDraft[],
+              };
+            }
+          })
+        );
         setForm({
           title: course.title,
           description: typeof course.description === 'string' ? course.description : '',
           expert_id: course.assigned_expert_id,
-          lessons: course.lessons.map(l => ({
-            _key: l.id,
-            title: l.title,
-            description: l.description ?? '',
-            order_index: l.order_index,
-            teacher_id: l.assigned_teacher_id ?? '',
-            converter_id: l.assigned_converter_id ?? '',
-          })),
+          lessons: lessonsWithSubLessons,
         });
-      })
-      .catch(() => {
+      } catch {
         toastError(t('courses.modal.errorGeneric'));
         navigate('/courses');
-      })
-      .finally(() => setIsLoadingCourse(false));
+      } finally {
+        setIsLoadingCourse(false);
+      }
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
@@ -101,7 +137,7 @@ export default function CourseFormPage() {
       ...f,
       lessons: [
         ...f.lessons,
-        { _key: makeKey(), title: '', description: '', order_index: f.lessons.length, teacher_id: '', converter_id: '' },
+        { _key: makeKey(), title: '', description: '', order_index: f.lessons.length, teacher_id: '', converter_id: '', sub_lessons: [] },
       ],
     }));
   };
@@ -178,9 +214,10 @@ export default function CourseFormPage() {
     setIsSaving(true);
     try {
       if (isEditing && courseId) {
-        // Existing lessons (UUID _key, not deleted) — update; new lessons (random _key) — create; all marked deleted removed from list.
-        const existingLessons = form.lessons.filter(l => l._isDeleted !== true && l._key.length === 36 && l._key.includes('-'));
-        const newLessons = form.lessons.filter(l => l._isDeleted !== true && !(l._key.length === 36 && l._key.includes('-')));
+        // Existing lessons (UUID _key, not deleted) — update; new lessons (random _key) — create.
+        const visible = form.lessons.filter(l => l._isDeleted !== true);
+        const existingLessons = visible.filter(l => l._key.length === 36 && l._key.includes('-'));
+        const newLessons = visible.filter(l => !(l._key.length === 36 && l._key.includes('-')));
 
         await courseService.updateCourse(courseId, {
           title: form.title.trim(),
@@ -209,6 +246,43 @@ export default function CourseFormPage() {
           ],
           delete_lesson_ids: deletedLessonIds,
         } as ApiCourseUpdate);
+
+        // Sync sub-lessons only for existing lessons that are kept
+        const keptExistingLessonIds = existingLessons
+          .filter(l => l.title.trim())
+          .map(l => l._key);
+
+        await Promise.all(keptExistingLessonIds.map(async lessonId => {
+          const lesson = form.lessons.find(l => l._key === lessonId)!;
+          const visibleSl = lesson.sub_lessons.filter(sl => !sl._isDeleted);
+          const existingSl = visibleSl.filter(sl => sl._key.length === 36 && sl._key.includes('-'));
+          const newSl = visibleSl.filter(sl => !(sl._key.length === 36 && sl._key.includes('-')));
+          const deletedSlIds = lesson.sub_lessons
+            .filter(sl => sl._isDeleted && sl._key.length === 36 && sl._key.includes('-'))
+            .map(sl => sl._key);
+
+          // Update existing, create new, batch delete
+          await Promise.all([
+            ...existingSl.map((sl, idx) =>
+              courseService.updateSubLesson(sl._key, {
+                title: sl.title.trim(),
+                description: sl.description.trim() || null,
+                order_index: idx,
+              })
+            ),
+            ...newSl.map((sl, idx) =>
+              courseService.createSubLesson(lessonId, {
+                title: sl.title.trim(),
+                description: sl.description.trim() || null,
+                order_index: existingSl.length + idx,
+              })
+            ),
+          ]);
+          if (deletedSlIds.length > 0) {
+            await courseService.deleteSubLessonBatch(lessonId, deletedSlIds);
+          }
+        }));
+
         success(t('courses.modal.updateSuccess'));
       } else {
         const payload: ApiCourseCreate = {

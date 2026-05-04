@@ -176,6 +176,10 @@ export const courseService = {
   async deleteSubLesson(sublessonId: string): Promise<void> {
     await client.delete(`/courses/sub-lessons/${sublessonId}`);
   },
+
+  async deleteSubLessonBatch(lessonId: string, ids: string[]): Promise<void> {
+    await client.post(`/courses/lessons/${lessonId}/sub-lessons/batch-delete`, ids);
+  },
 };
 
 // ─── System ───────────────────────────────────────────────────────────────────

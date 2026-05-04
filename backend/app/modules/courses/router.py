@@ -160,3 +160,17 @@ async def delete_sublesson(
     current_user: AdminOnly,
 ):
     await service.delete_sublesson(db, sublesson_id)
+
+
+@router.post(
+    "/lessons/{lesson_id}/sub-lessons/batch-delete",
+    status_code=204,
+)
+async def delete_sublesson_batch(
+    lesson_id: uuid.UUID,
+    ids: list[uuid.UUID],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: AdminOnly,
+):
+    for sublesson_id in ids:
+        await service.delete_sublesson(db, sublesson_id)
