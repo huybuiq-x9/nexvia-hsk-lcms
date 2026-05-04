@@ -5,274 +5,14 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
-  Plus,
-  FileText,
   Users,
   User,
   Pencil,
-  AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { courseService, userService } from '../services';
-import { useToast } from '../contexts/ToastContext';
 import type { ApiCourseWithLessons, ApiLessonWithSubLessons, ApiUserWithRoles } from '../types/api';
 import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS } from '../types/api';
-
-// ─── Create SubLesson Modal ────────────────────────────────────────────────────
-
-const CreateSubLessonModal = ({
-  lessonId,
-  lessonTitle,
-  onClose,
-  onCreated,
-}: {
-  lessonId: string;
-  lessonTitle: string;
-  onClose: () => void;
-  onCreated: (newSubLesson: ApiLessonWithSubLessons) => void;
-}) => {
-  const { t } = useTranslation();
-  const { success, error: toastError } = useToast();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      setFormError(t('courses.modal.validationLessonName'));
-      return;
-    }
-    setFormError('');
-    setIsSaving(true);
-    try {
-      const sl = await courseService.createSubLesson(lessonId, {
-        title: title.trim(),
-        description: description.trim() || null,
-        order_index: 0,
-      });
-      success(t('courses.modal.createSubLessonSuccess'));
-      onClose();
-      const data = await courseService.getLesson(lessonId);
-      onCreated(data);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || t('courses.modal.errorGeneric');
-      toastError(t('courses.modal.errorGeneric'), msg);
-    } finally { setIsSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">{lessonTitle}</h2>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {formError && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
-              <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{formError}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="label">
-              {t('courses.modal.subLessonName')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={t('courses.modal.subLessonNamePlaceholder')}
-              className="input"
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="label">{t('courses.modal.description') || 'Mô tả'}</label>
-            <textarea
-              value={String(description ?? '')}
-              onChange={e => setDescription(e.target.value)}
-              placeholder={t('courses.modal.descriptionPlaceholder')}
-              className="input resize-none"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1 justify-center">
-              {t('courses.modal.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="btn btn-primary flex-1 justify-center disabled:opacity-50"
-            >
-              {isSaving
-                ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : t('courses.modal.submitCreate')
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// ─── Assign Modal ──────────────────────────────────────────────────────────────
-
-const AssignModal = ({
-  lessonId,
-  currentTeacherId,
-  currentConverterId,
-  onClose,
-  onAssigned,
-}: {
-  lessonId: string;
-  currentTeacherId: string | null;
-  currentConverterId: string | null;
-  onClose: () => void;
-  onAssigned: () => void;
-}) => {
-  const { t } = useTranslation();
-  const { success } = useToast();
-  const [teachers, setTeachers] = useState<ApiUserWithRoles[]>([]);
-  const [converters, setConverters] = useState<ApiUserWithRoles[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [teacherId, setTeacherId] = useState<string>(currentTeacherId ?? '');
-  const [converterId, setConverterId] = useState<string>(currentConverterId ?? '');
-
-  useEffect(() => {
-    Promise.all([
-      userService.listUsers({ limit: 100, role: 'teacher' }),
-      userService.listUsers({ limit: 100, role: 'converter' }),
-    ]).then(([tRes, cRes]) => {
-      setTeachers(tRes.items);
-      setConverters(cRes.items);
-    }).catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  const handleAssign = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      await courseService.assignLesson(lessonId, {
-        teacher_id: teacherId || null,
-        converter_id: converterId || null,
-      });
-      success(t('courses.modal.assignSuccess'));
-      onAssigned();
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || t('courses.modal.errorGeneric');
-      setError(msg);
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">{t('courses.modal.titleAssignUsers')}</h2>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
-              <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="label">
-              <span className="flex items-center gap-1">
-                <Users size={12} />
-                {t('courses.modal.teacher')}
-              </span>
-            </label>
-            {isLoading
-              ? <div className="h-9 bg-slate-50 rounded-md animate-pulse" />
-              : (
-                <select
-                  value={teacherId}
-                  onChange={e => setTeacherId(e.target.value)}
-                  className="input"
-                >
-                  <option value="">{t('courses.modal.selectTeacher')}</option>
-                  {teachers.map(u => (
-                    <option key={u.id} value={u.id}>{u.full_name}</option>
-                  ))}
-                </select>
-              )
-            }
-          </div>
-
-          <div>
-            <label className="label">
-              <span className="flex items-center gap-1">
-                <User size={12} />
-                {t('courses.modal.converter')}
-              </span>
-            </label>
-            {isLoading
-              ? <div className="h-9 bg-slate-50 rounded-md animate-pulse" />
-              : (
-                <select
-                  value={converterId}
-                  onChange={e => setConverterId(e.target.value)}
-                  className="input"
-                >
-                  <option value="">{t('courses.modal.selectConverter')}</option>
-                  {converters.map(u => (
-                    <option key={u.id} value={u.id}>{u.full_name}</option>
-                  ))}
-                </select>
-              )
-            }
-          </div>
-        </div>
-
-        <div className="flex gap-3 px-4 pb-4">
-          <button onClick={onClose} className="btn btn-secondary flex-1 justify-center">{t('courses.modal.cancel')}</button>
-          <button
-            onClick={handleAssign}
-            disabled={saving}
-            className="btn btn-primary flex-1 justify-center disabled:opacity-50"
-          >
-            {saving
-              ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : t('courses.modal.submitUpdate')
-            }
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -299,11 +39,9 @@ export default function CourseDetailPage() {
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [openLessons, setOpenLessons] = useState<Set<string>>(new Set());
-  const [assignLesson, setAssignLesson] = useState<{ id: string; teacher_id: string | null; converter_id: string | null } | null>(null);
-  const [createSubLessonFor, setCreateSubLessonFor] = useState<string | null>(null);
   const [userCache, setUserCache] = useState<Record<string, ApiUserWithRoles>>({});
   const [userCacheLoading, setUserCacheLoading] = useState<Set<string>>(new Set());
+  const [openLessons, setOpenLessons] = useState<Set<string>>(new Set());
   const [lessonsData, setLessonsData] = useState<Record<string, ApiLessonWithSubLessons>>({});
 
   const loadUser = useCallback((id: string) => {
@@ -321,41 +59,45 @@ export default function CourseDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshLesson = useCallback(async (lessonId: string) => {
-    const data = await courseService.getLesson(lessonId);
-    setLessonsData(prev => ({ ...prev, [lessonId]: data }));
-  }, []);
-
   useEffect(() => {
     if (!courseId) return;
-    courseService.getCourse(courseId)
-      .then(c => {
+    (async () => {
+      setIsLoading(true);
+      try {
+        const c = await courseService.getCourse(courseId);
         setCourse(c);
         loadUser(c.assigned_expert_id);
         c.lessons.forEach(l => {
           if (l.assigned_teacher_id) loadUser(l.assigned_teacher_id);
           if (l.assigned_converter_id) loadUser(l.assigned_converter_id);
         });
-      })
-      .catch(() => { setCourse(null); })
-      .finally(() => { setIsLoading(false); });
+      } catch {
+        setCourse(null);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
-  const toggleLesson = useCallback(async (lessonId: string) => {
+  const loadLesson = useCallback(async (lessonId: string) => {
+    if (lessonsData[lessonId]) return;
+    const data = await courseService.getLesson(lessonId);
+    setLessonsData(prev => ({ ...prev, [lessonId]: data }));
+  }, [lessonsData]);
+
+  const toggleLesson = useCallback((lessonId: string) => {
     setOpenLessons(prev => {
       const next = new Set(prev);
       if (next.has(lessonId)) {
         next.delete(lessonId);
       } else {
         next.add(lessonId);
-        if (!lessonsData[lessonId]) {
-          refreshLesson(lessonId);
-        }
+        loadLesson(lessonId);
       }
       return next;
     });
-  }, [lessonsData, refreshLesson]);
+  }, [loadLesson]);
 
   if (isLoading) {
     return (
@@ -468,35 +210,44 @@ export default function CourseDetailPage() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {course.lessons.map((lesson, idx) => {
+            {course.lessons.map((lesson) => {
               const isOpen = openLessons.has(lesson.id);
-              const lessonData = lessonsData[lesson.id];
+              const subLessons = lessonsData[lesson.id]?.sub_lessons ?? [];
               const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
               const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
-              const subLessons = lessonData?.sub_lessons ?? [];
 
               return (
                 <div key={lesson.id}>
                   {/* Lesson row */}
-                  <button
-                    onClick={() => toggleLesson(lesson.id)}
-                    className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                  <div
+                    onClick={() => navigate(`/lessons/${lesson.id}`)}
+                    className="flex items-center gap-3 px-5 py-4 hover:bg-blue-50/40 cursor-pointer transition-colors"
                   >
-                    {isOpen
-                      ? <ChevronDown size={16} className="text-slate-400 shrink-0" />
-                      : <ChevronRight size={16} className="text-slate-400 shrink-0" />
-                    }
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleLesson(lesson.id); }}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-blue-100 shrink-0 transition-colors"
+                      title="Mở rộng"
+                    >
+                      {isOpen
+                        ? <ChevronDown size={16} className="text-slate-500" />
+                        : <ChevronRight size={16} className="text-slate-400" />
+                      }
+                    </button>
+
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-slate-800">{idx + 1}. {lesson.title}</div>
+                      <span className="text-sm font-medium text-slate-800 hover:text-blue-600 transition-colors">
+                        {lesson.title}
+                      </span>
                       {lesson.description && (
                         <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{lesson.description}</div>
                       )}
                     </div>
+
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
                       {lesson.status}
                     </span>
                     <span className="text-xs text-slate-400 shrink-0">{lesson.sub_lessons_count ?? 0} {t('courses.subLessons')}</span>
-                  </button>
+                  </div>
 
                   {/* Sub-lessons panel */}
                   {isOpen && (
@@ -506,27 +257,24 @@ export default function CourseDetailPage() {
                           {t('courses.noSubLessons')}
                         </div>
                       ) : (
-                        subLessons.map((sl, slIdx) => (
+                        subLessons.map((sl: { id: string; title: string; description?: string | null; status: string }, slIdx: number) => (
                           <Link
                             key={sl.id}
                             to={`/sub-lessons/${sl.id}`}
-                            className="flex items-center gap-3 px-5 py-3 pl-12 hover:bg-white transition-colors border-b border-slate-100 last:border-0 group cursor-pointer"
+                            className="flex items-center gap-3 px-5 py-3 pl-14 hover:bg-white transition-colors border-b border-slate-100 last:border-0 group"
                           >
                             <span className="text-xs text-slate-400 w-5 shrink-0">{slIdx + 1}</span>
-                            <FileText size={14} className="text-slate-400 shrink-0" />
+                            <FileText size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm text-slate-700 group-hover:text-blue-600 transition-colors truncate">
-                                {sl.title}
-                              </div>
+                              <div className="text-sm text-slate-700 group-hover:text-blue-600 font-medium transition-colors truncate">{sl.title}</div>
                               {sl.description && (
                                 <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{sl.description}</div>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
-                                {sl.status}
-                              </span>
-                            </div>
+                            <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
+                              {sl.status}
+                            </span>
                           </Link>
                         ))
                       )}
@@ -535,34 +283,11 @@ export default function CourseDetailPage() {
                       <div className="px-5 py-3 bg-white border-t border-slate-100 flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <Users size={11} />
-                          {teacher ? <UserBadge user={teacher} /> : (
-                            <span className="text-slate-400 italic">{t('courses.modal.selectTeacher')}</span>
-                          )}
+                          <UserBadge user={teacher} />
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <User size={11} />
-                          {converter ? <UserBadge user={converter} /> : (
-                            <span className="text-slate-400 italic">{t('courses.modal.selectConverter')}</span>
-                          )}
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            onClick={() => setCreateSubLessonFor(lesson.id)}
-                            className="px-3 py-1.5 text-xs rounded-md border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 font-medium transition-colors flex items-center gap-1.5"
-                          >
-                            <Plus size={12} />
-                            {t('courses.modal.addSubLesson')}
-                          </button>
-                          <button
-                            onClick={() => setAssignLesson({
-                              id: lesson.id,
-                              teacher_id: lesson.assigned_teacher_id,
-                              converter_id: lesson.assigned_converter_id,
-                            })}
-                            className="px-3 py-1.5 text-xs rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium transition-colors"
-                          >
-                            {t('courses.modal.titleAssignUsers')}
-                          </button>
+                          <UserBadge user={converter} />
                         </div>
                       </div>
                     </div>
@@ -574,45 +299,6 @@ export default function CourseDetailPage() {
         )}
       </div>
 
-      {/* Assign modal */}
-      {assignLesson && (
-        <AssignModal
-          key={assignLesson.id}
-          lessonId={assignLesson.id}
-          currentTeacherId={assignLesson.teacher_id}
-          currentConverterId={assignLesson.converter_id}
-          onClose={() => setAssignLesson(null)}
-          onAssigned={() => {
-            setAssignLesson(null);
-            if (courseId) {
-              courseService.getCourse(courseId).then(c => {
-                setCourse(c);
-                c.lessons.forEach(l => {
-                  if (l.assigned_teacher_id) loadUser(l.assigned_teacher_id);
-                  if (l.assigned_converter_id) loadUser(l.assigned_converter_id);
-                });
-              });
-            }
-          }}
-        />
-      )}
-
-      {/* Create sub-lesson modal */}
-      {createSubLessonFor && (
-        <CreateSubLessonModal
-          lessonId={createSubLessonFor}
-          lessonTitle={course?.lessons.find(l => l.id === createSubLessonFor)?.title ?? ''}
-          onClose={() => setCreateSubLessonFor(null)}
-          onCreated={(newData) => {
-            setCreateSubLessonFor(null);
-            setLessonsData(prev => ({ ...prev, [createSubLessonFor]: newData }));
-            setOpenLessons(prev => new Set([...prev, createSubLessonFor]));
-            if (courseId) {
-              courseService.getCourse(courseId).then(c => setCourse(c)).catch(() => {});
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
