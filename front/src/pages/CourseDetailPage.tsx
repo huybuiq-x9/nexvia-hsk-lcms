@@ -11,6 +11,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { courseService, userService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 import type { ApiCourseWithLessons, ApiLessonWithSubLessons, ApiUserWithRoles } from '../types/api';
 import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS } from '../types/api';
 
@@ -36,6 +37,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
+  const { isAdmin } = useAuth();
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -143,6 +145,7 @@ export default function CourseDetailPage() {
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{course.description}</p>
           )}
         </div>
+        {isAdmin && (
         <button
           onClick={() => navigate(`/courses/edit/${course.id}`)}
           className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
@@ -150,6 +153,7 @@ export default function CourseDetailPage() {
           <Pencil size={14} />
           {t('courses.edit')}
         </button>
+        )}
       </div>
 
       {/* Course info card */}

@@ -15,6 +15,7 @@ interface AuthContextValue extends AuthState {
   selectRole: (role: ApiRole) => void;
   selectedRole: ApiRole | null;
   isAdmin: boolean;
+  isExpert: boolean;
   error: string | null;
   clearError: () => void;
 }
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearError = useCallback(() => setError(null), []);
 
   const isAdmin = state.user?.roles.includes('admin') ?? false;
+  const isExpert = state.user?.roles.includes('expert') ?? false;
 
   return (
     <AuthContext.Provider
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         selectRole,
         isAdmin,
+        isExpert,
         error,
         clearError,
       }}

@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react';
 import { courseService, userService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 import type { ApiCourseWithLessons, ApiUserWithRoles } from '../types/api';
 import { COURSE_STATUS_COLORS } from '../types/api';
 
@@ -42,6 +43,7 @@ const UserAvatar = ({ name }: { name: string }) => {
 export default function CoursesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -91,6 +93,7 @@ export default function CoursesPage() {
             {isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}
           </p>
         </div>
+        {isAdmin && (
         <button
           onClick={() => navigate('/courses/create')}
           className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
@@ -98,6 +101,7 @@ export default function CoursesPage() {
           <Plus size={15} />
           <span>{t('courses.add')}</span>
         </button>
+        )}
       </div>
 
       {/* Search bar */}

@@ -3,10 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ChevronRight,
-  ChevronLeft,
-  Send,
   Check,
-  XCircle,
   Upload,
   FileText,
   HelpCircle,
@@ -14,16 +11,15 @@ import {
   History,
   Plus,
   AlertCircle,
-  X,
   Trash2,
   Download,
-  Eye,
   FileSpreadsheet,
   Presentation,
   File,
 } from 'lucide-react';
 import { courseService, documentService } from '../services';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import type {
   ApiSubLessonResponse,
   ApiDocumentWithUploader,
@@ -237,9 +233,11 @@ const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 MB
 const DocumentsTab = ({
   subLessonId,
   onRefresh,
+  canUpload,
 }: {
   subLessonId: string;
   onRefresh: () => void;
+  canUpload?: boolean;
 }) => {
   const { t } = useTranslation();
   const { success, error: toastError } = useToast();
@@ -345,6 +343,7 @@ const DocumentsTab = ({
   return (
     <div className="space-y-4">
       {/* Upload area */}
+      {canUpload !== false && (
       <div
         className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
           dragActive
@@ -378,6 +377,7 @@ const DocumentsTab = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Document list */}
       {documents.length === 0 ? (
@@ -421,6 +421,7 @@ const DocumentsTab = ({
                 >
                   <Download size={15} />
                 </button>
+                {canUpload !== false && (
                 <button
                   onClick={() => setDeleteId(doc.id)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
@@ -428,6 +429,7 @@ const DocumentsTab = ({
                 >
                   <Trash2 size={15} />
                 </button>
+                )}
               </div>
             </div>
           ))}
@@ -473,6 +475,8 @@ export default function SubLessonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
+  const { isAdmin, selectedRole } = useAuth();
+  const canUploadDocuments = isAdmin || selectedRole === 'teacher' || selectedRole === 'converter';
 
   const [subLesson, setSubLesson] = useState<ApiSubLessonResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -617,6 +621,7 @@ export default function SubLessonDetailPage() {
             <DocumentsTab
               subLessonId={subLesson.id}
               onRefresh={loadSubLesson}
+              canUpload={canUploadDocuments}
             />
           )}
 

@@ -8,11 +8,29 @@ import {
   Users,
   Bell,
   ChevronLeft,
+  ChevronDown,
+  ChevronRight,
   LogOut,
   Shield,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { LanguageSwitcher } from '../LanguageSwitcher';
+
+interface NavSubItem {
+  labelKey: string;
+  to: string;
+  adminOnly?: boolean;
+  expertOnly?: boolean;
+}
+
+interface NavItem {
+  labelKey: string;
+  to: string;
+  icon: React.ReactNode;
+  adminOnly?: boolean;
+  children?: NavSubItem[];
+}
 
 function Sidebar({
   collapsed,
@@ -24,15 +42,48 @@ function Sidebar({
   sidebarWidth: number;
 }) {
   const { t } = useTranslation();
-  const { user, selectedRole, isAdmin } = useAuth();
+  const { user, selectedRole, isAdmin, isExpert } = useAuth();
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['/courses']));
 
-  const navItems = [
+  const toggleGroup = (key: string) => {
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const baseNavItems: NavItem[] = [
     { to: '/dashboard', icon: <LayoutDashboard size={18} />, labelKey: 'nav.dashboard' },
-    { to: '/courses', icon: <BookOpen size={18} />, labelKey: 'nav.courses' },
+    {
+      to: '/courses',
+      icon: <BookOpen size={18} />,
+      labelKey: 'nav.content',
+      children: [
+        { labelKey: 'nav.courses', to: '/courses', expertOnly: true },
+        { labelKey: 'nav.lessons', to: '/lessons' },
+        { labelKey: 'nav.subLessons', to: '/sub-lessons' },
+      ],
+    },
     { to: '/question-bank', icon: <HelpCircle size={18} />, labelKey: 'nav.questionBank' },
     { to: '/users', icon: <Users size={18} />, labelKey: 'nav.users', adminOnly: true },
     { to: '/notifications', icon: <Bell size={18} />, labelKey: 'nav.notifications' },
-  ].filter(item => !item.adminOnly || isAdmin);
+  ];
+
+  const isTeacherConverter = selectedRole === 'teacher' || selectedRole === 'converter';
+  const navItems = baseNavItems.filter(item => {
+    if (item.adminOnly) return isAdmin;
+    if (isTeacherConverter) return false;
+    return true;
+  });
+
+  const isActive = (to: string) => {
+    return window.location.pathname === to || window.location.pathname.startsWith(to + '/');
+  };
 
   return (
     <aside
@@ -73,22 +124,92 @@ function Sidebar({
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-              } ${collapsed ? 'justify-center' : ''}`
-            }
-          >
-            <span className="shrink-0">{item.icon}</span>
-            {!collapsed && <span>{t(item.labelKey)}</span>}
-          </NavLink>
-        ))}
+        {navItems.map(item => {
+          if (!item.children) {
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end
+                className={({ isActive: active }) =>
+                  `flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    active
+                      ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                  } ${collapsed ? 'justify-center' : ''}`
+                }
+              >
+                <span className="shrink-0">{item.icon}</span>
+                {!collapsed && <span>{t(item.labelKey)}</span>}
+              </NavLink>
+            );
+          }
+
+          const groupKey = item.to;
+          const isOpen = openGroups.has(groupKey);
+          const visibleChildren = item.children?.filter(c => {
+            if (c.adminOnly) return isAdmin;
+            if (c.expertOnly) return isExpert || isAdmin;
+            return true;
+          }) ?? [];
+          if (visibleChildren.length === 0) return null;
+          const hasActiveChild = visibleChildren.some(c => isActive(c.to));
+
+          return (
+            <div
+              key={groupKey}
+              onMouseEnter={() => setOpenGroups(prev => new Set([...prev, groupKey]))}
+              onMouseLeave={() => {
+                if (!hasActiveChild) {
+                  setOpenGroups(prev => { const next = new Set(prev); next.delete(groupKey); return next; });
+                }
+              }}
+            >
+              <button
+                onClick={() => toggleGroup(groupKey)}
+                className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  hasActiveChild
+                    ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                } ${collapsed ? 'justify-center' : ''}`}
+              >
+                <span className="shrink-0">{item.icon}</span>
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{t(item.labelKey)}</span>
+                    {isOpen ? (
+                      <ChevronDown size={14} className="shrink-0" />
+                    ) : (
+                      <ChevronRight size={14} className="shrink-0" />
+                    )}
+                  </>
+                )}
+              </button>
+
+              {!collapsed && isOpen && (
+                <div className="ml-3 mt-1 space-y-0.5 pl-3">
+                  {visibleChildren.map(child => (
+                    <NavLink
+                      key={child.to}
+                      to={child.to}
+                      end
+                      className={({ isActive: active }) =>
+                        `flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                          active
+                            ? 'text-blue-700 bg-blue-50'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`
+                      }
+                    >
+                      <Layers size={13} className="shrink-0 opacity-60" />
+                      <span>{t(child.labelKey)}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* User section */}

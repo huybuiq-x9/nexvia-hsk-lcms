@@ -123,6 +123,36 @@ export interface ApiLessonBrief {
   sub_lessons_count: number;
 }
 
+export interface ApiLessonListItem extends ApiLessonBrief {
+  course_title: string | null;
+}
+
+export interface ApiLessonListResponse {
+  total: number;
+  items: ApiLessonListItem[];
+}
+
+export interface ApiSubLessonListItem {
+  id: string;
+  lesson_id: string;
+  title: string;
+  description: string | null;
+  status: SubLessonStatus;
+  order_index: number;
+  submitted_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  lesson_title: string | null;
+  course_id: string | null;
+  course_title: string | null;
+}
+
+export interface ApiSubLessonListResponse {
+  total: number;
+  items: ApiSubLessonListItem[];
+}
+
 export interface ApiLessonWithSubLessons extends ApiLessonResponse {
   sub_lessons: ApiSubLessonResponse[];
 }
@@ -139,6 +169,16 @@ export interface ApiLessonCreate {
 export interface ApiLessonAssign {
   teacher_id?: string | null;
   converter_id?: string | null;
+}
+
+export interface ApiSubLessonUpdate {
+  title?: string;
+  description?: string | null;
+  order_index?: number;
+}
+
+export interface ApiSubLessonBatchDelete {
+  ids: string[];
 }
 
 export interface ApiCourseResponse {

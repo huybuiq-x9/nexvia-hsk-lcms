@@ -122,3 +122,40 @@ class CourseWithLessonsResponse(CourseResponse):
 class CourseListResponse(BaseModel):
     total: int
     items: list[CourseWithLessonsResponse]
+
+
+# ─── Standalone Lessons Page ──────────────────────────────────────────────────
+
+class LessonListItem(LessonBrief):
+    model_config = ConfigDict(from_attributes=True)
+    course_title: str | None = None
+
+
+class LessonListResponse(BaseModel):
+    total: int
+    items: list[LessonListItem]
+
+
+# ─── Standalone SubLessons Page ───────────────────────────────────────────────
+
+class SubLessonListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    lesson_id: uuid.UUID
+    title: str
+    description: str | None
+    status: str
+    order_index: int
+    submitted_at: datetime | None
+    approved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    # Enriched from parent lesson
+    lesson_title: str | None = None
+    course_id: uuid.UUID | None = None
+    course_title: str | None = None
+
+
+class SubLessonListResponse(BaseModel):
+    total: int
+    items: list[SubLessonListItem]

@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, AdminOnly
+from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson, TeacherAssignedToDocument
 from app.modules.courses import service, schema as course_schema
 
 router = APIRouter()
@@ -11,21 +11,21 @@ router = APIRouter()
 @router.get("/", response_model=course_schema.CourseListResponse)
 async def list_courses(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
 ):
-    return await service.list_courses(db, skip, limit, search)
+    return await service.list_courses(db, current_user, skip, limit, search)
 
 
 @router.get("/{course_id}", response_model=course_schema.CourseWithLessonsResponse)
 async def get_course(
     course_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: CurrentUser,
 ):
-    return await service.get_course(db, course_id)
+    return await service.get_course(db, current_user, course_id)
 
 
 @router.post("/", response_model=course_schema.CourseWithLessonsResponse, status_code=201)
@@ -56,6 +56,24 @@ async def delete_course(
     await service.delete_course(db, course_id)
 
 
+# ─── Standalone Lessons List ───────────────────────────────────────────────────
+
+@router.get(
+    "/lessons/",
+    response_model=course_schema.LessonListResponse,
+)
+async def list_lessons(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: CurrentUser,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = None,
+    course_id: uuid.UUID | None = None,
+    status: str | None = None,
+):
+    return await service.list_lessons(db, current_user, skip, limit, search, course_id, status)
+
+
 # ─── Lesson routes (nested under course) ──────────────────────────────────────
 
 @router.get(
@@ -65,7 +83,7 @@ async def delete_course(
 async def get_lesson(
     lesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: CurrentUser,
 ):
     return await service.get_lesson(db, lesson_id)
 
@@ -89,7 +107,7 @@ async def update_lesson(
     lesson_id: uuid.UUID,
     data: course_schema.LessonUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToLesson,
 ):
     return await service.update_lesson(db, lesson_id, data)
 
@@ -108,9 +126,28 @@ async def assign_lesson(
 async def delete_lesson(
     lesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToLesson,
 ):
     await service.delete_lesson(db, lesson_id)
+
+
+# ─── Standalone SubLessons List ───────────────────────────────────────────────
+
+@router.get(
+    "/sub-lessons/",
+    response_model=course_schema.SubLessonListResponse,
+)
+async def list_sub_lessons(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: CurrentUser,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = None,
+    course_id: uuid.UUID | None = None,
+    lesson_id: uuid.UUID | None = None,
+    status: str | None = None,
+):
+    return await service.list_sub_lessons(db, current_user, skip, limit, search, course_id, lesson_id, status)
 
 
 # ─── SubLesson routes ─────────────────────────────────────────────────────────
@@ -122,7 +159,7 @@ async def delete_lesson(
 async def get_sublesson(
     sublesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: CurrentUser,
 ):
     return await service.get_sublesson(db, sublesson_id)
 
@@ -136,7 +173,7 @@ async def create_sublesson(
     lesson_id: uuid.UUID,
     data: course_schema.SubLessonCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToLesson,
 ):
     return await service.create_sublesson(db, lesson_id, data)
 
@@ -148,7 +185,7 @@ async def update_sublesson(
     sublesson_id: uuid.UUID,
     data: course_schema.SubLessonUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToSubLesson,
 ):
     return await service.update_sublesson(db, sublesson_id, data)
 
@@ -157,7 +194,7 @@ async def update_sublesson(
 async def delete_sublesson(
     sublesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToSubLesson,
 ):
     await service.delete_sublesson(db, sublesson_id)
 
@@ -170,7 +207,7 @@ async def delete_sublesson_batch(
     lesson_id: uuid.UUID,
     ids: list[uuid.UUID],
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: AdminOnly,
+    current_user: TeacherAssignedToLesson,
 ):
     for sublesson_id in ids:
         await service.delete_sublesson(db, sublesson_id)

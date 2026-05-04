@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from fastapi import HTTPException
 from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -127,10 +128,13 @@ async def _get_user_orm(db: AsyncSession, user_id: uuid.UUID) -> User:
 
 async def list_courses(
     db: AsyncSession,
+    current_user,
     skip: int = 0,
     limit: int = 20,
     search: str | None = None,
 ) -> course_schema.CourseListResponse:
+    roles = _user_roles(current_user)
+
     query = (
         select(Course)
         .options(selectinload(Course.lessons).selectinload(Lesson.sub_lessons))
@@ -139,6 +143,14 @@ async def list_courses(
 
     if search:
         query = query.where(Course.title.ilike(f"%{search}%"))
+
+    if "admin" not in roles:
+        if "expert" in roles:
+            query = query.where(Course.assigned_expert_id == current_user.id)
+        elif "teacher" in roles or "converter" in roles:
+            return course_schema.CourseListResponse(total=0, items=[])
+        else:
+            return course_schema.CourseListResponse(total=0, items=[])
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -154,9 +166,24 @@ async def list_courses(
 
 
 async def get_course(
-    db: AsyncSession, course_id: uuid.UUID
+    db: AsyncSession,
+    current_user,
+    course_id: uuid.UUID,
 ) -> course_schema.CourseWithLessonsResponse:
+    roles = _user_roles(current_user)
     course = await _get_course_orm(db, course_id)
+
+    if "admin" not in roles:
+        if "expert" in roles:
+            if course.assigned_expert_id != current_user.id:
+                raise HTTPException(status_code=403, detail="You do not have access to this course")
+        elif "teacher" in roles:
+            # teacher has access via lesson, handled at lesson level
+            pass
+        elif "converter" in roles:
+            pass
+        else:
+            raise HTTPException(status_code=403, detail="You do not have access to this course")
     return _to_course_with_lessons(course)
 
 
@@ -431,3 +458,156 @@ async def delete_sublesson_batch(
     )
     await db.execute(stmt)
     await db.commit()
+
+
+# ─── Role-Based Access Helpers ────────────────────────────────────────────────
+
+def _user_roles(user) -> set[str]:
+    return {r.role for r in user.roles if r.revoked_at is None}
+
+
+# ─── Standalone Lessons List ───────────────────────────────────────────────────
+
+async def list_lessons(
+    db: AsyncSession,
+    current_user,
+    skip: int = 0,
+    limit: int = 20,
+    search: str | None = None,
+    course_id: uuid.UUID | None = None,
+    status: str | None = None,
+) -> course_schema.LessonListResponse:
+    roles = _user_roles(current_user)
+
+    query = (
+        select(Lesson)
+        .options(
+            selectinload(Lesson.course),
+            selectinload(Lesson.sub_lessons),
+        )
+        .where(Lesson.deleted_at.is_(None))
+    )
+
+    if search:
+        query = query.where(Lesson.title.ilike(f"%{search}%"))
+
+    if course_id is not None:
+        query = query.where(Lesson.course_id == course_id)
+
+    if status is not None:
+        query = query.where(Lesson.status == status)
+
+    # Role-based filtering
+    if "admin" not in roles:
+        if "expert" in roles:
+            query = query.where(Lesson.course.has(assigned_expert_id=current_user.id))
+        elif "teacher" in roles:
+            query = query.where(Lesson.assigned_teacher_id == current_user.id)
+        elif "converter" in roles:
+            query = query.where(Lesson.assigned_converter_id == current_user.id)
+        else:
+            # No relevant role — return empty
+            return course_schema.LessonListResponse(total=0, items=[])
+
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    query = query.offset(skip).limit(limit).order_by(Lesson.created_at.desc())
+    result = await db.execute(query)
+    lessons = list(result.scalars().all())
+
+    items = []
+    for lesson in lessons:
+        active_sub = [sl for sl in (lesson.sub_lessons or []) if sl.deleted_at is None]
+        items.append(course_schema.LessonListItem(
+            id=lesson.id,
+            title=lesson.title,
+            description=lesson.description,
+            status=lesson.status,
+            order_index=lesson.order_index,
+            assigned_teacher_id=lesson.assigned_teacher_id,
+            assigned_converter_id=lesson.assigned_converter_id,
+            sub_lessons_count=len(active_sub),
+            course_title=lesson.course.title if lesson.course else None,
+        ))
+
+    return course_schema.LessonListResponse(total=total, items=items)
+
+
+# ─── Standalone SubLessons List ───────────────────────────────────────────────
+
+async def list_sub_lessons(
+    db: AsyncSession,
+    current_user,
+    skip: int = 0,
+    limit: int = 20,
+    search: str | None = None,
+    course_id: uuid.UUID | None = None,
+    lesson_id: uuid.UUID | None = None,
+    status: str | None = None,
+) -> course_schema.SubLessonListResponse:
+    roles = _user_roles(current_user)
+
+    query = (
+        select(SubLesson)
+        .options(
+            selectinload(SubLesson.lesson).selectinload(Lesson.course),
+        )
+        .where(SubLesson.deleted_at.is_(None))
+    )
+
+    if search:
+        query = query.where(SubLesson.title.ilike(f"%{search}%"))
+
+    if lesson_id is not None:
+        query = query.where(SubLesson.lesson_id == lesson_id)
+
+    if course_id is not None:
+        query = query.where(SubLesson.lesson.has(Lesson.course_id == course_id))
+
+    if status is not None:
+        query = query.where(SubLesson.status == status)
+
+    # Role-based filtering
+    if "admin" not in roles:
+        if "expert" in roles:
+            query = query.where(
+                SubLesson.lesson.has(
+                    Lesson.course.has(assigned_expert_id=current_user.id)
+                )
+            )
+        elif "teacher" in roles:
+            query = query.where(SubLesson.lesson.has(assigned_teacher_id=current_user.id))
+        elif "converter" in roles:
+            query = query.where(SubLesson.lesson.has(assigned_converter_id=current_user.id))
+        else:
+            return course_schema.SubLessonListResponse(total=0, items=[])
+
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    query = query.offset(skip).limit(limit).order_by(SubLesson.created_at.desc())
+    result = await db.execute(query)
+    sublessons = list(result.scalars().all())
+
+    items = []
+    for sl in sublessons:
+        lesson = sl.lesson
+        course = lesson.course if lesson else None
+        items.append(course_schema.SubLessonListItem(
+            id=sl.id,
+            lesson_id=sl.lesson_id,
+            title=sl.title,
+            description=sl.description,
+            status=sl.status,
+            order_index=sl.order_index,
+            submitted_at=sl.submitted_at,
+            approved_at=sl.approved_at,
+            created_at=sl.created_at,
+            updated_at=sl.updated_at,
+            lesson_title=lesson.title if lesson else None,
+            course_id=course.id if course else None,
+            course_title=course.title if course else None,
+        ))
+
+    return course_schema.SubLessonListResponse(total=total, items=items)
