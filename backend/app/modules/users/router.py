@@ -1,6 +1,6 @@
 from typing import Annotated
 import uuid
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, CurrentUser, AdminOnly
 from app.modules.users import schema as user_schema
@@ -56,7 +56,7 @@ async def get_user(
     svc: Annotated[UserService, Depends(get_user_service)],
     current_user: CurrentUser,
 ):
-    return await svc.get_by_id(user_id)
+    return await svc.get_user_by_id(user_id)
 
 
 @router.post("/", response_model=user_schema.UserResponse, status_code=201)

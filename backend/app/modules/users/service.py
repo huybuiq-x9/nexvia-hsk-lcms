@@ -6,7 +6,8 @@ from sqlalchemy.orm import selectinload
 from app.modules.users.model import User, UserRoleAssignment
 from app.modules.users import schema as user_schema
 from app.core.security import get_password_hash, verify_password
-from app.core.exceptions import NotFoundError, AlreadyExistsError, InvalidCredentialsError
+from app.core.exceptions import NotFoundError, AlreadyExistsError
+from fastapi import HTTPException, status
 from app.shared.enums import UserRole
 
 
@@ -177,7 +178,10 @@ class UserService:
         new_password: str,
     ) -> None:
         if not verify_password(current_password, user.hashed_password):
-            raise InvalidCredentialsError()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect",
+            )
         user.hashed_password = get_password_hash(new_password)
         await self._db.commit()
 

@@ -85,6 +85,10 @@ export const userService = {
   async deleteUser(userId: string): Promise<void> {
     await client.delete(`/users/${userId}`);
   },
+
+  async changePassword(data: { current_password: string; new_password: string }): Promise<void> {
+    await client.post('/users/me/change-password', data);
+  },
 };
 
 // ─── Courses ─────────────────────────────────────────────────────────────────

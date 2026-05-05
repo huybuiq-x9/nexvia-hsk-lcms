@@ -65,6 +65,11 @@ export interface ApiUserListResponse {
   items: ApiUserWithRoles[];
 }
 
+export interface ApiChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
 export interface ApiError {
   detail: string;
 }

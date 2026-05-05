@@ -267,6 +267,20 @@
     "user": "User",
     "logout": "Sign out"
   },
+  "common": {
+    "cancel": "Cancel",
+    "saving": "Saving"
+  },
+  "profile": {
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordMismatch": "New passwords do not match.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "passwordChanged": "Password changed successfully.",
+    "passwordChangeFailed": "Failed to change password. Please check your current password."
+  },
   "language": {
     "vi": "Tiếng Việt",
     "en": "English",
