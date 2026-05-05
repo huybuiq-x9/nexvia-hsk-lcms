@@ -7,7 +7,9 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import CoursesPage from './pages/CoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
+import LessonsPage from './pages/LessonsPage';
 import LessonDetailPage from './pages/LessonDetailPage';
+import SubLessonsPage from './pages/SubLessonsPage';
 import SubLessonDetailPage from './pages/SubLessonDetailPage';
 import CourseFormPage from './pages/CourseFormPage';
 import QuestionBankPage from './pages/QuestionBankPage';
@@ -48,7 +50,9 @@ function AppRoutes() {
         <Route path="/courses/create" element={<CourseFormPage />} />
         <Route path="/courses/edit/:courseId" element={<CourseFormPage />} />
         <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+        <Route path="/lessons" element={<LessonsPage />} />
         <Route path="/lessons/:lessonId" element={<LessonDetailPage />} />
+        <Route path="/sub-lessons" element={<SubLessonsPage />} />
         <Route path="/sub-lessons/:subLessonId" element={<SubLessonDetailPage />} />
         <Route path="/question-bank" element={<QuestionBankPage />} />
         {isAdmin && <Route path="/users" element={<UsersPage />} />}

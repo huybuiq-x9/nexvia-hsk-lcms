@@ -1,7 +1,10 @@
-from typing import Annotated
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import datetime
+from typing import Annotated
 import uuid
+
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
+from app.shared.enums import UserRole
 
 
 class LoginRequest(BaseModel):
@@ -25,7 +28,7 @@ class TokenData(BaseModel):
 
     sub: uuid.UUID
     email: str
-    roles: list[str]
+    roles: list[UserRole]
 
 
 class AuthResponse(BaseModel):

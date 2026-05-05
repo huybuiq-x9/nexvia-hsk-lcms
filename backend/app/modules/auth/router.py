@@ -1,9 +1,8 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser, OptionalUser
+from app.core.deps import get_db, CurrentUser
 from app.modules.auth import service, schema as auth_schema
-from app.modules.users.model import User
 
 router = APIRouter()
 
@@ -51,9 +50,8 @@ async def refresh_token(
 
 @router.post("/logout")
 async def logout(
+    db: Annotated[AsyncSession, Depends(get_db)],
     data: auth_schema.RefreshTokenRequest | None = None,
-    db: Annotated[AsyncSession, Depends(get_db)] = None,
-    current_user: OptionalUser = None,
 ):
     if data and data.refresh_token:
         await service.logout(db, data.refresh_token)

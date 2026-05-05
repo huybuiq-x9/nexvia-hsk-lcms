@@ -8,7 +8,10 @@
   },
   "nav": {
     "dashboard": "Dashboard",
-    "courses": "Course Management",
+    "content": "Content",
+    "courses": "Courses",
+    "lessons": "Lessons",
+    "subLessons": "Sub-Lessons",
     "questionBank": "Question Bank Management",
     "users": "User Management",
     "notifications": "Notifications",
@@ -270,5 +273,48 @@
     "switch": "Language",
     "switchToEn": "Switch to English",
     "switchToVi": "Chuyển sang Tiếng Việt"
+  },
+  "lessons": {
+    "title": "Lessons",
+    "totalLessons": "lessons",
+    "search": "Search by lesson name...",
+    "noResults": "No lessons found.",
+    "subLessons": "Sub-Lessons",
+    "filter": {
+      "allCourses": "All courses",
+      "allStatuses": "All statuses",
+      "course": "Course",
+      "status": "Status"
+    },
+    "status": {
+      "draft": "Draft",
+      "in_progress": "In Progress",
+      "approved": "Approved"
+    }
+  },
+  "subLessons": {
+    "title": "Sub-Lessons",
+    "totalSubLessons": "sub-lessons",
+    "search": "Search by sub-lesson name...",
+    "noResults": "No sub-lessons found.",
+    "filter": {
+      "allCourses": "All courses",
+      "allLessons": "All lessons",
+      "allStatuses": "All statuses",
+      "course": "Course",
+      "lesson": "Lesson",
+      "status": "Status"
+    },
+    "status": {
+      "draft": "Draft",
+      "in_progress": "In Progress",
+      "submitted": "Submitted",
+      "reviewing": "Reviewing",
+      "in_conversion": "Converting",
+      "scorm_uploaded": "SCORM Uploaded",
+      "scorm_reviewing": "SCORM Reviewing",
+      "approved": "Approved",
+      "published": "Published"
+    }
   }
 }

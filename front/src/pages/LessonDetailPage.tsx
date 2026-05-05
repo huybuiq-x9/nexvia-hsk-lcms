@@ -17,12 +17,13 @@ import {
 } from 'lucide-react';
 import { courseService, userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import type {
   ApiLessonWithSubLessons,
   ApiSubLessonResponse,
   ApiUserWithRoles,
 } from '../types/api';
-import { LESSON_STATUS_COLORS } from '../types/api';
+import { API_ROLE, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -355,6 +356,9 @@ export default function LessonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lessonId } = useParams<{ lessonId: string }>();
+  const { isAdmin, selectedRole } = useAuth();
+  const canManageSubLessons =
+    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
 
   const [lesson, setLesson] = useState<ApiLessonWithSubLessons | null>(null);
   const [courseTitle, setCourseTitle] = useState<string>('');
@@ -446,24 +450,26 @@ export default function LessonDetailPage() {
 
       {/* Header */}
       <div className="card p-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
-              {lesson.status}
-            </span>
-            <h1 className="text-xl font-bold text-slate-900 mt-2">{lesson.title}</h1>
-            {lesson.description && (
-              <p className="text-sm text-slate-500 mt-1">{lesson.description}</p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
+                {lesson.status}
+              </span>
+              <h1 className="text-xl font-bold text-slate-900 mt-2">{lesson.title}</h1>
+              {lesson.description && (
+                <p className="text-sm text-slate-500 mt-1">{lesson.description}</p>
+              )}
+            </div>
+            {canManageSubLessons && (
+              <button
+                onClick={() => setIsEditingSubLessons(true)}
+                className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
+              >
+                <Pencil size={14} />
+                {t('courses.edit')}
+              </button>
             )}
           </div>
-          <button
-            onClick={() => setIsEditingSubLessons(true)}
-            className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
-          >
-            <Pencil size={14} />
-            {t('courses.edit')}
-          </button>
-        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
           <div>
@@ -508,7 +514,7 @@ export default function LessonDetailPage() {
               {lesson.sub_lessons.length} {t('courses.lessons')}
             </p>
           </div>
-          {!isEditingSubLessons && (
+          {canManageSubLessons && !isEditingSubLessons && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="btn btn-primary flex items-center gap-1.5 text-sm"
@@ -534,13 +540,15 @@ export default function LessonDetailPage() {
             <div className="py-8 text-center text-sm text-slate-400 italic space-y-3">
               <FileText size={36} className="mx-auto opacity-40" />
               <p>{t('courses.noSubLessons')}</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn btn-secondary flex items-center gap-1.5 mx-auto text-sm"
-              >
-                <Plus size={14} />
-                Tạo bài học con đầu tiên
-              </button>
+              {canManageSubLessons && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="btn btn-secondary flex items-center gap-1.5 mx-auto text-sm"
+                >
+                  <Plus size={14} />
+                  Tạo bài học con đầu tiên
+                </button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -561,7 +569,7 @@ export default function LessonDetailPage() {
                     )}
                   </div>
                   <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${SUB_LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
                     {sl.status}
                   </span>
                 </Link>

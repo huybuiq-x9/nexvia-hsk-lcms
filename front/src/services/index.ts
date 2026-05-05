@@ -13,13 +13,19 @@ import type {
   ApiCourseWithLessons,
   ApiCourseResponse,
   ApiLessonCreate,
+  ApiLessonListItem,
   ApiLessonWithSubLessons,
   ApiLessonResponse,
   ApiLessonAssign,
+  ApiLessonListResponse,
   ApiSubLessonCreate,
   ApiSubLessonResponse,
+  ApiSubLessonListResponse,
   ApiDocumentListResponse,
   ApiDocumentUploadResponse,
+  ApiRole,
+  LessonStatus,
+  SubLessonStatus,
 } from '../types/api';
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -52,7 +58,7 @@ export const userService = {
     skip?: number;
     limit?: number;
     search?: string;
-    role?: string;
+    role?: ApiRole;
   }): Promise<ApiUserListResponse> {
     const res = await client.get<ApiUserListResponse>('/users/', { params });
     return res.data;
@@ -76,10 +82,6 @@ export const userService = {
     return res.data;
   },
 
-  async revokeRole(userId: string, role: string): Promise<void> {
-    await client.delete(`/users/${userId}/roles/${role}`);
-  },
-
   async deleteUser(userId: string): Promise<void> {
     await client.delete(`/users/${userId}`);
   },
@@ -95,6 +97,12 @@ export const courseService = {
   }): Promise<ApiCourseListResponse> {
     const res = await client.get<ApiCourseListResponse>('/courses/', { params });
     return res.data;
+  },
+
+  async getCoursesForFilter(): Promise<ApiCourseWithLessons[]> {
+    // Fetch all courses (paginated) for dropdown filter options
+    const res = await client.get<ApiCourseListResponse>('/courses/', { params: { limit: 100 } });
+    return res.data.items;
   },
 
   async getCourse(courseId: string): Promise<ApiCourseWithLessons> {
@@ -157,11 +165,42 @@ export const courseService = {
     await client.delete(`/courses/lessons/${lessonId}`);
   },
 
+  async listLessons(params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    course_id?: string;
+    status?: LessonStatus;
+  }): Promise<ApiLessonListResponse> {
+    const res = await client.get<ApiLessonListResponse>('/courses/lessons/', { params });
+    return res.data;
+  },
+
+  async listLessonsForFilter(params?: {
+    course_id?: string;
+    status?: LessonStatus;
+  }): Promise<ApiLessonListItem[]> {
+    const res = await client.get<ApiLessonListResponse>('/courses/lessons/', { params: { ...params, limit: 100 } });
+    return res.data.items;
+  },
+
   async createSubLesson(
     lessonId: string,
     data: ApiSubLessonCreate
   ): Promise<ApiSubLessonResponse> {
     const res = await client.post<ApiSubLessonResponse>(`/courses/lessons/${lessonId}/sub-lessons`, data);
+    return res.data;
+  },
+
+  async listSubLessons(params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    course_id?: string;
+    lesson_id?: string;
+    status?: SubLessonStatus;
+  }): Promise<ApiSubLessonListResponse> {
+    const res = await client.get<ApiSubLessonListResponse>('/courses/sub-lessons/', { params });
     return res.data;
   },
 

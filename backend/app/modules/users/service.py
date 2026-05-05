@@ -7,6 +7,7 @@ from app.modules.users.model import User, UserRoleAssignment
 from app.modules.users import schema as user_schema
 from app.core.security import get_password_hash, verify_password
 from app.core.exceptions import NotFoundError, AlreadyExistsError, InvalidCredentialsError
+from app.shared.enums import UserRole
 
 
 class UserService:
@@ -19,8 +20,8 @@ class UserService:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _active_roles(user: User) -> list[str]:
-        return [r.role for r in user.roles if r.revoked_at is None]
+    def _active_roles(user: User) -> list[UserRole]:
+        return [UserRole(r.role) for r in user.roles if r.revoked_at is None]
 
     @staticmethod
     def _to_user_with_roles(user: User) -> user_schema.UserWithRoles:
@@ -47,7 +48,11 @@ class UserService:
             updated_at=user.updated_at,
         )
 
-    async def _get_user_orm(self, user_id: uuid.UUID) -> User:
+    @staticmethod
+    async def get_me(user: User) -> user_schema.UserWithRoles:
+        return UserService._to_user_with_roles(user)
+
+    async def get_by_id(self, user_id: uuid.UUID) -> User:
         result = await self._db.execute(
             select(User).options(selectinload(User.roles)).where(User.id == user_id)
         )
@@ -56,32 +61,15 @@ class UserService:
             raise NotFoundError("User", str(user_id))
         return user
 
-    async def _get_user_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> User | None:
         result = await self._db.execute(
             select(User).options(selectinload(User.roles)).where(User.email == email)
         )
         return result.scalar_one_or_none()
 
-    # -------------------------------------------------------------------------
-    # Public methods
-    # -------------------------------------------------------------------------
-
-    @staticmethod
-    async def get_me(user: User) -> user_schema.UserWithRoles:
-        return UserService._to_user_with_roles(user)
-
-    async def get_by_id(self, user_id: uuid.UUID) -> User:
-        return await self._get_user_orm(user_id)
-
-    async def get_by_email(self, email: str) -> User | None:
-        return await self._get_user_by_email(email)
-
-    async def get_by_id_schema(self, user_id: uuid.UUID) -> user_schema.UserWithRoles:
-        user = await self._get_user_orm(user_id)
-        return self._to_user_with_roles(user)
 
     async def create(self, data: user_schema.UserCreate) -> user_schema.UserResponse:
-        existing = await self._get_user_by_email(data.email)
+        existing = await self.get_by_email(data.email)
         if existing:
             raise AlreadyExistsError("User", data.email)
 
@@ -102,7 +90,7 @@ class UserService:
             self._db.add(role_assignment)
 
         await self._db.commit()
-        user = await self._get_user_orm(user.id)
+        user = await self.get_by_id(user.id)
         return self._to_user_response(user)
 
     async def update(
@@ -110,7 +98,7 @@ class UserService:
         user_id: uuid.UUID,
         data: user_schema.UserUpdate,
     ) -> user_schema.UserResponse:
-        user = await self._get_user_orm(user_id)
+        user = await self.get_by_id(user_id)
         if data.full_name is not None:
             user.full_name = data.full_name
         if data.is_active is not None:
@@ -144,7 +132,7 @@ class UserService:
         skip: int = 0,
         limit: int = 20,
         search: str | None = None,
-        role: str | None = None,
+        role: UserRole | None = None,
     ) -> user_schema.UserListResponse:
         query = (
             select(User)
@@ -161,7 +149,7 @@ class UserService:
                 .where(
                     and_(
                         UserRoleAssignment.user_id == User.id,
-                        UserRoleAssignment.role == role,
+                        UserRoleAssignment.role == role.value,
                         UserRoleAssignment.revoked_at.is_(None),
                     )
                 )
@@ -182,15 +170,6 @@ class UserService:
             items=[self._to_user_with_roles(u) for u in users],
         )
 
-    async def revoke_role(self, user_id: uuid.UUID, role: str) -> User:
-        user = await self._get_user_orm(user_id)
-        for r in user.roles:
-            if r.role == role and r.revoked_at is None:
-                r.revoked_at = datetime.now(timezone.utc)
-        await self._db.commit()
-        await self._db.refresh(user)
-        return user
-
     async def change_password(
         self,
         user: User,
@@ -203,6 +182,6 @@ class UserService:
         await self._db.commit()
 
     async def delete(self, user_id: uuid.UUID) -> None:
-        user = await self._get_user_orm(user_id)
+        user = await self.get_by_id(user_id)
         user.deleted_at = datetime.now(timezone.utc)
         await self._db.commit()

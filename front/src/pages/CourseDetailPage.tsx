@@ -11,8 +11,14 @@ import {
   FileText,
 } from 'lucide-react';
 import { courseService, userService } from '../services';
-import type { ApiCourseWithLessons, ApiLessonWithSubLessons, ApiUserWithRoles } from '../types/api';
-import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS } from '../types/api';
+import { useAuth } from '../contexts/AuthContext';
+import type {
+  ApiCourseWithLessons,
+  ApiLessonWithSubLessons,
+  ApiSubLessonResponse,
+  ApiUserWithRoles,
+} from '../types/api';
+import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -36,6 +42,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
+  const { isAdmin } = useAuth();
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -143,6 +150,7 @@ export default function CourseDetailPage() {
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{course.description}</p>
           )}
         </div>
+        {isAdmin && (
         <button
           onClick={() => navigate(`/courses/edit/${course.id}`)}
           className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
@@ -150,6 +158,7 @@ export default function CourseDetailPage() {
           <Pencil size={14} />
           {t('courses.edit')}
         </button>
+        )}
       </div>
 
       {/* Course info card */}
@@ -257,7 +266,7 @@ export default function CourseDetailPage() {
                           {t('courses.noSubLessons')}
                         </div>
                       ) : (
-                        subLessons.map((sl: { id: string; title: string; description?: string | null; status: string }, slIdx: number) => (
+                        subLessons.map((sl: Pick<ApiSubLessonResponse, 'id' | 'title' | 'description' | 'status'>, slIdx: number) => (
                           <Link
                             key={sl.id}
                             to={`/sub-lessons/${sl.id}`}
@@ -272,7 +281,7 @@ export default function CourseDetailPage() {
                               )}
                             </div>
                             <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${SUB_LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
                               {sl.status}
                             </span>
                           </Link>

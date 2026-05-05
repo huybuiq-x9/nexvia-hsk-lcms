@@ -8,7 +8,10 @@
   },
   "nav": {
     "dashboard": "Tổng quan",
-    "courses": "Quản lý khóa học",
+    "content": "Nội dung",
+    "courses": "Khóa học",
+    "lessons": "Bài học",
+    "subLessons": "Tiết học",
     "questionBank": "Quản lý ngân hàng câu hỏi",
     "users": "Quản lý người dùng",
     "notifications": "Thông báo",
@@ -269,5 +272,48 @@
     "switch": "Ngôn ngữ",
     "switchToEn": "Chuyển sang English",
     "switchToVi": "Chuyển sang Tiếng Việt"
+  },
+  "lessons": {
+    "title": "Bài học",
+    "totalLessons": "bài học",
+    "search": "Tìm theo tên bài học...",
+    "noResults": "Không tìm thấy bài học nào.",
+    "subLessons": "Tiết học",
+    "filter": {
+      "allCourses": "Tất cả khóa học",
+      "allStatuses": "Tất cả trạng thái",
+      "course": "Khóa học",
+      "status": "Trạng thái"
+    },
+    "status": {
+      "draft": "Bản nháp",
+      "in_progress": "Đang tiến hành",
+      "approved": "Đã duyệt"
+    }
+  },
+  "subLessons": {
+    "title": "Tiết học",
+    "totalSubLessons": "tiết học",
+    "search": "Tìm theo tên tiết học...",
+    "noResults": "Không tìm thấy tiết học nào.",
+    "filter": {
+      "allCourses": "Tất cả khóa học",
+      "allLessons": "Tất cả bài học",
+      "allStatuses": "Tất cả trạng thái",
+      "course": "Khóa học",
+      "lesson": "Bài học",
+      "status": "Trạng thái"
+    },
+    "status": {
+      "draft": "Bản nháp",
+      "in_progress": "Đang tiến hành",
+      "submitted": "Đã gửi",
+      "reviewing": "Đang kiểm duyệt",
+      "in_conversion": "Đang chuyển đổi",
+      "scorm_uploaded": "SCORM đã upload",
+      "scorm_reviewing": "SCORM đang kiểm duyệt",
+      "approved": "Đã duyệt",
+      "published": "Đã xuất bản"
+    }
   }
 }
