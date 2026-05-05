@@ -23,7 +23,7 @@ import type {
   ApiSubLessonResponse,
   ApiUserWithRoles,
 } from '../types/api';
-import { LESSON_STATUS_COLORS } from '../types/api';
+import { API_ROLE, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -357,7 +357,8 @@ export default function LessonDetailPage() {
   const navigate = useNavigate();
   const { lessonId } = useParams<{ lessonId: string }>();
   const { isAdmin, selectedRole } = useAuth();
-  const canManageSubLessons = isAdmin || selectedRole === 'teacher' || selectedRole === 'converter';
+  const canManageSubLessons =
+    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
 
   const [lesson, setLesson] = useState<ApiLessonWithSubLessons | null>(null);
   const [courseTitle, setCourseTitle] = useState<string>('');
@@ -568,7 +569,7 @@ export default function LessonDetailPage() {
                     )}
                   </div>
                   <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${SUB_LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
                     {sl.status}
                   </span>
                 </Link>

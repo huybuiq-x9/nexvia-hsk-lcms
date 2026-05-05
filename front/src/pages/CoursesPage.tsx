@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { courseService, userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
-import type { ApiCourseWithLessons, ApiUserWithRoles } from '../types/api';
+import type { ApiCourseWithLessons, ApiUserWithRoles, CourseStatus } from '../types/api';
 import { COURSE_STATUS_COLORS } from '../types/api';
 
 const PER_PAGE = 20;
@@ -19,8 +19,8 @@ const StatusBadge = ({
   status,
   colors,
 }: {
-  status: string;
-  colors: Record<string, string>;
+  status: CourseStatus;
+  colors: Record<CourseStatus, string>;
 }) => (
   <span
     className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}

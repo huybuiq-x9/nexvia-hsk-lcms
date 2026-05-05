@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { courseService, userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
-import type { ApiCourseCreate, ApiCourseUpdate, ApiUserWithRoles } from '../types/api';
+import { API_ROLE, type ApiCourseCreate, type ApiCourseUpdate, type ApiUserWithRoles } from '../types/api';
 
 interface SubLessonDraft {
   _key: string;
@@ -67,9 +67,9 @@ export default function CourseFormPage() {
   // Load all user lists
   useEffect(() => {
     Promise.all([
-      userService.listUsers({ limit: 100, role: 'expert' }),
-      userService.listUsers({ limit: 100, role: 'teacher' }),
-      userService.listUsers({ limit: 100, role: 'converter' }),
+      userService.listUsers({ limit: 100, role: API_ROLE.EXPERT }),
+      userService.listUsers({ limit: 100, role: API_ROLE.TEACHER }),
+      userService.listUsers({ limit: 100, role: API_ROLE.CONVERTER }),
     ]).then(([eRes, tRes, cRes]) => {
       setExperts(eRes.items);
       setTeachers(tRes.items);

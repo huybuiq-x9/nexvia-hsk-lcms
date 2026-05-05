@@ -24,29 +24,22 @@ import type {
   ApiSubLessonResponse,
   ApiDocumentWithUploader,
 } from '../types/api';
-import { FILE_TYPE_COLORS } from '../types/api';
+import {
+  API_ROLE,
+  FILE_TYPE_COLORS,
+  SUB_LESSON_STATUS,
+  SUB_LESSON_STATUS_COLORS,
+} from '../types/api';
 
 type Tab = 'documents' | 'questions' | 'scorm' | 'history';
 
-const SUBLESSON_STATUS_COLORS: Record<string, string> = {
-  draft:            'bg-slate-50 text-slate-600 border-slate-200',
-  in_progress:      'bg-blue-50 text-blue-700 border-blue-200',
-  submitted:        'bg-amber-50 text-amber-700 border-amber-200',
-  reviewing:        'bg-orange-50 text-orange-700 border-orange-200',
-  in_conversion:   'bg-violet-50 text-violet-700 border-violet-200',
-  scorm_uploaded:  'bg-violet-50 text-violet-700 border-violet-200',
-  scorm_reviewing: 'bg-orange-50 text-orange-700 border-orange-200',
-  approved:         'bg-green-50 text-green-700 border-green-200',
-  published:        'bg-green-50 text-green-700 border-green-200',
-};
-
 const WORKFLOW_STEPS = [
-  { key: 'draft',          label: 'Bản nháp' },
-  { key: 'submitted',      label: 'Đã gửi' },
-  { key: 'reviewing',      label: 'Kiểm duyệt' },
-  { key: 'in_conversion',  label: 'Chuyển đổi' },
-  { key: 'scorm_uploaded', label: 'SCORM' },
-  { key: 'approved',       label: 'Đã duyệt' },
+  { key: SUB_LESSON_STATUS.DRAFT,          label: 'Bản nháp' },
+  { key: SUB_LESSON_STATUS.SUBMITTED,      label: 'Đã gửi' },
+  { key: SUB_LESSON_STATUS.REVIEWING,      label: 'Kiểm duyệt' },
+  { key: SUB_LESSON_STATUS.IN_CONVERSION,  label: 'Chuyển đổi' },
+  { key: SUB_LESSON_STATUS.SCORM_UPLOADED, label: 'SCORM' },
+  { key: SUB_LESSON_STATUS.APPROVED,       label: 'Đã duyệt' },
 ];
 
 const FILE_TYPE_ICON_MAP: Record<string, React.ReactNode> = {
@@ -476,7 +469,8 @@ export default function SubLessonDetailPage() {
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
   const { isAdmin, selectedRole } = useAuth();
-  const canUploadDocuments = isAdmin || selectedRole === 'teacher' || selectedRole === 'converter';
+  const canUploadDocuments =
+    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
 
   const [subLesson, setSubLesson] = useState<ApiSubLessonResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -559,7 +553,7 @@ export default function SubLessonDetailPage() {
       <div className="card p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${SUBLESSON_STATUS_COLORS[subLesson.status] ?? ''}`}>
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${SUB_LESSON_STATUS_COLORS[subLesson.status] ?? ''}`}>
               {subLesson.status}
             </span>
             <h1 className="text-xl font-bold text-slate-900 mt-2">{subLesson.title}</h1>

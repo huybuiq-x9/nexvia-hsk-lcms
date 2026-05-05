@@ -9,15 +9,15 @@ import {
 } from 'lucide-react';
 import { courseService, userService } from '../services';
 import FilterBar, { type FilterOption } from '../components/FilterBar';
-import type { ApiLessonListItem, ApiCourseWithLessons, ApiUserWithRoles } from '../types/api';
-import { LESSON_STATUS_COLORS } from '../types/api';
+import type { ApiLessonListItem, ApiCourseWithLessons, ApiUserWithRoles, LessonStatus } from '../types/api';
+import { LESSON_STATUSES, LESSON_STATUS_COLORS } from '../types/api';
 
 const PER_PAGE = 20;
 
-const StatusBadge = ({ status }: { status: string }) => (
+const StatusBadge = ({ status }: { status: LessonStatus }) => (
   <span
     className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
-      LESSON_STATUS_COLORS[status as keyof typeof LESSON_STATUS_COLORS] ?? 'bg-slate-50 text-slate-600 border-slate-200'
+      LESSON_STATUS_COLORS[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'
     }`}
   >
     {status}
@@ -77,7 +77,7 @@ export default function LessonsPage() {
       limit: PER_PAGE,
       search: search || undefined,
       course_id: selectedCourseId || undefined,
-      status: selectedStatus || undefined,
+      status: (selectedStatus as LessonStatus) || undefined,
     }).then(res => {
       if (!cancelled) { setLessons(res.items); setTotal(res.total); }
     }).catch(() => { if (!cancelled) setLessons([]); })
@@ -101,9 +101,10 @@ export default function LessonsPage() {
 
   const statusOptions: FilterOption[] = [
     { value: '', label: t('lessons.filter.allStatuses') },
-    { value: 'draft', label: t('lessons.status.draft') },
-    { value: 'in_progress', label: t('lessons.status.in_progress') },
-    { value: 'approved', label: t('lessons.status.approved') },
+    ...LESSON_STATUSES.map(status => ({
+      value: status,
+      label: t(`lessons.status.${status}`),
+    })),
   ];
 
   const hasActiveFilters = selectedCourseId !== '' || selectedStatus !== '' || search !== '';

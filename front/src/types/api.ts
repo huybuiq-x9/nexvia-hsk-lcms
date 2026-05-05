@@ -1,14 +1,23 @@
 // API response types matching FastAPI backend
 
-export type ApiRole = 'admin' | 'teacher' | 'expert' | 'converter';
+export const API_ROLE = {
+  ADMIN: 'admin',
+  TEACHER: 'teacher',
+  EXPERT: 'expert',
+  CONVERTER: 'converter',
+} as const;
+
+export type ApiRole = (typeof API_ROLE)[keyof typeof API_ROLE];
+
+export const API_ROLES: ApiRole[] = Object.values(API_ROLE);
 
 export type RoleLabelType = Record<ApiRole, string>;
 
 export const ROLE_COLORS: Record<ApiRole, string> = {
-  admin:     'bg-blue-50 text-blue-700 border-blue-200',
-  teacher:   'bg-green-50 text-green-700 border-green-200',
-  expert:    'bg-purple-50 text-purple-700 border-purple-200',
-  converter: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  [API_ROLE.ADMIN]:     'bg-blue-50 text-blue-700 border-blue-200',
+  [API_ROLE.TEACHER]:   'bg-green-50 text-green-700 border-green-200',
+  [API_ROLE.EXPERT]:    'bg-purple-50 text-purple-700 border-purple-200',
+  [API_ROLE.CONVERTER]: 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
 export interface ApiUserResponse {
@@ -22,7 +31,7 @@ export interface ApiUserResponse {
 }
 
 export interface ApiUserWithRoles extends ApiUserResponse {
-  roles: string[];
+  roles: ApiRole[];
 }
 
 export interface ApiTokenResponse {
@@ -62,22 +71,68 @@ export interface ApiError {
 
 // ─── Course / Lesson / SubLesson ────────────────────────────────────────────
 
-export type CourseStatus = 'draft' | 'in_progress' | 'ready_to_publish' | 'published' | 'unpublished';
-export type LessonStatus = 'draft' | 'in_progress' | 'approved';
-export type SubLessonStatus = 'draft' | 'in_progress' | 'submitted' | 'reviewing' | 'in_conversion' | 'scorm_uploaded' | 'scorm_reviewing' | 'approved' | 'published';
+export const COURSE_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  READY_TO_PUBLISH: 'ready_to_publish',
+  PUBLISHED: 'published',
+  UNPUBLISHED: 'unpublished',
+} as const;
+
+export type CourseStatus = (typeof COURSE_STATUS)[keyof typeof COURSE_STATUS];
+
+export const COURSE_STATUSES: CourseStatus[] = Object.values(COURSE_STATUS);
+
+export const LESSON_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  APPROVED: 'approved',
+} as const;
+
+export type LessonStatus = (typeof LESSON_STATUS)[keyof typeof LESSON_STATUS];
+
+export const LESSON_STATUSES: LessonStatus[] = Object.values(LESSON_STATUS);
+
+export const SUB_LESSON_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  SUBMITTED: 'submitted',
+  REVIEWING: 'reviewing',
+  IN_CONVERSION: 'in_conversion',
+  SCORM_UPLOADED: 'scorm_uploaded',
+  SCORM_REVIEWING: 'scorm_reviewing',
+  APPROVED: 'approved',
+  PUBLISHED: 'published',
+} as const;
+
+export type SubLessonStatus = (typeof SUB_LESSON_STATUS)[keyof typeof SUB_LESSON_STATUS];
+
+export const SUB_LESSON_STATUSES: SubLessonStatus[] = Object.values(SUB_LESSON_STATUS);
 
 export const COURSE_STATUS_COLORS: Record<CourseStatus, string> = {
-  draft:            'bg-slate-50 text-slate-600 border-slate-200',
-  in_progress:      'bg-blue-50 text-blue-700 border-blue-200',
-  ready_to_publish: 'bg-amber-50 text-amber-700 border-amber-200',
-  published:        'bg-green-50 text-green-700 border-green-200',
-  unpublished:      'bg-red-50 text-red-600 border-red-200',
+  [COURSE_STATUS.DRAFT]:            'bg-slate-50 text-slate-600 border-slate-200',
+  [COURSE_STATUS.IN_PROGRESS]:      'bg-blue-50 text-blue-700 border-blue-200',
+  [COURSE_STATUS.READY_TO_PUBLISH]: 'bg-amber-50 text-amber-700 border-amber-200',
+  [COURSE_STATUS.PUBLISHED]:        'bg-green-50 text-green-700 border-green-200',
+  [COURSE_STATUS.UNPUBLISHED]:      'bg-red-50 text-red-600 border-red-200',
 };
 
 export const LESSON_STATUS_COLORS: Record<LessonStatus, string> = {
-  draft:      'bg-slate-50 text-slate-600 border-slate-200',
-  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
-  approved:   'bg-green-50 text-green-700 border-green-200',
+  [LESSON_STATUS.DRAFT]:       'bg-slate-50 text-slate-600 border-slate-200',
+  [LESSON_STATUS.IN_PROGRESS]: 'bg-blue-50 text-blue-700 border-blue-200',
+  [LESSON_STATUS.APPROVED]:    'bg-green-50 text-green-700 border-green-200',
+};
+
+export const SUB_LESSON_STATUS_COLORS: Record<SubLessonStatus, string> = {
+  [SUB_LESSON_STATUS.DRAFT]:           'bg-slate-50 text-slate-600 border-slate-200',
+  [SUB_LESSON_STATUS.IN_PROGRESS]:     'bg-blue-50 text-blue-700 border-blue-200',
+  [SUB_LESSON_STATUS.SUBMITTED]:       'bg-amber-50 text-amber-700 border-amber-200',
+  [SUB_LESSON_STATUS.REVIEWING]:       'bg-orange-50 text-orange-700 border-orange-200',
+  [SUB_LESSON_STATUS.IN_CONVERSION]:   'bg-violet-50 text-violet-700 border-violet-200',
+  [SUB_LESSON_STATUS.SCORM_UPLOADED]:  'bg-violet-50 text-violet-700 border-violet-200',
+  [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'bg-orange-50 text-orange-700 border-orange-200',
+  [SUB_LESSON_STATUS.APPROVED]:        'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.PUBLISHED]:       'bg-green-50 text-green-700 border-green-200',
 };
 
 export interface ApiSubLessonResponse {

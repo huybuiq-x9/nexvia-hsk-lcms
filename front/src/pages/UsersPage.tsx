@@ -16,12 +16,9 @@ import {
 import { userService } from '../services';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import type { ApiUserWithRoles, ApiRole, ApiUserCreate } from '../types/api';
-import { ROLE_COLORS } from '../types/api';
+import { API_ROLES, ROLE_COLORS, type ApiUserWithRoles, type ApiRole, type ApiUserCreate } from '../types/api';
 
 const PER_PAGE = 10;
-
-const ROLES: ApiRole[] = ['admin', 'teacher', 'expert', 'converter'];
 
 const UserModal = ({
   user,
@@ -62,8 +59,8 @@ const UserModal = ({
     setIsLoading(true);
     try {
       if (user) {
-        const rolesToAdd = ROLES.filter(r => !user.roles.includes(r) && form.roles.includes(r));
-        const rolesToRemove = ROLES.filter(r => user.roles.includes(r) && !form.roles.includes(r));
+        const rolesToAdd = API_ROLES.filter(r => !user.roles.includes(r) && form.roles.includes(r));
+        const rolesToRemove = API_ROLES.filter(r => user.roles.includes(r) && !form.roles.includes(r));
         await userService.updateUser(user.id, {
           full_name: form.full_name,
           is_active: form.is_active,
@@ -169,7 +166,7 @@ const UserModal = ({
             <div>
               <label className="label">{t('users.modal.roles')}</label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {ROLES.map(role => (
+                {API_ROLES.map(role => (
                   <button
                     key={role}
                     type="button"
@@ -213,7 +210,7 @@ const UserModal = ({
             <div>
               <label className="label">{t('users.modal.roles')}</label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {ROLES.map(role => (
+                {API_ROLES.map(role => (
                   <button
                     key={role}
                     type="button"
@@ -397,7 +394,7 @@ export default function UsersPage() {
             className="input sm:w-auto w-full"
           >
             <option value="">{t('users.allRoles')}</option>
-            {ROLES.map(r => (
+            {API_ROLES.map(r => (
               <option key={r} value={r}>{t(`roles.${r}`)}</option>
             ))}
           </select>

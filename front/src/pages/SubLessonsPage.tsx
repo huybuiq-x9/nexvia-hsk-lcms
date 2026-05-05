@@ -9,15 +9,15 @@ import {
 } from 'lucide-react';
 import { courseService } from '../services';
 import FilterBar, { type FilterOption } from '../components/FilterBar';
-import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem } from '../types/api';
-import { LESSON_STATUS_COLORS } from '../types/api';
+import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem, SubLessonStatus } from '../types/api';
+import { SUB_LESSON_STATUSES, SUB_LESSON_STATUS_COLORS } from '../types/api';
 
 const PER_PAGE = 20;
 
-const StatusBadge = ({ status }: { status: string }) => (
+const StatusBadge = ({ status }: { status: SubLessonStatus }) => (
   <span
     className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
-      LESSON_STATUS_COLORS[status as keyof typeof LESSON_STATUS_COLORS] ?? 'bg-slate-50 text-slate-600 border-slate-200'
+      SUB_LESSON_STATUS_COLORS[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'
     }`}
   >
     {status}
@@ -70,7 +70,7 @@ export default function SubLessonsPage() {
           search: search || undefined,
           course_id: selectedCourseId || undefined,
           lesson_id: selectedLessonId || undefined,
-          status: selectedStatus || undefined,
+          status: (selectedStatus as SubLessonStatus) || undefined,
         });
         setSubLessons(res.items);
         setTotal(res.total);
@@ -97,15 +97,10 @@ export default function SubLessonsPage() {
 
   const statusOptions: FilterOption[] = [
     { value: '', label: t('subLessons.filter.allStatuses') },
-    { value: 'draft', label: t('subLessons.status.draft') },
-    { value: 'in_progress', label: t('subLessons.status.in_progress') },
-    { value: 'submitted', label: t('subLessons.status.submitted') },
-    { value: 'reviewing', label: t('subLessons.status.reviewing') },
-    { value: 'in_conversion', label: t('subLessons.status.in_conversion') },
-    { value: 'scorm_uploaded', label: t('subLessons.status.scorm_uploaded') },
-    { value: 'scorm_reviewing', label: t('subLessons.status.scorm_reviewing') },
-    { value: 'approved', label: t('subLessons.status.approved') },
-    { value: 'published', label: t('subLessons.status.published') },
+    ...SUB_LESSON_STATUSES.map(status => ({
+      value: status,
+      label: t(`subLessons.status.${status}`),
+    })),
   ];
 
   const hasActiveFilters =

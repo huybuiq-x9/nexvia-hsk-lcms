@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authService, userService } from '../services';
-import type { ApiRole, ApiUserWithRoles } from '../types/api';
+import { API_ROLE, type ApiRole, type ApiUserWithRoles } from '../types/api';
 
 interface AuthState {
   user: ApiUserWithRoles | null;
@@ -86,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const selectRole = useCallback((role: ApiRole) => setSelectedRole(role), []);
   const clearError = useCallback(() => setError(null), []);
 
-  const isAdmin = state.user?.roles.includes('admin') ?? false;
-  const isExpert = state.user?.roles.includes('expert') ?? false;
+  const isAdmin = state.user?.roles.includes(API_ROLE.ADMIN) ?? false;
+  const isExpert = state.user?.roles.includes(API_ROLE.EXPERT) ?? false;
 
   return (
     <AuthContext.Provider

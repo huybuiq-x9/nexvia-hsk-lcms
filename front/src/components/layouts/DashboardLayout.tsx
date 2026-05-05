@@ -15,6 +15,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_ROLE } from '../../types/api';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 
 interface NavSubItem {
@@ -74,7 +75,8 @@ function Sidebar({
     { to: '/notifications', icon: <Bell size={18} />, labelKey: 'nav.notifications' },
   ];
 
-  const isTeacherConverter = selectedRole === 'teacher' || selectedRole === 'converter';
+  const isTeacherConverter =
+    selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
   const navItems = baseNavItems.filter(item => {
     if (item.adminOnly) return isAdmin;
     if (isTeacherConverter) return false;

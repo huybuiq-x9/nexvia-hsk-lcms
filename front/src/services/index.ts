@@ -13,6 +13,7 @@ import type {
   ApiCourseWithLessons,
   ApiCourseResponse,
   ApiLessonCreate,
+  ApiLessonListItem,
   ApiLessonWithSubLessons,
   ApiLessonResponse,
   ApiLessonAssign,
@@ -20,10 +21,11 @@ import type {
   ApiSubLessonCreate,
   ApiSubLessonResponse,
   ApiSubLessonListResponse,
-  ApiSubLessonUpdate,
-  ApiSubLessonBatchDelete,
   ApiDocumentListResponse,
   ApiDocumentUploadResponse,
+  ApiRole,
+  LessonStatus,
+  SubLessonStatus,
 } from '../types/api';
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -56,7 +58,7 @@ export const userService = {
     skip?: number;
     limit?: number;
     search?: string;
-    role?: string;
+    role?: ApiRole;
   }): Promise<ApiUserListResponse> {
     const res = await client.get<ApiUserListResponse>('/users/', { params });
     return res.data;
@@ -80,7 +82,7 @@ export const userService = {
     return res.data;
   },
 
-  async revokeRole(userId: string, role: string): Promise<void> {
+  async revokeRole(userId: string, role: ApiRole): Promise<void> {
     await client.delete(`/users/${userId}/roles/${role}`);
   },
 
@@ -172,7 +174,7 @@ export const courseService = {
     limit?: number;
     search?: string;
     course_id?: string;
-    status?: string;
+    status?: LessonStatus;
   }): Promise<ApiLessonListResponse> {
     const res = await client.get<ApiLessonListResponse>('/courses/lessons/', { params });
     return res.data;
@@ -180,7 +182,7 @@ export const courseService = {
 
   async listLessonsForFilter(params?: {
     course_id?: string;
-    status?: string;
+    status?: LessonStatus;
   }): Promise<ApiLessonListItem[]> {
     const res = await client.get<ApiLessonListResponse>('/courses/lessons/', { params: { ...params, limit: 100 } });
     return res.data.items;
@@ -200,7 +202,7 @@ export const courseService = {
     search?: string;
     course_id?: string;
     lesson_id?: string;
-    status?: string;
+    status?: SubLessonStatus;
   }): Promise<ApiSubLessonListResponse> {
     const res = await client.get<ApiSubLessonListResponse>('/courses/sub-lessons/', { params });
     return res.data;
