@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 from app.modules.courses.model import Course, Lesson, SubLesson
 from app.modules.courses import schema as course_schema
 from app.modules.users.model import User
-from app.core.exceptions import NotFoundError, AlreadyExistsError
+from app.core.exceptions import NotFoundError
+from app.shared.enums import LessonStatus, SubLessonStatus, UserRole
 
 
 def _to_course_response(course: Course) -> course_schema.CourseResponse:
@@ -82,6 +83,10 @@ def _to_course_with_lessons(course: Course) -> course_schema.CourseWithLessonsRe
     )
 
 
+def _role_value(role: UserRole) -> str:
+    return role.value
+
+
 async def _get_course_orm(db: AsyncSession, course_id: uuid.UUID) -> Course:
     result = await db.execute(
         select(Course)
@@ -144,10 +149,10 @@ async def list_courses(
     if search:
         query = query.where(Course.title.ilike(f"%{search}%"))
 
-    if "admin" not in roles:
-        if "expert" in roles:
+    if _role_value(UserRole.ADMIN) not in roles:
+        if _role_value(UserRole.EXPERT) in roles:
             query = query.where(Course.assigned_expert_id == current_user.id)
-        elif "teacher" in roles or "converter" in roles:
+        elif _role_value(UserRole.TEACHER) in roles or _role_value(UserRole.CONVERTER) in roles:
             return course_schema.CourseListResponse(total=0, items=[])
         else:
             return course_schema.CourseListResponse(total=0, items=[])
@@ -173,14 +178,14 @@ async def get_course(
     roles = _user_roles(current_user)
     course = await _get_course_orm(db, course_id)
 
-    if "admin" not in roles:
-        if "expert" in roles:
+    if _role_value(UserRole.ADMIN) not in roles:
+        if _role_value(UserRole.EXPERT) in roles:
             if course.assigned_expert_id != current_user.id:
                 raise HTTPException(status_code=403, detail="You do not have access to this course")
-        elif "teacher" in roles:
+        elif _role_value(UserRole.TEACHER) in roles:
             # teacher has access via lesson, handled at lesson level
             pass
-        elif "converter" in roles:
+        elif _role_value(UserRole.CONVERTER) in roles:
             pass
         else:
             raise HTTPException(status_code=403, detail="You do not have access to this course")
@@ -475,7 +480,7 @@ async def list_lessons(
     limit: int = 20,
     search: str | None = None,
     course_id: uuid.UUID | None = None,
-    status: str | None = None,
+    status: LessonStatus | None = None,
 ) -> course_schema.LessonListResponse:
     roles = _user_roles(current_user)
 
@@ -495,15 +500,15 @@ async def list_lessons(
         query = query.where(Lesson.course_id == course_id)
 
     if status is not None:
-        query = query.where(Lesson.status == status)
+        query = query.where(Lesson.status == status.value)
 
     # Role-based filtering
-    if "admin" not in roles:
-        if "expert" in roles:
+    if _role_value(UserRole.ADMIN) not in roles:
+        if _role_value(UserRole.EXPERT) in roles:
             query = query.where(Lesson.course.has(assigned_expert_id=current_user.id))
-        elif "teacher" in roles:
+        elif _role_value(UserRole.TEACHER) in roles:
             query = query.where(Lesson.assigned_teacher_id == current_user.id)
-        elif "converter" in roles:
+        elif _role_value(UserRole.CONVERTER) in roles:
             query = query.where(Lesson.assigned_converter_id == current_user.id)
         else:
             # No relevant role — return empty
@@ -544,7 +549,7 @@ async def list_sub_lessons(
     search: str | None = None,
     course_id: uuid.UUID | None = None,
     lesson_id: uuid.UUID | None = None,
-    status: str | None = None,
+    status: SubLessonStatus | None = None,
 ) -> course_schema.SubLessonListResponse:
     roles = _user_roles(current_user)
 
@@ -566,19 +571,19 @@ async def list_sub_lessons(
         query = query.where(SubLesson.lesson.has(Lesson.course_id == course_id))
 
     if status is not None:
-        query = query.where(SubLesson.status == status)
+        query = query.where(SubLesson.status == status.value)
 
     # Role-based filtering
-    if "admin" not in roles:
-        if "expert" in roles:
+    if _role_value(UserRole.ADMIN) not in roles:
+        if _role_value(UserRole.EXPERT) in roles:
             query = query.where(
                 SubLesson.lesson.has(
                     Lesson.course.has(assigned_expert_id=current_user.id)
                 )
             )
-        elif "teacher" in roles:
+        elif _role_value(UserRole.TEACHER) in roles:
             query = query.where(SubLesson.lesson.has(assigned_teacher_id=current_user.id))
-        elif "converter" in roles:
+        elif _role_value(UserRole.CONVERTER) in roles:
             query = query.where(SubLesson.lesson.has(assigned_converter_id=current_user.id))
         else:
             return course_schema.SubLessonListResponse(total=0, items=[])

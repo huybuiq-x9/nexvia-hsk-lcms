@@ -48,7 +48,7 @@ class User(BaseModel):
 
     def has_role(self, role: UserRole) -> bool:
         return any(
-            r.role == role and r.revoked_at is None
+            r.role == role.value and r.revoked_at is None
             for r in self.roles
         )
 

@@ -2,8 +2,9 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson, TeacherAssignedToDocument
+from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson
 from app.modules.courses import service, schema as course_schema
+from app.shared.enums import LessonStatus, SubLessonStatus
 
 router = APIRouter()
 
@@ -69,7 +70,7 @@ async def list_lessons(
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
     course_id: uuid.UUID | None = None,
-    status: str | None = None,
+    status: LessonStatus | None = None,
 ):
     return await service.list_lessons(db, current_user, skip, limit, search, course_id, status)
 
@@ -145,7 +146,7 @@ async def list_sub_lessons(
     search: str | None = None,
     course_id: uuid.UUID | None = None,
     lesson_id: uuid.UUID | None = None,
-    status: str | None = None,
+    status: SubLessonStatus | None = None,
 ):
     return await service.list_sub_lessons(db, current_user, skip, limit, search, course_id, lesson_id, status)
 

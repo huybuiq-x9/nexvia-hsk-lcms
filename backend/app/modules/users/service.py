@@ -7,6 +7,7 @@ from app.modules.users.model import User, UserRoleAssignment
 from app.modules.users import schema as user_schema
 from app.core.security import get_password_hash, verify_password
 from app.core.exceptions import NotFoundError, AlreadyExistsError, InvalidCredentialsError
+from app.shared.enums import UserRole
 
 
 class UserService:
@@ -19,8 +20,8 @@ class UserService:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def _active_roles(user: User) -> list[str]:
-        return [r.role for r in user.roles if r.revoked_at is None]
+    def _active_roles(user: User) -> list[UserRole]:
+        return [UserRole(r.role) for r in user.roles if r.revoked_at is None]
 
     @staticmethod
     def _to_user_with_roles(user: User) -> user_schema.UserWithRoles:
@@ -144,7 +145,7 @@ class UserService:
         skip: int = 0,
         limit: int = 20,
         search: str | None = None,
-        role: str | None = None,
+        role: UserRole | None = None,
     ) -> user_schema.UserListResponse:
         query = (
             select(User)
@@ -161,7 +162,7 @@ class UserService:
                 .where(
                     and_(
                         UserRoleAssignment.user_id == User.id,
-                        UserRoleAssignment.role == role,
+                        UserRoleAssignment.role == role.value,
                         UserRoleAssignment.revoked_at.is_(None),
                     )
                 )
@@ -182,10 +183,10 @@ class UserService:
             items=[self._to_user_with_roles(u) for u in users],
         )
 
-    async def revoke_role(self, user_id: uuid.UUID, role: str) -> User:
+    async def revoke_role(self, user_id: uuid.UUID, role: UserRole) -> User:
         user = await self._get_user_orm(user_id)
         for r in user.roles:
-            if r.role == role and r.revoked_at is None:
+            if r.role == role.value and r.revoked_at is None:
                 r.revoked_at = datetime.now(timezone.utc)
         await self._db.commit()
         await self._db.refresh(user)

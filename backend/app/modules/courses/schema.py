@@ -2,6 +2,7 @@ from datetime import datetime
 import uuid
 from typing import Annotated
 from pydantic import BaseModel, Field, ConfigDict
+from app.shared.enums import CourseStatus, LessonStatus, SubLessonStatus
 
 
 class SubLessonBase(BaseModel):
@@ -24,7 +25,7 @@ class SubLessonResponse(SubLessonBase):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     lesson_id: uuid.UUID
-    status: str
+    status: SubLessonStatus
     submitted_at: datetime | None
     approved_at: datetime | None
     created_at: datetime
@@ -57,7 +58,7 @@ class LessonResponse(LessonBase):
     course_id: uuid.UUID
     assigned_teacher_id: uuid.UUID | None
     assigned_converter_id: uuid.UUID | None
-    status: str
+    status: LessonStatus
     order_index: int
     created_at: datetime
     updated_at: datetime
@@ -97,7 +98,7 @@ class CourseResponse(CourseBase):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     assigned_expert_id: uuid.UUID
-    status: str
+    status: CourseStatus
     order_index: int
     created_at: datetime
     updated_at: datetime
@@ -108,7 +109,7 @@ class LessonBrief(BaseModel):
     id: uuid.UUID
     title: str
     description: str | None
-    status: str
+    status: LessonStatus
     order_index: int
     assigned_teacher_id: uuid.UUID | None
     assigned_converter_id: uuid.UUID | None
@@ -144,7 +145,7 @@ class SubLessonListItem(BaseModel):
     lesson_id: uuid.UUID
     title: str
     description: str | None
-    status: str
+    status: SubLessonStatus
     order_index: int
     submitted_at: datetime | None
     approved_at: datetime | None

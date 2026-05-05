@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, CurrentUser, AdminOnly
 from app.modules.users import schema as user_schema
 from app.modules.users.service import UserService
+from app.shared.enums import UserRole
 
 router = APIRouter()
 
@@ -44,7 +45,7 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
-    role: str | None = None,
+    role: UserRole | None = None,
 ):
     return await svc.list_users(skip, limit, search, role)
 
@@ -80,12 +81,12 @@ async def update_user(
 @router.delete("/{user_id}/roles/{role}")
 async def revoke_role(
     user_id: uuid.UUID,
-    role: str,
+    role: UserRole,
     svc: Annotated[UserService, Depends(get_user_service)],
     _: AdminOnly,
 ):
     await svc.revoke_role(user_id, role)
-    return {"message": f"Role '{role}' revoked"}
+    return {"message": f"Role '{role.value}' revoked"}
 
 
 @router.delete("/{user_id}", status_code=204)
