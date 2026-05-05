@@ -82,10 +82,6 @@ export const userService = {
     return res.data;
   },
 
-  async revokeRole(userId: string, role: ApiRole): Promise<void> {
-    await client.delete(`/users/${userId}/roles/${role}`);
-  },
-
   async deleteUser(userId: string): Promise<void> {
     await client.delete(`/users/${userId}`);
   },

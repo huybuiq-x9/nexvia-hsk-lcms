@@ -56,7 +56,7 @@ async def get_user(
     svc: Annotated[UserService, Depends(get_user_service)],
     current_user: CurrentUser,
 ):
-    return await svc.get_by_id_schema(user_id)
+    return await svc.get_by_id(user_id)
 
 
 @router.post("/", response_model=user_schema.UserResponse, status_code=201)
@@ -76,17 +76,6 @@ async def update_user(
     _: AdminOnly,
 ):
     return await svc.update(user_id, data)
-
-
-@router.delete("/{user_id}/roles/{role}")
-async def revoke_role(
-    user_id: uuid.UUID,
-    role: UserRole,
-    svc: Annotated[UserService, Depends(get_user_service)],
-    _: AdminOnly,
-):
-    await svc.revoke_role(user_id, role)
-    return {"message": f"Role '{role.value}' revoked"}
 
 
 @router.delete("/{user_id}", status_code=204)
