@@ -27,7 +27,32 @@
     "login": "Đăng nhập",
     "loggingIn": "Đang đăng nhập...",
     "loginSuccess": "Đăng nhập thành công!",
-    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại."
+    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+    "backToLogin": " Quay lại đăng nhập",
+    "forgot": {
+      "link": "Quên mật khẩu?",
+      "title": "Quên mật khẩu",
+      "subtitle": "Nhập email để nhận liên kết đặt lại mật khẩu.",
+      "sendLink": "Gửi liên kết đặt lại",
+      "checkEmail": "Kiểm tra hộp thư",
+      "emailSent": "Nếu tài khoản tồn tại, chúng tôi đã gửi email hướng dẫn đặt lại mật khẩu."
+    },
+    "reset": {
+      "title": "Đặt lại mật khẩu",
+      "subtitle": "Tạo mật khẩu mới cho tài khoản của bạn.",
+      "newPassword": "Mật khẩu mới",
+      "newPasswordPlaceholder": "Ít nhất 8 ký tự",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "confirmPasswordPlaceholder": "Nhập lại mật khẩu mới",
+      "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự.",
+      "passwordMismatch": "Mật khẩu mới không khớp.",
+      "invalidToken": "Liên kết không hợp lệ",
+      "tokenExpired": "Liên kết đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu đặt lại mật khẩu mới.",
+      "resetFailed": "Đặt lại mật khẩu thất bại. Vui lòng thử lại.",
+      "resetButton": "Đặt lại mật khẩu",
+      "successTitle": "Mật khẩu đã được đặt lại",
+      "successMessage": "Bạn có thể đăng nhập ngay với mật khẩu mới."
+    }
   },
   "dashboard": {
     "title": "Tổng quan",

@@ -27,7 +27,32 @@
     "login": "Sign in",
     "loggingIn": "Signing in...",
     "loginSuccess": "Login successful!",
-    "loginFailed": "Login failed. Please try again."
+    "loginFailed": "Login failed. Please try again.",
+    "backToLogin": "Back to login",
+    "forgot": {
+      "link": "Forgot password?",
+      "title": "Forgot Password",
+      "subtitle": "Enter your email to receive a password reset link.",
+      "sendLink": "Send Reset Link",
+      "checkEmail": "Check your inbox",
+      "emailSent": "If that email exists in our system, we sent a password reset link."
+    },
+    "reset": {
+      "title": "Reset Password",
+      "subtitle": "Create a new password for your account.",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "At least 8 characters",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Re-enter new password",
+      "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "invalidToken": "Invalid link",
+      "tokenExpired": "This link is expired or invalid. Please request a new password reset.",
+      "resetFailed": "Failed to reset password. Please try again.",
+      "resetButton": "Reset Password",
+      "successTitle": "Password Reset Complete",
+      "successMessage": "You can now sign in with your new password."
+    }
   },
   "dashboard": {
     "title": "Dashboard",

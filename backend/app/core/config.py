@@ -21,6 +21,21 @@ class Settings(BaseSettings):
 
     QUESTION_DRAW_SIZE: int = 5
 
+    # ─── Email / SMTP ───────────────────────────────────────────────────────────
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "hsk-lcms-noreply@gmail.com"
+    SMTP_FROM_NAME: str = "HSK LCMS"
+    SMTP_USE_TLS: bool = True
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # ─── Redis / Celery ─────────────────────────────────────────────────────────
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+
     @property
     def parsed_cors_origins(self) -> List[str]:
         if isinstance(self.CORS_ORIGINS, str):

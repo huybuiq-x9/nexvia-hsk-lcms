@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
@@ -105,6 +106,15 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="mt-3 text-right">
+            <Link
+              to="/forgot-password"
+              className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+            >
+              {t('auth.forgot.link')}
+            </Link>
+          </div>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">

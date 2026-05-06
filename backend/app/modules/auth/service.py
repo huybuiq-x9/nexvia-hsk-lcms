@@ -11,11 +11,14 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
+    create_password_reset_token,
+    decode_password_reset_token,
     verify_password,
     get_password_hash,
 )
 from app.core.exceptions import InvalidCredentialsError, InvalidTokenError
 from app.core.config import settings
+from app.core.celery_tasks import send_password_reset_email_task
 
 
 async def authenticate(
@@ -125,3 +128,35 @@ async def revoke_all_user_tokens(db: AsyncSession, user_id: uuid.UUID) -> None:
 async def logout(db: AsyncSession, refresh_token: str | None) -> None:
     if refresh_token:
         await revoke_token(db, refresh_token)
+
+
+async def send_password_reset_email(db: AsyncSession, email: str) -> bool:
+    user_svc = UserService(db)
+    user = await user_svc.get_by_email(email)
+    if not user or not user.is_active:
+        return False
+
+    token = create_password_reset_token(str(user.id))
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+    send_password_reset_email_task.delay(user.email, reset_url, user.full_name)
+    return True
+
+
+async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
+    try:
+        payload = decode_password_reset_token(token)
+    except Exception:
+        raise InvalidTokenError("Invalid or expired reset token")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise InvalidTokenError("Invalid reset token payload")
+
+    user_svc = UserService(db)
+    user = await user_svc.get_by_id(uuid.UUID(user_id))
+    if not user or not user.is_active:
+        raise InvalidTokenError("User not found or inactive")
+
+    user.hashed_password = get_password_hash(new_password)
+    await db.commit()
+    await revoke_all_user_tokens(db, user.id)

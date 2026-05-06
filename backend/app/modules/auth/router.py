@@ -65,3 +65,24 @@ async def logout_all(
 ):
     await service.revoke_all_user_tokens(db, current_user.id)
     return {"message": "Logged out from all devices"}
+
+
+@router.post("/forgot-password", response_model=auth_schema.ForgotPasswordResponse)
+async def forgot_password(
+    data: auth_schema.ForgotPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],s
+):
+    sent = await service.send_password_reset_email(db, data.email)
+    return auth_schema.ForgotPasswordResponse(
+        message="If that email exists in our system, a password reset link has been sent.",
+        sent=sent,
+    )
+
+
+@router.post("/reset-password", response_model=auth_schema.MessageResponse)
+async def reset_password(
+    data: auth_schema.ResetPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    await service.reset_password(db, data.token, data.new_password)
+    return auth_schema.MessageResponse(message="Password reset successfully. You can now login with your new password.")

@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from typing import Any
 import bcrypt
+import aiosmtplib
 from jose import jwt, JWTError
 from app.core.config import settings
 
 ALGORITHM = "HS256"
 BCRYPT_MAX_PASSWORD_BYTES = 72
+RESET_TOKEN_EXPIRE_MINUTES = 15
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -43,6 +46,22 @@ def create_refresh_token(data: dict[str, Any], expires_delta: timedelta | None =
         )
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_password_reset_token(user_id: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"sub": user_id, "exp": expire, "type": "reset"}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_password_reset_token(token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "reset":
+            raise JWTError("Invalid token type")
+        return payload
+    except JWTError as e:
+        raise e
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
