@@ -84,8 +84,9 @@ function Sidebar({
   const isTeacherConverter =
     selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
   const navItems = baseNavItems.filter(item => {
-    if (item.adminOnly) return isAdmin;
-    if (isTeacherConverter) return false;
+    if (item.adminOnly) return isAdmin && selectedRole === API_ROLE.ADMIN;
+    // Teacher/Converter: show dashboard, courses (children), lessons, sub-lessons
+    if (isTeacherConverter) return item.to === '/dashboard' || item.to === '/courses';
     return true;
   });
 

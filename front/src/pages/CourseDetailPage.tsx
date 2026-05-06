@@ -18,7 +18,7 @@ import type {
   ApiSubLessonResponse,
   ApiUserWithRoles,
 } from '../types/api';
-import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../types/api';
+import { COURSE_STATUS_COLORS, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS, API_ROLE } from '../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
-  const { isAdmin } = useAuth();
+  const { isAdmin, selectedRole } = useAuth();
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -150,7 +150,7 @@ export default function CourseDetailPage() {
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{course.description}</p>
           )}
         </div>
-        {isAdmin && (
+        {isAdmin && selectedRole === API_ROLE.ADMIN && (
         <button
           onClick={() => navigate(`/courses/edit/${course.id}`)}
           className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"

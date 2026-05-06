@@ -11,7 +11,7 @@ import {
 import { courseService, userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiCourseWithLessons, ApiUserWithRoles, CourseStatus } from '../types/api';
-import { COURSE_STATUS_COLORS } from '../types/api';
+import { COURSE_STATUS_COLORS, API_ROLE } from '../types/api';
 
 const PER_PAGE = 20;
 
@@ -43,7 +43,7 @@ const UserAvatar = ({ name }: { name: string }) => {
 export default function CoursesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, selectedRole } = useAuth();
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -93,7 +93,7 @@ export default function CoursesPage() {
             {isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}
           </p>
         </div>
-        {isAdmin && (
+        {isAdmin && selectedRole === API_ROLE.ADMIN && (
         <button
           onClick={() => navigate('/courses/create')}
           className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"

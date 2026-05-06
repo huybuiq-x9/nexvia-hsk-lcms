@@ -152,15 +152,25 @@ async def list_courses(
     if _role_value(UserRole.ADMIN) not in roles:
         if _role_value(UserRole.EXPERT) in roles:
             query = query.where(Course.assigned_expert_id == current_user.id)
-        elif _role_value(UserRole.TEACHER) in roles or _role_value(UserRole.CONVERTER) in roles:
-            return course_schema.CourseListResponse(total=0, items=[])
+        elif _role_value(UserRole.TEACHER) in roles:
+            # Teachers can see courses via their assigned lessons
+            query = query.join(Lesson, Lesson.course_id == Course.id).where(
+                Lesson.assigned_teacher_id == current_user.id,
+                Lesson.deleted_at.is_(None),
+            )
+        elif _role_value(UserRole.CONVERTER) in roles:
+            # Converters can see courses via their assigned lessons
+            query = query.join(Lesson, Lesson.course_id == Course.id).where(
+                Lesson.assigned_converter_id == current_user.id,
+                Lesson.deleted_at.is_(None),
+            )
         else:
             return course_schema.CourseListResponse(total=0, items=[])
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
-    query = query.offset(skip).limit(limit).order_by(Course.created_at.desc())
+    query = query.offset(skip).limit(limit).order_by(Course.created_at.desc()).distinct()
     result = await db.execute(query)
     courses = list(result.scalars().all())
 
@@ -183,10 +193,26 @@ async def get_course(
             if course.assigned_expert_id != current_user.id:
                 raise HTTPException(status_code=403, detail="You do not have access to this course")
         elif _role_value(UserRole.TEACHER) in roles:
-            # teacher has access via lesson, handled at lesson level
-            pass
+            # Check if teacher is assigned to at least one lesson in this course
+            result = await db.execute(
+                select(Lesson.id).where(
+                    Lesson.course_id == course_id,
+                    Lesson.assigned_teacher_id == current_user.id,
+                    Lesson.deleted_at.is_(None),
+                ).limit(1)
+            )
+            if result.scalar_one_or_none() is None:
+                raise HTTPException(status_code=403, detail="You do not have access to this course")
         elif _role_value(UserRole.CONVERTER) in roles:
-            pass
+            result = await db.execute(
+                select(Lesson.id).where(
+                    Lesson.course_id == course_id,
+                    Lesson.assigned_converter_id == current_user.id,
+                    Lesson.deleted_at.is_(None),
+                ).limit(1)
+            )
+            if result.scalar_one_or_none() is None:
+                raise HTTPException(status_code=403, detail="You do not have access to this course")
         else:
             raise HTTPException(status_code=403, detail="You do not have access to this course")
     return _to_course_with_lessons(course)
