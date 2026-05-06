@@ -56,7 +56,8 @@ async def get_user(
     svc: Annotated[UserService, Depends(get_user_service)],
     current_user: CurrentUser,
 ):
-    return await svc.get_user_by_id(user_id)
+    user = await svc.get_by_id(user_id)
+    return UserService._to_user_with_roles(user)
 
 
 @router.post("/", response_model=user_schema.UserResponse, status_code=201)
