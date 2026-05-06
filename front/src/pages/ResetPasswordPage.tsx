@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-md">
-            <span className="text-white font-bold text-lg">HSK</span>
+            <span className="text-white font-bold text-lg">NX</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">{t('auth.reset.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('auth.reset.subtitle')}</p>

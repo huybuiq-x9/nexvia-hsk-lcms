@@ -43,10 +43,10 @@ async def send_email(
 
 
 def build_password_reset_email(reset_url: str, user_name: str) -> tuple[str, str]:
-    subject = "HSK LCMS — Đặt lại mật khẩu"
+    subject = "NEXVIA LCMS — Đặt lại mật khẩu"
     text = (
         f"Xin chào {user_name},\n\n"
-        f"Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản HSK LCMS.\n"
+        f"Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản NEXVIA LCMS.\n"
         f"Nhấn vào liên kết bên dưới để đặt lại mật khẩu mới:\n\n"
         f"{reset_url}\n\n"
         f"Liên kết này có hiệu lực trong 15 phút.\n"
@@ -68,7 +68,7 @@ def build_password_reset_email(reset_url: str, user_name: str) -> tuple[str, str
     </head>
     <body>
       <div class="container">
-        <div class="logo">HSK LCMS</div>
+        <div class="logo">NEXVIA LCMS</div>
         <div class="title">Xin chào {user_name},</div>
         <div class="text">Nhấn vào <a href="{reset_url}">liên kết này</a> để đặt lại mật khẩu.</div>
         <div class="text" style="margin-top:20px">
@@ -76,7 +76,7 @@ def build_password_reset_email(reset_url: str, user_name: str) -> tuple[str, str
           Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
         </div>
         <div class="footer">
-          HSK LCMS — Hệ thống Quản lý Nội dung Học tập<br/>
+          NEXVIA LCMS — Hệ thống Quản lý Nội dung Học tập<br/>
           Email này được gửi tự động, vui lòng không trả lời.
         </div>
       </div>

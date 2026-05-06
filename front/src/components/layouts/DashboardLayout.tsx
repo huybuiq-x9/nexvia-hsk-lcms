@@ -106,17 +106,16 @@ function Sidebar({
         {!collapsed && (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-xs">HSK</span>
+              <span className="text-white font-bold text-xs">NX</span>
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-800 leading-tight">{t('app.brandShort')}</div>
-              <div className="text-[10px] text-slate-400 leading-tight">{t('app.brandSub')}</div>
+              <div className="text-xs font-bold text-slate-800 leading-tight">{t('app.brand')}</div>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center mx-auto shadow-sm">
-            <span className="text-white font-bold text-xs">HSK</span>
+            <span className="text-white font-bold text-xs">NX</span>
           </div>
         )}
         <button

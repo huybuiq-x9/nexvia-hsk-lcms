@@ -1,6 +1,6 @@
-# HSK LCMS — Đặc tả Chức năng
+# NEXVIA LCMS — Đặc tả Chức năng
 
-> **Tài liệu mô tả chức năng hệ thống HSK LCMS từ góc nhìn người dùng**
+> **Tài liệu mô tả chức năng hệ thống NEXVIA LCMS từ góc nhìn người dùng**
 >
 > *Tài liệu này tập trung vào: vai trò, quyền hạn, luồng nghiệp vụ, màn hình và tương tác của từng nhóm người dùng.*
 
@@ -403,7 +403,7 @@ Hệ thống phân biệt rõ Quiz và Question:
 ### 7.2 Mẫu email
 
 Tất cả email sử dụng template có cấu trúc:
-- Header: Logo HSK LCMS
+- Header: Logo NEXVIA LCMS
 - Body: Nội dung sự kiện
 - CTA Button: Link tới hệ thống
 - Footer: Thông tin liên hệ

@@ -457,7 +457,7 @@ async def seed_courses(email_to_id: dict[str, uuid.UUID]) -> None:
 
 async def main() -> None:
     print("=" * 60)
-    print("  HSK LCMS — Database Seeder")
+    print("  NEXVIA LCMS — Database Seeder")
     print("=" * 60)
     print()
 

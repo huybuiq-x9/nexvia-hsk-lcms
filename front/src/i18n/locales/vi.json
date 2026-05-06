@@ -1,10 +1,9 @@
 {
   "app": {
     "loading": "Đang tải...",
-    "brand": "HSK LCMS",
-    "brandShort": "LCMS",
-    "brandSub": "HSK Hà Nội",
-    "footer": "HSK LCMS — Hệ thống Quản lý Nội dung Học tập"
+    "brand": "NEXVIA LCMS",
+    "brandShort": "NEXVIA",
+    "footer": "NEXVIA LCMS — Hệ thống Quản lý Nội dung Học tập"
   },
   "nav": {
     "dashboard": "Tổng quan",
@@ -56,7 +55,7 @@
   },
   "dashboard": {
     "title": "Tổng quan",
-    "welcome": "Chào mừng bạn quay trở lại HSK LCMS.",
+    "welcome": "Chào mừng bạn quay trở lại NEXVIA LCMS.",
     "courses": "Khóa học",
     "active": "Đang hoạt động",
     "questions": "Ngân hàng câu hỏi",
