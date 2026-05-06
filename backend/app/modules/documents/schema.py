@@ -34,5 +34,5 @@ class DocumentListResponse(BaseModel):
 
 
 class DocumentUploadResponse(BaseModel):
-    document: DocumentResponse
-    download_url: str
+    documents: list[DocumentResponse]
+    download_urls: list[str]

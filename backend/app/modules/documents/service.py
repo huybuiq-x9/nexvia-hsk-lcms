@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from fastapi import UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -106,47 +107,56 @@ async def list_documents(
     )
 
 
-async def upload_document(
+async def upload_documents(
     db: AsyncSession,
     sub_lesson_id: uuid.UUID,
     uploader_id: uuid.UUID,
-    file_content: bytes,
-    original_filename: str,
-    file_size: int,
+    files: list[UploadFile],
 ) -> DocumentUploadResponse:
-    if file_size > MAX_FILE_SIZE:
-        raise ForbiddenError(f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024*1024)} MB")
+    if not files:
+        raise ForbiddenError("No files provided")
 
-    ext = original_filename.rsplit(".", 1)[-1].lower()
-    if f".{ext}" not in ALLOWED_EXTENSIONS:
-        raise ForbiddenError(
-            f"File type '.{ext}' is not allowed. Allowed types: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+    results = []
+    for file in files:
+        content = await file.read()
+        ext = (file.filename or "unknown").rsplit(".", 1)[-1].lower()
+
+        if len(content) > MAX_FILE_SIZE:
+            raise ForbiddenError(
+                f"File '{file.filename}' exceeds maximum size of {MAX_FILE_SIZE // (1024*1024)} MB"
+            )
+        if f".{ext}" not in ALLOWED_EXTENSIONS:
+            raise ForbiddenError(
+                f"File type '.{ext}' is not allowed. Allowed types: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+            )
+
+        mime_type = storage_service.guess_mime_type(file.filename or "unknown")
+        stored_name, download_url = storage_service.upload_file(
+            file_content=content,
+            original_filename=file.filename or "unknown",
+            content_type=mime_type,
+            sub_lesson_id=str(sub_lesson_id),
         )
 
-    mime_type = storage_service.guess_mime_type(original_filename)
+        doc = Document(
+            sub_lesson_id=sub_lesson_id,
+            uploader_id=uploader_id,
+            original_name=file.filename or "unknown",
+            stored_name=stored_name,
+            file_extension=ext,
+            file_size=len(content),
+            mime_type=mime_type,
+        )
+        db.add(doc)
+        results.append((doc, download_url))
 
-    stored_name, download_url = storage_service.upload_file(
-        file_content=file_content,
-        original_filename=original_filename,
-        content_type=mime_type,
-    )
-
-    doc = Document(
-        sub_lesson_id=sub_lesson_id,
-        uploader_id=uploader_id,
-        original_name=original_filename,
-        stored_name=stored_name,
-        file_extension=ext,
-        file_size=file_size,
-        mime_type=mime_type,
-    )
-    db.add(doc)
     await db.commit()
-    await db.refresh(doc)
+    for doc, _ in results:
+        await db.refresh(doc)
 
     return DocumentUploadResponse(
-        document=_to_document_response(doc),
-        download_url=download_url,
+        documents=[_to_document_response(doc) for doc, _ in results],
+        download_urls=[url for _, url in results],
     )
 
 

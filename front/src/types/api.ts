@@ -314,8 +314,8 @@ export interface ApiDocumentWithUploader extends ApiDocumentResponse {
 }
 
 export interface ApiDocumentUploadResponse {
-  document: ApiDocumentResponse;
-  download_url: string;
+  documents: ApiDocumentResponse[];
+  download_urls: string[];
 }
 
 export interface ApiDocumentListResponse {

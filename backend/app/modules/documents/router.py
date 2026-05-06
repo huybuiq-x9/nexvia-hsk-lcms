@@ -32,20 +32,17 @@ async def list_documents(
     response_model=DocumentUploadResponse,
     status_code=201,
 )
-async def upload_document(
+async def upload_documents(
     sublesson_id: uuid.UUID,
     current_user: TeacherAssignedToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
 ) -> DocumentUploadResponse:
-    content = await file.read()
-    return await service.upload_document(
+    return await service.upload_documents(
         db=db,
         sub_lesson_id=sublesson_id,
         uploader_id=current_user.id,
-        file_content=content,
-        original_filename=file.filename or "unknown",
-        file_size=len(content),
+        files=files,
     )
 
 

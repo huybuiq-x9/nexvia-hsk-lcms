@@ -242,9 +242,9 @@ export const documentService = {
     return res.data;
   },
 
-  async uploadDocument(sublessonId: string, file: File): Promise<ApiDocumentUploadResponse> {
+  async uploadDocuments(sublessonId: string, files: File[]): Promise<ApiDocumentUploadResponse> {
     const formData = new FormData();
-    formData.append('file', file);
+    files.forEach(file => formData.append('files', file));
     const res = await client.post<ApiDocumentUploadResponse>(
       `/documents/sub-lessons/${sublessonId}/documents`,
       formData,

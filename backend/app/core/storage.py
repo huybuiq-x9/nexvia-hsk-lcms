@@ -1,9 +1,17 @@
 import boto3
-import uuid
 import mimetypes
+import re
 from botocore.exceptions import ClientError
 from app.core.config import settings
 from app.core.exceptions import LCMSException
+
+
+def _sanitize_filename(filename: str) -> str:
+    """Remove path separators and reserved characters from filename."""
+    name = re.sub(r"[/\\:]", "_", filename)
+    if len(name) > 200:
+        name = name[:200]
+    return name
 
 
 class StorageService:
@@ -55,16 +63,20 @@ class StorageService:
         file_content: bytes,
         original_filename: str,
         content_type: str,
+        sub_lesson_id: str | None = None,
     ) -> tuple[str, str]:
         """
         Upload a file to S3/MinIO and return (stored_name, public_url).
+        If sub_lesson_id is provided, stores under Documents/{sub_lesson_id}/{filename}.
         Raises LCMSException on failure.
         """
         self._ensure_bucket_exists()
 
-        ext = original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else ""
-        stored_name = f"{uuid.uuid4().hex}.{ext}" if ext else uuid.uuid4().hex
-        key = f"documents/{stored_name}"
+        safe_name = _sanitize_filename(original_filename)
+        if sub_lesson_id:
+            key = f"Documents/{sub_lesson_id}/{safe_name}"
+        else:
+            key = f"documents/{safe_name}"
 
         try:
             self.client.put_object(
@@ -80,15 +92,14 @@ class StorageService:
             )
 
         public_url = f"{settings.S3_PUBLIC_URL}/{key}"
-        return stored_name, public_url
+        return key, public_url
 
     def delete_file(self, stored_name: str) -> None:
-        """Delete a file from S3/MinIO by its stored name."""
-        key = f"documents/{stored_name}"
+        """Delete a file from S3/MinIO by its stored name (full key)."""
         try:
             self.client.delete_object(
                 Bucket=settings.S3_BUCKET_NAME,
-                Key=key,
+                Key=stored_name,
             )
         except ClientError as e:
             raise LCMSException(
@@ -97,20 +108,19 @@ class StorageService:
             )
 
     def get_presigned_download_url(self, stored_name: str, expires_in: int = 3600) -> str:
-        """Generate a presigned URL for downloading a file."""
-        key = f"documents/{stored_name}"
+        """Generate a presigned URL for downloading a file (stored_name = full key)."""
         try:
             url = self.client.generate_presigned_url(
                 "get_object",
                 Params={
                     "Bucket": settings.S3_BUCKET_NAME,
-                    "Key": key,
+                    "Key": stored_name,
                 },
                 ExpiresIn=expires_in,
             )
             return url
         except ClientError:
-            return f"{settings.S3_PUBLIC_URL}/{key}"
+            return f"{settings.S3_PUBLIC_URL}/{stored_name}"
 
     @staticmethod
     def guess_mime_type(filename: str) -> str:

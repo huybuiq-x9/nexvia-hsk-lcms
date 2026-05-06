@@ -259,21 +259,25 @@ const DocumentsTab = ({
     loadDocuments();
   }, [loadDocuments]);
 
-  const handleFile = async (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+  const handleFiles = async (files: File[]) => {
+    const invalidExt = files.find(f => !ALLOWED_EXTENSIONS.includes(f.name.split('.').pop()?.toLowerCase() || ''));
+    if (invalidExt) {
       toastError(t('documents.allowedTypes'));
       return;
     }
-    if (file.size > MAX_FILE_SIZE) {
+    const oversized = files.find(f => f.size > MAX_FILE_SIZE);
+    if (oversized) {
       toastError(t('documents.fileTooBig'));
       return;
     }
     setUploading(true);
     try {
-      await documentService.uploadDocument(subLessonId, file);
-      success(t('documents.uploadSuccess'));
-      window.location.reload();
+      await documentService.uploadDocuments(subLessonId, files);
+      success(files.length === 1
+        ? t('documents.uploadSuccess')
+        : t('documents.uploadSuccessMulti', { count: files.length }));
+      loadDocuments();
+      onRefresh();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -287,13 +291,13 @@ const DocumentsTab = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) handleFiles(files);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleFiles(files);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -353,6 +357,7 @@ const DocumentsTab = ({
           type="file"
           className="hidden"
           accept={ALLOWED_EXTENSIONS.map(e => `.${e}`).join(',')}
+          multiple
           onChange={handleInputChange}
         />
         {uploading ? (

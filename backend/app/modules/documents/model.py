@@ -28,7 +28,7 @@ class Document(BaseModel):
         index=True,
     )
     original_name: Mapped[str] = mapped_column(String(500), nullable=False)
-    stored_name: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
+    stored_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_extension: Mapped[str] = mapped_column(String(50), nullable=False)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
