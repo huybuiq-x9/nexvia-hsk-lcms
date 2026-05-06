@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -34,6 +35,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
+      <div className="fixed right-4 top-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm">
 
         {/* Brand */}

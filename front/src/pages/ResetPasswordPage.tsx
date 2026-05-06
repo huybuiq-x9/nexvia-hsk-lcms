@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import client from '../services/apiClient';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export default function ResetPasswordPage() {
   const { t } = useTranslation();
@@ -52,6 +53,10 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
+        <div className="fixed right-4 top-4 z-10">
+          <LanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={28} className="text-green-600" />
@@ -69,6 +74,10 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
+        <div className="fixed right-4 top-4 z-10">
+          <LanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={28} className="text-red-600" />
@@ -85,6 +94,10 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
+      <div className="fixed right-4 top-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm">
 
         {/* Brand */}
