@@ -353,6 +353,26 @@
       "scorm_reviewing": "SCORM đang kiểm duyệt",
       "approved": "Đã duyệt",
       "published": "Đã xuất bản"
+    },
+    "workflow": {
+      "stepDraft": "Bản nháp",
+      "stepSubmitted": "Đã gửi",
+      "stepReviewing": "Kiểm duyệt",
+      "stepInConversion": "Chuyển đổi",
+      "stepScorm": "SCORM",
+      "stepApproved": "Đã duyệt"
+    },
+    "tabs": {
+      "documents": "Tài liệu",
+      "questions": "Ngân hàng câu hỏi",
+      "scorm": "SCORM",
+      "history": "Lịch sử"
+    },
+    "breadcrumb": "Khóa học",
+    "card": {
+      "parentLesson": "Bài học cha",
+      "lastUpdated": "Cập nhật lần cuối",
+      "createdAt": "Ngày tạo"
     }
   }
 }

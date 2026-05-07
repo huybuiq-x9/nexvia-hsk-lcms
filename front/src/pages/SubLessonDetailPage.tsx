@@ -33,15 +33,6 @@ import {
 
 type Tab = 'documents' | 'questions' | 'scorm' | 'history';
 
-const WORKFLOW_STEPS = [
-  { key: SUB_LESSON_STATUS.DRAFT,          label: 'Bản nháp' },
-  { key: SUB_LESSON_STATUS.SUBMITTED,      label: 'Đã gửi' },
-  { key: SUB_LESSON_STATUS.REVIEWING,      label: 'Kiểm duyệt' },
-  { key: SUB_LESSON_STATUS.IN_CONVERSION,  label: 'Chuyển đổi' },
-  { key: SUB_LESSON_STATUS.SCORM_UPLOADED, label: 'SCORM' },
-  { key: SUB_LESSON_STATUS.APPROVED,       label: 'Đã duyệt' },
-];
-
 const FILE_TYPE_ICON_MAP: Record<string, React.ReactNode> = {
   pdf:  <FileText size={18} className="text-red-500" />,
   pptx: <Presentation size={18} className="text-orange-500" />,
@@ -180,7 +171,25 @@ const ActionModal = ({
 
 // ─── Workflow Stepper ──────────────────────────────────────────────────────────
 
-const WorkflowStepper = ({ currentStatus }: { currentStatus: string }) => {
+const WORKFLOW_STEPS = [
+  { key: SUB_LESSON_STATUS.DRAFT },
+  { key: SUB_LESSON_STATUS.SUBMITTED },
+  { key: SUB_LESSON_STATUS.REVIEWING },
+  { key: SUB_LESSON_STATUS.IN_CONVERSION },
+  { key: SUB_LESSON_STATUS.SCORM_UPLOADED },
+  { key: SUB_LESSON_STATUS.APPROVED },
+];
+
+const WORKFLOW_LABELS: Record<string, string> = {
+  [SUB_LESSON_STATUS.DRAFT]:          'stepDraft',
+  [SUB_LESSON_STATUS.SUBMITTED]:      'stepSubmitted',
+  [SUB_LESSON_STATUS.REVIEWING]:      'stepReviewing',
+  [SUB_LESSON_STATUS.IN_CONVERSION]:  'stepInConversion',
+  [SUB_LESSON_STATUS.SCORM_UPLOADED]: 'stepScorm',
+  [SUB_LESSON_STATUS.APPROVED]:       'stepApproved',
+};
+
+const WorkflowStepper = ({ currentStatus, t }: { currentStatus: string; t: (key: string) => string }) => {
   const currentIdx = WORKFLOW_STEPS.findIndex(s => s.key === currentStatus);
 
   return (
@@ -203,7 +212,7 @@ const WorkflowStepper = ({ currentStatus }: { currentStatus: string }) => {
                 <span className={`text-[10px] mt-1 whitespace-nowrap ${
                   isCurrent ? 'text-blue-600 font-semibold' :
                   isFuture ? 'text-slate-400' : 'text-slate-600'
-                }`}>{step.label}</span>
+                }`}>{t(`subLessons.workflow.${WORKFLOW_LABELS[step.key]}`)}</span>
               </div>
               {idx < WORKFLOW_STEPS.length - 1 && (
                 <div className={`w-8 sm:w-16 h-0.5 mx-1 ${
@@ -462,11 +471,11 @@ const DocumentsTab = ({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-  { key: 'documents', label: 'Tài liệu',    icon: <FileText size={16} /> },
-  { key: 'questions', label: 'Ngân hàng câu hỏi', icon: <HelpCircle size={16} /> },
-  { key: 'scorm',     label: 'SCORM',        icon: <Package size={16} /> },
-  { key: 'history',   label: 'Lịch sử',      icon: <History size={16} /> },
+const TABS: { key: Tab; labelKey: string; icon: React.ReactNode }[] = [
+  { key: 'documents', labelKey: 'documents', icon: <FileText size={16} /> },
+  { key: 'questions', labelKey: 'questions', icon: <HelpCircle size={16} /> },
+  { key: 'scorm',     labelKey: 'scorm',     icon: <Package size={16} /> },
+  { key: 'history',   labelKey: 'history',   icon: <History size={16} /> },
 ];
 
 export default function SubLessonDetailPage() {
@@ -533,7 +542,7 @@ export default function SubLessonDetailPage() {
     <div className="space-y-5">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm text-slate-500">
-        <Link to="/courses" className="hover:text-slate-700 transition-colors">Khóa học</Link>
+        <Link to="/courses" className="hover:text-slate-700 transition-colors">{t('subLessons.breadcrumb')}</Link>
         <ChevronRight size={14} />
         {courseInfo && (
           <>
@@ -570,13 +579,13 @@ export default function SubLessonDetailPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
           <div>
-            <div className="text-xs text-slate-400">Bài học cha</div>
+            <div className="text-xs text-slate-400">{t('subLessons.card.parentLesson')}</div>
             <div className="text-sm font-medium text-slate-800 mt-0.5 truncate">
               {lessonInfo?.title ?? '—'}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400">Cập nhật lần cuối</div>
+            <div className="text-xs text-slate-400">{t('subLessons.card.lastUpdated')}</div>
             <div className="text-sm font-medium text-slate-800 mt-0.5">
               {new Date(subLesson.updated_at).toLocaleDateString('vi-VN', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
@@ -584,7 +593,7 @@ export default function SubLessonDetailPage() {
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400">Ngày tạo</div>
+            <div className="text-xs text-slate-400">{t('subLessons.card.createdAt')}</div>
             <div className="text-sm font-medium text-slate-800 mt-0.5">
               {new Date(subLesson.created_at).toLocaleDateString('vi-VN', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
@@ -595,7 +604,7 @@ export default function SubLessonDetailPage() {
       </div>
 
       {/* Workflow stepper */}
-      <WorkflowStepper currentStatus={subLesson.status} />
+      <WorkflowStepper currentStatus={subLesson.status} t={t} />
 
       {/* Tabs */}
       <div className="card overflow-hidden">
@@ -610,7 +619,7 @@ export default function SubLessonDetailPage() {
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
-              {tab.icon} {tab.label}
+              {tab.icon} {t(`subLessons.tabs.${tab.labelKey}`)}
             </button>
           ))}
         </div>

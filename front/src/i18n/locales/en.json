@@ -354,6 +354,26 @@
       "scorm_reviewing": "SCORM Reviewing",
       "approved": "Approved",
       "published": "Published"
+    },
+    "workflow": {
+      "stepDraft": "Draft",
+      "stepSubmitted": "Submitted",
+      "stepReviewing": "Reviewing",
+      "stepInConversion": "Converting",
+      "stepScorm": "SCORM",
+      "stepApproved": "Approved"
+    },
+    "tabs": {
+      "documents": "Documents",
+      "questions": "Question Bank",
+      "scorm": "SCORM",
+      "history": "History"
+    },
+    "breadcrumb": "Courses",
+    "card": {
+      "parentLesson": "Parent Lesson",
+      "lastUpdated": "Last Updated",
+      "createdAt": "Created At"
     }
   }
 }
