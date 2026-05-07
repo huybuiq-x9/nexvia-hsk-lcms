@@ -1,12 +1,13 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, delete, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.modules.users.model import User, UserRoleAssignment
+from app.modules.courses.model import Course, Lesson
 from app.modules.users import schema as user_schema
 from app.core.security import get_password_hash, verify_password
-from app.core.exceptions import NotFoundError, AlreadyExistsError
+from app.core.exceptions import NotFoundError, AlreadyExistsError, ForbiddenDeletionError
 from fastapi import HTTPException, status
 from app.shared.enums import UserRole
 
@@ -187,5 +188,40 @@ class UserService:
 
     async def delete(self, user_id: uuid.UUID) -> None:
         user = await self.get_by_id(user_id)
+
+        assigned_courses = (
+            (await self._db.execute(select(func.count()).select_from(Course).where(Course.assigned_expert_id == user_id)))
+            .scalar() or 0
+        )
+        assigned_lessons = (
+            (await self._db.execute(
+                select(func.count())
+                .select_from(Lesson)
+                .where(
+                    (Lesson.assigned_teacher_id == user_id) | (Lesson.assigned_converter_id == user_id)
+                )
+            ))
+            .scalar() or 0
+        )
+
+        msgs: list[str] = []
+        if assigned_courses > 0:
+            msgs.append(f"expert ({assigned_courses} course{'s' if assigned_courses > 1 else ''})")
+        if assigned_lessons > 0:
+            msgs.append(f"teacher/converter ({assigned_lessons} lesson{'s' if assigned_lessons > 1 else ''})")
+        if msgs:
+            raise ForbiddenDeletionError(
+                f"Cannot delete user: they are still assigned as {', '.join(msgs)}. "
+                f"Please unassign them before deleting."
+            )
+
+        user.is_active = False
+        from app.modules.auth.model import RefreshToken
+        await self._db.execute(
+            delete(RefreshToken).where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.is_revoked == False,
+            )
+        )
         user.deleted_at = datetime.now(timezone.utc)
         await self._db.commit()

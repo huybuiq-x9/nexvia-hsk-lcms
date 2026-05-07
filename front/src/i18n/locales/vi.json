@@ -114,7 +114,11 @@
       "confirm": "Bạn có chắc muốn xóa tài khoản {{name}}?",
       "cancel": "Hủy",
       "confirmDelete": "Xóa",
-      "success": "Đã xóa người dùng."
+      "success": "Đã xóa người dùng.",
+      "selfDeletedTitle": "Tài khoản đã bị xóa",
+      "selfDeletedMessage": "Tài khoản của bạn đã bị xóa vĩnh viễn. Tất cả phiên đăng nhập đã bị thu hồi.",
+      "selfDeletedHint": "Bạn sẽ được chuyển hướng về trang đăng nhập.",
+      "goToLogin": "Đến trang đăng nhập"
     }
   },
   "stub": {

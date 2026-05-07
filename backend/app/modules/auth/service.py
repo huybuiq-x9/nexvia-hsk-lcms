@@ -96,8 +96,10 @@ async def refresh_tokens(
 
     user_svc = UserService(db)
     user = await user_svc.get_by_id(uuid.UUID(user_id))
-    if not user or not user.is_active:
-        raise InvalidTokenError("User not found or inactive")
+    if not user or user.deleted_at is not None:
+        raise InvalidTokenError("User no longer exists")
+    if not user.is_active:
+        raise InvalidTokenError("User is inactive")
 
     db_token.is_revoked = True
     await db.flush()

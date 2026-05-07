@@ -247,29 +247,60 @@ const UserModal = ({
 
 const DeleteModal = ({
   user,
+  currentUserId,
   onClose,
   onDeleted,
 }: {
   user: ApiUserWithRoles;
+  currentUserId: string;
   onClose: () => void;
   onDeleted: () => void;
 }) => {
   const { t } = useTranslation();
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [selfDeleted, setSelfDeleted] = useState(false);
 
   const handleDelete = async () => {
     setIsLoading(true);
     try {
       await userService.deleteUser(user.id);
-      success(t('users.deleteModal.success'));
-      onDeleted();
-    } catch {
-      // handled
-    } finally {
+      if (user.id === currentUserId) {
+        setSelfDeleted(true);
+      } else {
+        success(t('users.deleteModal.success'));
+        onDeleted();
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        || t('users.modal.errorGeneric');
+      showError(msg);
       setIsLoading(false);
     }
   };
+
+  if (selfDeleted) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={20} className="text-blue-600" />
+          </div>
+          <h2 className="text-base font-semibold text-slate-900 mb-2">{t('users.deleteModal.selfDeletedTitle')}</h2>
+          <p className="text-sm text-slate-500 mb-4">{t('users.deleteModal.selfDeletedMessage')}</p>
+          <p className="text-xs text-slate-400 mb-5">{t('users.deleteModal.selfDeletedHint')}</p>
+          <button
+            onClick={() => { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); window.location.href = '/'; }}
+            className="btn btn-primary w-full justify-center"
+          >
+            {t('users.deleteModal.goToLogin')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -305,7 +336,7 @@ const DeleteModal = ({
 
 export default function UsersPage() {
   const { t, i18n } = useTranslation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -628,6 +659,7 @@ export default function UsersPage() {
       {deleteUser && (
         <DeleteModal
           user={deleteUser}
+          currentUserId={user?.id ?? ''}
           onClose={() => setDeleteUser(undefined)}
           onDeleted={() => { setDeleteUser(undefined); setRefreshKey(k => k + 1); }}
         />

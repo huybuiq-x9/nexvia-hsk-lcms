@@ -114,7 +114,11 @@
       "confirm": "Are you sure you want to delete the account {{name}}?",
       "cancel": "Cancel",
       "confirmDelete": "Delete",
-      "success": "User deleted."
+      "success": "User deleted.",
+      "selfDeletedTitle": "Account Deleted",
+      "selfDeletedMessage": "Your account has been permanently deleted. All active sessions have been revoked.",
+      "selfDeletedHint": "You will be redirected to the login page.",
+      "goToLogin": "Go to Login"
     }
   },
   "stub": {
