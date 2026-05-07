@@ -25,13 +25,11 @@ class LessonStatus(str, enum.Enum):
 class SubLessonStatus(str, enum.Enum):
     DRAFT = "draft"
     IN_PROGRESS = "in_progress"
-    SUBMITTED = "submitted"
     REVIEWING = "reviewing"
-    IN_CONVERSION = "in_conversion"
-    SCORM_UPLOADED = "scorm_uploaded"
+    CONVERTING = "converting"
     SCORM_REVIEWING = "scorm_reviewing"
     APPROVED = "approved"
-    PUBLISHED = "published"
+    REJECTED = "rejected"
 
 
 class ExamStatus(str, enum.Enum):

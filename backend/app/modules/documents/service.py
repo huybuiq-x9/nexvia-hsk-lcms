@@ -4,21 +4,47 @@ from fastapi import UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.modules.documents.model import Document
+from app.modules.documents.model import Document, DocumentComment
 from app.modules.documents.schema import (
     DocumentResponse,
     DocumentListResponse,
     DocumentUploadResponse,
     DocumentWithUploaderResponse,
+    DocumentCommentResponse,
+    DocumentCommentCreate,
+    DocumentCommentListResponse,
     UploaderInfo,
+    CommentAuthorInfo,
 )
 from app.modules.courses.model import SubLesson
+from app.shared.enums import SubLessonStatus
 from app.core.storage import storage_service
 from app.core.exceptions import NotFoundError, ForbiddenError
 
 
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
 ALLOWED_EXTENSIONS = {".pptx", ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".ppt"}
+
+
+async def _get_sublesson_orm(db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
+    result = await db.execute(select(SubLesson).where(SubLesson.id == sublesson_id))
+    sl = result.scalar_one_or_none()
+    if not sl:
+        raise NotFoundError("SubLesson", str(sublesson_id))
+    return sl
+
+
+async def _get_document_orm(db: AsyncSession, document_id: uuid.UUID) -> Document:
+    result = await db.execute(
+        select(Document)
+        .options(selectinload(Document.uploader))
+        .where(Document.id == document_id)
+        .where(Document.deleted_at.is_(None))
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise NotFoundError("Document", str(document_id))
+    return doc
 
 
 def _to_document_response(doc: Document) -> DocumentResponse:
@@ -54,28 +80,26 @@ def _to_document_with_uploader(doc: Document) -> DocumentWithUploaderResponse:
             full_name=uploader.full_name,
             email=uploader.email,
         ),
+        comments_count=len(doc.comments) if hasattr(doc, "comments") and doc.comments else 0,
     )
 
 
-async def _get_sublesson_orm(db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
-    result = await db.execute(select(SubLesson).where(SubLesson.id == sublesson_id))
-    sl = result.scalar_one_or_none()
-    if not sl:
-        raise NotFoundError("SubLesson", str(sublesson_id))
-    return sl
-
-
-async def get_document_orm(db: AsyncSession, document_id: uuid.UUID) -> Document:
-    result = await db.execute(
-        select(Document)
-        .options(selectinload(Document.uploader))
-        .where(Document.id == document_id)
-        .where(Document.deleted_at.is_(None))
+def _to_comment_response(comment: DocumentComment) -> DocumentCommentResponse:
+    return DocumentCommentResponse(
+        id=comment.id,
+        document_id=comment.document_id,
+        author_id=comment.author_id,
+        content=comment.content,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+        author=CommentAuthorInfo(
+            id=comment.author.id,
+            full_name=comment.author.full_name,
+        ) if hasattr(comment, "author") and comment.author else CommentAuthorInfo(
+            id=comment.author_id,
+            full_name="",
+        ),
     )
-    doc = result.scalar_one_or_none()
-    if not doc:
-        raise NotFoundError("Document", str(document_id))
-    return doc
 
 
 async def list_documents(
@@ -88,7 +112,7 @@ async def list_documents(
 
     query = (
         select(Document)
-        .options(selectinload(Document.uploader))
+        .options(selectinload(Document.uploader), selectinload(Document.comments))
         .where(Document.sub_lesson_id == sub_lesson_id)
         .where(Document.deleted_at.is_(None))
         .order_by(Document.created_at.desc())
@@ -115,6 +139,15 @@ async def upload_documents(
 ) -> DocumentUploadResponse:
     if not files:
         raise ForbiddenError("No files provided")
+
+    sublesson = await _get_sublesson_orm(db, sub_lesson_id)
+    if sublesson.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
+        raise ForbiddenError(
+            f"Cannot upload documents: sublesson status is '{sublesson.status.value}'. "
+            "Documents can only be uploaded when the sublesson is in DRAFT or IN_PROGRESS status."
+        )
+    if sublesson.status == SubLessonStatus.DRAFT:
+        sublesson.status = SubLessonStatus.IN_PROGRESS
 
     results = []
     for file in files:
@@ -164,7 +197,7 @@ async def delete_document(
     db: AsyncSession,
     document_id: uuid.UUID,
 ) -> None:
-    doc = await get_document_orm(db, document_id)
+    doc = await _get_document_orm(db, document_id)
     storage_service.delete_file(doc.stored_name)
     doc.deleted_at = datetime.now(timezone.utc)
     await db.commit()
@@ -174,5 +207,58 @@ async def get_download_url(
     db: AsyncSession,
     document_id: uuid.UUID,
 ) -> str:
-    doc = await get_document_orm(db, document_id)
+    doc = await _get_document_orm(db, document_id)
     return storage_service.get_presigned_download_url(doc.stored_name)
+
+
+async def add_comment(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    author_id: uuid.UUID,
+    data: DocumentCommentCreate,
+) -> DocumentCommentResponse:
+    await _get_document_orm(db, document_id)
+
+    comment = DocumentComment(
+        document_id=document_id,
+        author_id=author_id,
+        content=data.content,
+    )
+    db.add(comment)
+    await db.commit()
+
+    result = await db.execute(
+        select(DocumentComment)
+        .options(selectinload(DocumentComment.author))
+        .where(DocumentComment.id == comment.id)
+    )
+    comment = result.scalar_one()
+    return _to_comment_response(comment)
+
+
+async def list_comments(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
+) -> DocumentCommentListResponse:
+    await _get_document_orm(db, document_id)
+
+    query = (
+        select(DocumentComment)
+        .options(selectinload(DocumentComment.author))
+        .where(DocumentComment.document_id == document_id)
+        .order_by(DocumentComment.created_at.asc())
+    )
+
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    comments = list(result.scalars().all())
+
+    return DocumentCommentListResponse(
+        total=total,
+        items=[_to_comment_response(c) for c in comments],
+    )

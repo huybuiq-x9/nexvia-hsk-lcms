@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson
+from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson, ExpertAssignedToSubLesson
 from app.modules.courses import service, schema as course_schema
 from app.shared.enums import LessonStatus, SubLessonStatus
 
@@ -212,3 +212,41 @@ async def delete_sublesson_batch(
 ):
     for sublesson_id in ids:
         await service.delete_sublesson(db, sublesson_id)
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/submit",
+    response_model=course_schema.SubLessonResponse,
+)
+async def submit_sublesson(
+    sublesson_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: TeacherAssignedToSubLesson,
+):
+    return await service.submit_sublesson(db, sublesson_id)
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/review",
+    response_model=course_schema.SubLessonResponse,
+)
+async def review_sublesson(
+    sublesson_id: uuid.UUID,
+    data: course_schema.SubLessonReviewRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: ExpertAssignedToSubLesson,
+):
+    return await service.review_sublesson(db, sublesson_id, data.action)
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/submit-scorm",
+    response_model=course_schema.SubLessonResponse,
+)
+async def submit_scorm_sublesson(
+    sublesson_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: TeacherAssignedToSubLesson,
+):
+    """Converter gửi SCORM đã upload để Expert review lần 2."""
+    return await service.submit_scorm_sublesson(db, sublesson_id)

@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, XCircle, Send } from 'lucide-react';
 import { useToast } from '../../../contexts/ToastContext';
+import { courseService } from '../../../services';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
 
 interface SubLessonActionModalProps {
   type: ModalType;
+  subLessonId: string;
   onClose: () => void;
   onDone: () => void;
 }
 
-export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionModalProps) {
+export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: SubLessonActionModalProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,15 +23,31 @@ export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionM
     setIsSaving(true);
     setError('');
     try {
-      if (type === 'reject') {
-        if (!note.trim()) {
-          setError(t('courses.modal.rejectNoteRequired'));
-          setIsSaving(false);
-          return;
-        }
+      if (type === 'submit') {
+        await courseService.submitSubLesson(subLessonId);
+        toast.success(t('courses.modal.submitSuccess'));
+        onDone();
+      } else if (type === 'approve') {
+        await courseService.reviewSubLesson(subLessonId, 'approve');
+        toast.success(t('courses.modal.approveSuccess'));
+        onDone();
+      } else if (type === 'reject') {
+        await courseService.reviewSubLesson(subLessonId, 'reject');
+        toast.success(t('courses.modal.rejectSuccess'));
+        onDone();
+      } else if (type === 'submit_scorm') {
+        await courseService.submitScormSubLesson(subLessonId);
+        toast.success(t('courses.modal.submitScormSuccess'));
+        onDone();
+      } else if (type === 'approve_scorm') {
+        await courseService.reviewSubLesson(subLessonId, 'approve');
+        toast.success(t('courses.modal.approveScormSuccess'));
+        onDone();
+      } else if (type === 'reject_scorm') {
+        await courseService.reviewSubLesson(subLessonId, 'reject');
+        toast.success(t('courses.modal.rejectScormSuccess'));
+        onDone();
       }
-      toast.success(t('courses.modal.actionSuccess'));
-      onDone();
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -41,17 +58,33 @@ export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionM
   };
 
   const titleMap: Record<ModalType, string> = {
-    submit:  t('courses.modal.titleSubmit'),
-    approve: t('courses.modal.titleApprove'),
-    reject:  t('courses.modal.titleReject'),
-    upload:  t('courses.modal.titleUploadScorm'),
+    submit:       t('courses.modal.titleSubmit'),
+    approve:      t('courses.modal.titleApprove'),
+    reject:       t('courses.modal.titleReject'),
+    upload:       t('courses.modal.titleUploadScorm'),
+    submit_scorm: t('courses.modal.titleSubmitScorm'),
+    approve_scorm: t('courses.modal.titleApproveScorm'),
+    reject_scorm: t('courses.modal.titleRejectScorm'),
+  };
+
+  const iconMap: Record<ModalType, React.ReactNode> = {
+    submit:        <Upload size={20} className="text-blue-600" />,
+    approve:       <CheckCircle size={20} className="text-green-600" />,
+    reject:        <XCircle size={20} className="text-red-600" />,
+    upload:        <Upload size={20} className="text-violet-600" />,
+    submit_scorm:  <Send size={20} className="text-blue-600" />,
+    approve_scorm: <CheckCircle size={20} className="text-green-600" />,
+    reject_scorm:  <XCircle size={20} className="text-red-600" />,
   };
 
   const btnClassMap: Record<ModalType, string> = {
-    submit:  'btn-primary',
-    approve: 'btn-success',
-    reject:  'btn-danger',
-    upload:  'btn-info',
+    submit:        'btn-primary',
+    approve:       'bg-green-600 hover:bg-green-700 text-white',
+    reject:        'btn-danger',
+    upload:        'bg-violet-600 hover:bg-violet-700 text-white',
+    submit_scorm:  'btn-primary',
+    approve_scorm: 'bg-green-600 hover:bg-green-700 text-white',
+    reject_scorm:  'btn-danger',
   };
 
   return (
@@ -59,7 +92,10 @@ export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionM
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">{titleMap[type]}</h2>
+          <div className="flex items-center gap-2">
+            {iconMap[type]}
+            <h2 className="text-base font-semibold text-slate-900">{titleMap[type]}</h2>
+          </div>
           <button
             onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 text-lg leading-none"
@@ -76,21 +112,7 @@ export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionM
             <p className="text-sm text-slate-600">{t('courses.modal.approveDesc')}</p>
           )}
           {type === 'reject' && (
-            <>
-              <p className="text-sm text-slate-600">{t('courses.modal.rejectDesc')}</p>
-              <div>
-                <label className="label">
-                  {t('courses.modal.rejectNote')} <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  placeholder={t('courses.modal.rejectNotePlaceholder')}
-                  className="input resize-none"
-                  rows={3}
-                />
-              </div>
-            </>
+            <p className="text-sm text-slate-600">{t('courses.modal.rejectDesc')}</p>
           )}
           {type === 'upload' && (
             <>
@@ -101,6 +123,12 @@ export function SubLessonActionModal({ type, onClose, onDone }: SubLessonActionM
                 <p className="text-xs text-slate-400 mt-1">{t('courses.modal.scormFormat')}</p>
               </div>
             </>
+          )}
+          {(type === 'submit_scorm') && (
+            <p className="text-sm text-slate-600">{t('courses.modal.submitScormDesc')}</p>
+          )}
+          {(type === 'approve_scorm' || type === 'reject_scorm') && (
+            <p className="text-sm text-slate-600">{t('courses.modal.scormReviewDesc')}</p>
           )}
 
           {error && (

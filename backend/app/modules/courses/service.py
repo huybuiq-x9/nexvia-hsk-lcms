@@ -468,6 +468,85 @@ async def update_sublesson(
     return _to_sublesson_response(sl)
 
 
+async def submit_sublesson(
+    db: AsyncSession,
+    sublesson_id: uuid.UUID,
+) -> course_schema.SubLessonResponse:
+    sl = await _get_sublesson_orm(db, sublesson_id)
+    if sl.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
+        from app.core.exceptions import InvalidStatusTransitionError
+        raise InvalidStatusTransitionError(
+            f"Cannot submit sublesson: current status is '{sl.status.value}', "
+            "only DRAFT or IN_PROGRESS can be submitted."
+        )
+    sl.status = SubLessonStatus.REVIEWING
+    sl.submitted_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(sl)
+    return _to_sublesson_response(sl)
+
+
+async def review_sublesson(
+    db: AsyncSession,
+    sublesson_id: uuid.UUID,
+    action: str,
+) -> course_schema.SubLessonResponse:
+    sl = await _get_sublesson_orm(db, sublesson_id)
+
+    # Review CONTENT (REVIEWING → CONVERTING hoặc → IN_PROGRESS)
+    if sl.status == SubLessonStatus.REVIEWING:
+        if action == "approve":
+            sl.status = SubLessonStatus.CONVERTING
+        elif action == "reject":
+            sl.status = SubLessonStatus.IN_PROGRESS
+        else:
+            from app.core.exceptions import InvalidStatusTransitionError
+            raise InvalidStatusTransitionError(
+                f"Invalid review action: '{action}'. Must be 'approve' or 'reject'."
+            )
+    # Review SCORM (SCORM_REVIEWING → APPROVED)
+    elif sl.status == SubLessonStatus.SCORM_REVIEWING:
+        if action == "approve":
+            sl.status = SubLessonStatus.APPROVED
+            sl.approved_at = datetime.now(timezone.utc)
+        elif action == "reject":
+            # Ở lại SCORM_REVIEWING — Converter sẽ upload lại
+            pass
+        else:
+            from app.core.exceptions import InvalidStatusTransitionError
+            raise InvalidStatusTransitionError(
+                f"Invalid review action: '{action}'. Must be 'approve' or 'reject'."
+            )
+    else:
+        from app.core.exceptions import InvalidStatusTransitionError
+        raise InvalidStatusTransitionError(
+            f"Cannot review sublesson: current status is '{sl.status.value}', "
+            "only REVIEWING or SCORM_REVIEWING can be reviewed."
+        )
+
+    await db.commit()
+    await db.refresh(sl)
+    return _to_sublesson_response(sl)
+
+
+async def submit_scorm_sublesson(
+    db: AsyncSession,
+    sublesson_id: uuid.UUID,
+) -> course_schema.SubLessonResponse:
+    """Converter gửi SCORM đã upload lên để Expert review lần 2."""
+    sl = await _get_sublesson_orm(db, sublesson_id)
+    if sl.status != SubLessonStatus.CONVERTING:
+        from app.core.exceptions import InvalidStatusTransitionError
+        raise InvalidStatusTransitionError(
+            f"Cannot submit SCORM: current status is '{sl.status.value}', "
+            "only CONVERTING can submit SCORM for review."
+        )
+    sl.status = SubLessonStatus.SCORM_REVIEWING
+    await db.commit()
+    await db.refresh(sl)
+    return _to_sublesson_response(sl)
+
+
 async def delete_sublesson(db: AsyncSession, sublesson_id: uuid.UUID) -> None:
     sl = await _get_sublesson_orm(db, sublesson_id)
     sl.deleted_at = datetime.now(timezone.utc)

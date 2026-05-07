@@ -157,6 +157,10 @@ class SubLessonListItem(BaseModel):
     course_title: str | None = None
 
 
+class SubLessonReviewRequest(BaseModel):
+    action: Annotated[str, Field(pattern="^(approve|reject)$")]
+
+
 class SubLessonListResponse(BaseModel):
     total: int
     items: list[SubLessonListItem]

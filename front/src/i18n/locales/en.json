@@ -168,9 +168,6 @@
     "submitDesc": "Submit for review. Expert will be notified.",
     "approveDesc": "Approve content. Content will be transferred to Converter for SCORM conversion.",
     "rejectDesc": "Teacher will be notified to edit.",
-    "rejectNote": "Rejection reason",
-    "rejectNoteRequired": "Rejection reason is required.",
-    "rejectNotePlaceholder": "Describe issues to fix...",
     "uploadScormDesc": "Upload SCORM file (.zip) for Sub-Lesson.",
     "dropFile": "Drag and drop .zip file or click to select",
     "scormFormat": "SCORM 2004 supported (.zip)",
@@ -240,13 +237,39 @@
       "removeSubLesson": "Remove Sub-Lesson",
       "submitCreate": "Create Course",
       "submitUpdate": "Save Changes",
+      "confirm": "Confirm",
       "cancel": "Cancel",
       "validationCourseName": "Please enter a course name.",
       "validationLessonName": "Please enter a lesson name.",
       "errorGeneric": "An error occurred. Please try again.",
       "createSuccess": "Course created successfully!",
       "updateSuccess": "Course updated successfully!",
-      "assignSuccess": "Assigned successfully!"
+      "assignSuccess": "Assigned successfully!",
+      "titleSubmit": "Submit for Review",
+      "titleApprove": "Approve Content",
+      "titleReject": "Reject Content",
+      "submitDesc": "Submit this sub-lesson to the expert for review.",
+      "submitSuccess": "Sub-lesson submitted for review.",
+      "approveDesc": "Approve content. The content will be transferred to the Converter for SCORM conversion.",
+      "approveSuccess": "Content approved. Waiting for SCORM conversion.",
+      "rejectDesc": "Reject this sub-lesson and send it back to the teacher.",
+      "rejectSuccess": "Sub-lesson rejected and returned to teacher.",
+      "titleUploadScorm": "Upload SCORM Package",
+      "uploadScormDesc": "Upload a SCORM package for this sub-lesson.",
+      "dropFile": "Drop file here or click to select",
+      "scormFormat": "Supported format: .zip",
+      "titleSubmitScorm": "Submit SCORM for Review",
+      "submitScormDesc": "Submit the SCORM package to the expert for final approval.",
+      "submitScormSuccess": "SCORM submitted for review.",
+      "titleApproveScorm": "Approve SCORM",
+      "approveScormDesc": "Approve the SCORM package. The sub-lesson will be marked as completed.",
+      "approveScormSuccess": "SCORM approved. Sub-lesson completed.",
+      "titleRejectScorm": "Reject SCORM",
+      "rejectScormDesc": "Reject the SCORM package and send it back to the Converter.",
+      "rejectScormSuccess": "SCORM rejected and returned to Converter.",
+      "scormReviewDesc": "Review the SCORM package. Please provide feedback.",
+      "notFound": "Sub-lesson not found.",
+      "backToList": "Back to list"
     },
     "deleteModal": {
       "title": "Confirm Course Deletion",
@@ -286,7 +309,12 @@
     "noDocuments": "No documents yet",
     "noDocumentsHint": "Upload documents using the button below",
     "dragActive": "Drop file here...",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "comments": "Comments",
+    "commentPlaceholder": "Write a comment...",
+    "sendComment": "Send",
+    "noComments": "No comments yet.",
+    "lockedAfterSubmit": "This sub-lesson has been submitted for review. Document uploads are locked until the expert reviews it."
   },
   "roles": {
     "admin": "Administrator",
@@ -353,20 +381,17 @@
     "status": {
       "draft": "Draft",
       "in_progress": "In Progress",
-      "submitted": "Submitted",
       "reviewing": "Reviewing",
-      "in_conversion": "Converting",
-      "scorm_uploaded": "SCORM Uploaded",
+      "converting": "Converting",
       "scorm_reviewing": "SCORM Reviewing",
-      "approved": "Approved",
-      "published": "Published"
+      "approved": "Approved"
     },
     "workflow": {
       "stepDraft": "Draft",
-      "stepSubmitted": "Submitted",
+      "stepInProgress": "In Progress",
       "stepReviewing": "Reviewing",
-      "stepInConversion": "Converting",
-      "stepScorm": "SCORM",
+      "stepConverting": "Converting",
+      "stepScormReviewing": "SCORM Reviewing",
       "stepApproved": "Approved"
     },
     "tabs": {
@@ -380,6 +405,14 @@
       "parentLesson": "Parent Lesson",
       "lastUpdated": "Last Updated",
       "createdAt": "Created At"
+    },
+    "actions": {
+      "submitForReview": "Submit for Review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "submitScorm": "Submit SCORM",
+      "approveScorm": "Approve SCORM",
+      "rejectScorm": "Reject SCORM"
     }
   }
 }

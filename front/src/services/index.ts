@@ -23,6 +23,8 @@ import type {
   ApiSubLessonListResponse,
   ApiDocumentListResponse,
   ApiDocumentUploadResponse,
+  ApiDocumentComment,
+  ApiDocumentCommentListResponse,
   ApiRole,
   LessonStatus,
   SubLessonStatus,
@@ -223,6 +225,21 @@ export const courseService = {
   async deleteSubLessonBatch(lessonId: string, ids: string[]): Promise<void> {
     await client.post(`/courses/lessons/${lessonId}/sub-lessons/batch-delete`, ids);
   },
+
+  async submitSubLesson(sublessonId: string): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/submit`);
+    return res.data;
+  },
+
+  async reviewSubLesson(sublessonId: string, action: 'approve' | 'reject'): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/review`, { action });
+    return res.data;
+  },
+
+  async submitScormSubLesson(sublessonId: string): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/submit-scorm`);
+    return res.data;
+  },
 };
 
 // ─── System ───────────────────────────────────────────────────────────────────
@@ -260,5 +277,15 @@ export const documentService = {
   async getDownloadUrl(documentId: string): Promise<string> {
     const res = await client.get<{ url: string }>(`/documents/${documentId}/download`);
     return res.data.url;
+  },
+
+  async listComments(documentId: string, params?: { skip?: number; limit?: number }): Promise<ApiDocumentCommentListResponse> {
+    const res = await client.get<ApiDocumentCommentListResponse>(`/documents/${documentId}/comments`, { params });
+    return res.data;
+  },
+
+  async addComment(documentId: string, content: string): Promise<ApiDocumentComment> {
+    const res = await client.post<ApiDocumentComment>(`/documents/${documentId}/comments`, { content });
+    return res.data;
   },
 };

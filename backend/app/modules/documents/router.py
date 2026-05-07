@@ -62,3 +62,28 @@ async def delete_document(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     await service.delete_document(db, document_id)
+
+
+@router.get("/{document_id}/comments", response_model=service.DocumentCommentListResponse)
+async def list_document_comments(
+    document_id: uuid.UUID,
+    current_user: TeacherAssignedToDocument,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> service.DocumentCommentListResponse:
+    return await service.list_comments(db, document_id, skip, limit)
+
+
+@router.post(
+    "/{document_id}/comments",
+    response_model=service.DocumentCommentResponse,
+    status_code=201,
+)
+async def add_document_comment(
+    document_id: uuid.UUID,
+    data: service.DocumentCommentCreate,
+    current_user: TeacherAssignedToDocument,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> service.DocumentCommentResponse:
+    return await service.add_comment(db, document_id, current_user.id, data)

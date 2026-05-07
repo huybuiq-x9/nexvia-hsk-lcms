@@ -12,23 +12,39 @@ import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonScormTab } from './components/SubLessonScormTab';
 import { SubLessonHistoryTab } from './components/SubLessonHistoryTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
-import { API_ROLE } from '../../types/api';
+import { API_ROLE, SUB_LESSON_STATUS } from '../../types/api';
 
 type Tab = 'documents' | 'questions' | 'scorm' | 'history';
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'approve_scorm' | 'reject_scorm' | 'submit_scorm';
 
 export default function SubLessonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin, isExpert, selectedRole } = useAuth();
   const { subLesson, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
 
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
 
-  const canUploadDocuments =
-    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+  const isTeacher = selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+
+  const isEditable = subLesson ? (
+    subLesson.status === SUB_LESSON_STATUS.DRAFT ||
+    subLesson.status === SUB_LESSON_STATUS.IN_PROGRESS
+  ) : false;
+
+  const canUploadDocuments = isEditable && (isAdmin || isTeacher);
+  const canSubmitForReview = isEditable && (isAdmin || isTeacher);
+
+  // Expert / Admin review CONTENT
+  const canReview = subLesson?.status === SUB_LESSON_STATUS.REVIEWING && (isAdmin || isExpert);
+
+  // Converter / Admin submit SCORM for review
+  const canSubmitScorm = subLesson?.status === SUB_LESSON_STATUS.CONVERTING && (isAdmin || isTeacher);
+
+  // Expert / Admin review SCORM
+  const canReviewScorm = subLesson?.status === SUB_LESSON_STATUS.SCORM_REVIEWING && (isAdmin || isExpert);
 
   if (isLoading) {
     return (
@@ -57,7 +73,20 @@ export default function SubLessonDetailPage() {
         subLessonTitle={subLesson.title}
       />
 
-      <SubLessonHeader subLesson={subLesson} lessonTitle={lessonInfo?.title} />
+      <SubLessonHeader
+        subLesson={subLesson}
+        lessonTitle={lessonInfo?.title}
+        canSubmitForReview={canSubmitForReview}
+        canReview={canReview}
+        canSubmitScorm={canSubmitScorm}
+        canReviewScorm={canReviewScorm}
+        onSubmit={() => setModal({ type: 'submit', show: true })}
+        onApprove={() => setModal({ type: 'approve', show: true })}
+        onReject={() => setModal({ type: 'reject', show: true })}
+        onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
+        onApproveScorm={() => setModal({ type: 'approve_scorm', show: true })}
+        onRejectScorm={() => setModal({ type: 'reject_scorm', show: true })}
+      />
 
       <SubLessonWorkflowStepper currentStatus={subLesson.status} />
 
@@ -68,6 +97,7 @@ export default function SubLessonDetailPage() {
           {activeTab === 'documents' && (
             <SubLessonDocumentsTab
               subLessonId={subLesson.id}
+              subLessonStatus={subLesson.status}
               onRefresh={reload}
               canUpload={canUploadDocuments}
             />
@@ -81,6 +111,7 @@ export default function SubLessonDetailPage() {
       {modal.show && (
         <SubLessonActionModal
           type={modal.type}
+          subLessonId={subLesson.id}
           onClose={() => setModal(m => ({ ...m, show: false }))}
           onDone={() => {
             setModal(m => ({ ...m, show: false }));

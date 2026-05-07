@@ -70,13 +70,10 @@ LESSON_TOPICS: dict[int, list[str]] = {
 SUB_LESSON_STATUSES = [
     SubLessonStatus.DRAFT,
     SubLessonStatus.IN_PROGRESS,
-    SubLessonStatus.SUBMITTED,
     SubLessonStatus.REVIEWING,
-    SubLessonStatus.IN_CONVERSION,
-    SubLessonStatus.SCORM_UPLOADED,
+    SubLessonStatus.CONVERTING,
     SubLessonStatus.SCORM_REVIEWING,
     SubLessonStatus.APPROVED,
-    SubLessonStatus.PUBLISHED,
 ]
 
 LESSON_STATUSES = [LessonStatus.DRAFT, LessonStatus.IN_PROGRESS, LessonStatus.APPROVED]
@@ -86,7 +83,7 @@ _SUB_LESSON_ORDER = list(SubLessonStatus)
 
 def _is_sublesson_submitted(status: SubLessonStatus) -> bool:
     idx = _SUB_LESSON_ORDER.index(status)
-    return idx >= _SUB_LESSON_ORDER.index(SubLessonStatus.SUBMITTED)
+    return idx >= _SUB_LESSON_ORDER.index(SubLessonStatus.REVIEWING)
 
 
 def _is_sublesson_approved(status: SubLessonStatus) -> bool:

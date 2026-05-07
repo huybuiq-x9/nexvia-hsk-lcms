@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class UploaderInfo(BaseModel):
@@ -8,6 +9,32 @@ class UploaderInfo(BaseModel):
     id: uuid.UUID
     full_name: str
     email: str
+
+
+class CommentAuthorInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    full_name: str
+
+
+class DocumentCommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    document_id: uuid.UUID
+    author_id: uuid.UUID
+    content: str
+    created_at: datetime
+    updated_at: datetime
+    author: CommentAuthorInfo
+
+
+class DocumentCommentCreate(BaseModel):
+    content: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class DocumentCommentListResponse(BaseModel):
+    total: int
+    items: list[DocumentCommentResponse]
 
 
 class DocumentResponse(BaseModel):
@@ -26,6 +53,7 @@ class DocumentResponse(BaseModel):
 
 class DocumentWithUploaderResponse(DocumentResponse):
     uploader: UploaderInfo
+    comments_count: int = 0
 
 
 class DocumentListResponse(BaseModel):

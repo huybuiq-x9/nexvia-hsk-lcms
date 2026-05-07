@@ -168,9 +168,6 @@
     "submitDesc": "Gửi để kiểm duyệt. Expert sẽ nhận thông báo.",
     "approveDesc": "Phê duyệt nội dung. Nội dung sẽ chuyển sang Converter để chuyển đổi SCORM.",
     "rejectDesc": "Giáo viên sẽ nhận thông báo để chỉnh sửa.",
-    "rejectNote": "Lý do từ chối",
-    "rejectNoteRequired": "Lý do từ chối là bắt buộc.",
-    "rejectNotePlaceholder": "Mô tả các vấn đề cần sửa...",
     "uploadScormDesc": "Upload file SCORM (.zip) cho Sub-Lesson.",
     "dropFile": "Kéo thả file .zip hoặc click để chọn",
     "scormFormat": "Hỗ trợ SCORM 2004 (.zip)",
@@ -239,13 +236,39 @@
       "removeSubLesson": "Xóa tiết học",
       "submitCreate": "Tạo khóa học",
       "submitUpdate": "Lưu thay đổi",
+      "confirm": "Xác nhận",
       "cancel": "Hủy",
       "validationCourseName": "Vui lòng nhập tên khóa học.",
       "validationLessonName": "Vui lòng nhập tên bài học.",
       "errorGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
       "createSuccess": "Khóa học đã được tạo!",
       "updateSuccess": "Khóa học đã được cập nhật!",
-      "assignSuccess": "Đã gán thành công!"
+      "assignSuccess": "Đã gán thành công!",
+      "titleSubmit": "Gửi phê duyệt",
+      "titleApprove": "Duyệt nội dung",
+      "titleReject": "Từ chối nội dung",
+      "submitDesc": "Gửi bài học con này để chuyên gia kiểm tra.",
+      "submitSuccess": "Đã gửi bài học con để phê duyệt.",
+      "approveDesc": "Duyệt nội dung. Nội dung sẽ được chuyển sang Converter để chuyển đổi SCORM.",
+      "approveSuccess": "Đã duyệt nội dung. Đang chờ chuyển đổi SCORM.",
+      "rejectDesc": "Từ chối bài học con và gửi lại cho giáo viên.",
+      "rejectSuccess": "Đã từ chối và gửi lại cho giáo viên.",
+      "titleUploadScorm": "Tải lên gói SCORM",
+      "uploadScormDesc": "Tải lên gói SCORM cho bài học con này.",
+      "dropFile": "Kéo thả file vào đây hoặc click để chọn",
+      "scormFormat": "Định dạng hỗ trợ: .zip",
+      "titleSubmitScorm": "Gửi SCORM để duyệt",
+      "submitScormDesc": "Gửi gói SCORM cho chuyên gia duyệt lần cuối.",
+      "submitScormSuccess": "Đã gửi SCORM để duyệt.",
+      "titleApproveScorm": "Duyệt SCORM",
+      "approveScormDesc": "Duyệt gói SCORM. Bài học con sẽ được đánh dấu hoàn thành.",
+      "approveScormSuccess": "Đã duyệt SCORM. Bài học con hoàn thành.",
+      "titleRejectScorm": "Từ chối SCORM",
+      "rejectScormDesc": "Từ chối gói SCORM và gửi lại cho Converter.",
+      "rejectScormSuccess": "Đã từ chối SCORM và gửi lại cho Converter.",
+      "scormReviewDesc": "Kiểm tra gói SCORM. Vui lòng cung cấp phản hồi.",
+      "notFound": "Không tìm thấy bài học con.",
+      "backToList": "Quay lại danh sách"
     },
     "deleteModal": {
       "title": "Xác nhận xóa khóa học",
@@ -285,7 +308,12 @@
     "noDocuments": "Chưa có tài liệu nào",
     "noDocumentsHint": "Upload tài liệu bằng nút bên dưới",
     "dragActive": "Thả file vào đây...",
-    "uploading": "Đang tải lên..."
+    "uploading": "Đang tải lên...",
+    "comments": "Bình luận",
+    "commentPlaceholder": "Viết bình luận...",
+    "sendComment": "Gửi",
+    "noComments": "Chưa có bình luận nào.",
+    "lockedAfterSubmit": "Bài học con đã được gửi phê duyệt. Không thể tải tài liệu cho đến khi chuyên gia duyệt."
   },
   "roles": {
     "admin": "Quản trị viên",
@@ -352,20 +380,17 @@
     "status": {
       "draft": "Bản nháp",
       "in_progress": "Đang tiến hành",
-      "submitted": "Đã gửi",
       "reviewing": "Đang kiểm duyệt",
-      "in_conversion": "Đang chuyển đổi",
-      "scorm_uploaded": "SCORM đã upload",
-      "scorm_reviewing": "SCORM đang kiểm duyệt",
-      "approved": "Đã duyệt",
-      "published": "Đã xuất bản"
+      "converting": "Đang chuyển đổi",
+      "scorm_reviewing": "Kiểm duyệt SCORM",
+      "approved": "Đã duyệt"
     },
     "workflow": {
       "stepDraft": "Bản nháp",
-      "stepSubmitted": "Đã gửi",
+      "stepInProgress": "Đang làm",
       "stepReviewing": "Kiểm duyệt",
-      "stepInConversion": "Chuyển đổi",
-      "stepScorm": "SCORM",
+      "stepConverting": "Chuyển đổi",
+      "stepScormReviewing": "Kiểm duyệt SCORM",
       "stepApproved": "Đã duyệt"
     },
     "tabs": {
@@ -379,6 +404,14 @@
       "parentLesson": "Bài học cha",
       "lastUpdated": "Cập nhật lần cuối",
       "createdAt": "Ngày tạo"
+    },
+    "actions": {
+      "submitForReview": "Gửi phê duyệt",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "submitScorm": "Gửi SCORM",
+      "approveScorm": "Duyệt SCORM",
+      "rejectScorm": "Từ chối SCORM"
     }
   }
 }

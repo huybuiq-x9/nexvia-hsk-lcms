@@ -19,6 +19,7 @@ export interface ApiDocumentWithUploader extends ApiDocumentResponse {
     full_name: string;
     email: string;
   };
+  comments_count?: number;
 }
 
 export interface ApiDocumentUploadResponse {
@@ -29,6 +30,26 @@ export interface ApiDocumentUploadResponse {
 export interface ApiDocumentListResponse {
   total: number;
   items: ApiDocumentWithUploader[];
+}
+
+export interface ApiDocumentCommentAuthor {
+  id: string;
+  full_name: string;
+}
+
+export interface ApiDocumentComment {
+  id: string;
+  document_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author: ApiDocumentCommentAuthor;
+}
+
+export interface ApiDocumentCommentListResponse {
+  total: number;
+  items: ApiDocumentComment[];
 }
 
 export const FILE_TYPE_COLORS: Record<string, string> = {

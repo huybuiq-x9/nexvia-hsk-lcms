@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, BigInteger, ForeignKey
+from sqlalchemy import String, BigInteger, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -40,4 +41,37 @@ class Document(BaseModel):
     uploader: Mapped["User"] = relationship(
         "User",
         foreign_keys=[uploader_id],
+    )
+    comments: Mapped[list["DocumentComment"]] = relationship(
+        "DocumentComment",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentComment.created_at",
+    )
+
+
+class DocumentComment(BaseModel):
+    __tablename__ = "document_comments"
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    document: Mapped["Document"] = relationship(
+        "Document",
+        back_populates="comments",
+    )
+    author: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[author_id],
     )

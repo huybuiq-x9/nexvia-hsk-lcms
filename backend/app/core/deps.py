@@ -160,6 +160,37 @@ async def teacher_assigned_to_sublesson(
     )
 
 
+async def expert_assigned_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    """Admin or expert assigned to the parent course of the sublesson."""
+    user_roles = _active_role_values(current_user)
+    if UserRole.ADMIN.value in user_roles:
+        return current_user
+
+    result = await db.execute(
+        select(SubLesson)
+        .options(selectinload(SubLesson.lesson).selectinload(Lesson.course))
+        .where(SubLesson.id == sublesson_id)
+    )
+    sublesson = result.scalar_one_or_none()
+    if not sublesson:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SubLesson not found")
+
+    lesson = sublesson.lesson
+
+    if UserRole.EXPERT.value in user_roles:
+        if lesson.course.assigned_expert_id == current_user.id:
+            return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You are not assigned as an expert to this Sub-Lesson",
+    )
+
+
 async def teacher_assigned_to_document(
     document_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -200,6 +231,7 @@ async def teacher_assigned_to_document(
 
 
 TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
+ExpertAssignedToSubLesson = Annotated[User, Depends(expert_assigned_to_sublesson)]
 TeacherAssignedToDocument = Annotated[User, Depends(teacher_assigned_to_document)]
 
 

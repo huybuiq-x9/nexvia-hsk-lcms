@@ -160,8 +160,8 @@ Course (Khóa học HSK)
   - Tính đầy đủ của nội dung
 - **Thực hiện một trong hai hành động:**
 
-  - **Reject (Từ chối):** Nhập **comment** mô tả các issue (bắt buộc) → Hệ thống gửi **email** tới Teacher → Teacher chỉnh sửa và gửi lại
-  - **Approve (Phê duyệt):** Nhập **ghi chú** (không bắt buộc) → Hệ thống chuyển trạng thái Sub-Lesson sang `IN_CONVERSION` và gửi **email** tới **Converter** để tiến hành chuyển đổi SCORM
+  - **Reject (Từ chối):** Nhập **comment** mô tả các issue (bắt buộc) → Hệ thống chuyển trạng thái về `IN_PROGRESS` → Hệ thống gửi **email** tới Teacher → Teacher chỉnh sửa và gửi lại duyệt
+  - **Approve (Phê duyệt):** Nhập **ghi chú** (không bắt buộc) → Hệ thống chuyển trạng thái Sub-Lesson sang `CONVERTING` và gửi **email** tới **Converter** để tiến hành chuyển đổi SCORM
 
 #### Bước 4 — Converter chuyển đổi SCORM
 
@@ -170,7 +170,7 @@ Course (Khóa học HSK)
 - Tải các tài liệu (ppt, pdf, docx...) về máy
 - Sử dụng **tool chuyển đổi SCORM** đã cài đặt trên máy
 - Tool hỗ trợ: `.pptx`, `.pdf`, `.docx` → **`.zip` (SCORM 2004)** — kết quả là **1 file .zip duy nhất**
-- Sau khi chuyển đổi, Converter upload **file .zip** duy nhất lên hệ thống
+- Sau khi chuyển đổi, Converter upload **file .zip** duy nhất lên hệ thống → trạng thái chuyển thành `SCORM_REVIEWING`
 - Hệ thống hỗ trợ **preview** bài học SCORM trực tiếp trên trình duyệt (dùng package scorm-again để preview)
 - Hệ thống tự động gửi **email thông báo** tới Expert để tiến hành phê duyệt lần 2
 
@@ -179,8 +179,8 @@ Course (Khóa học HSK)
 - Expert nhận thông báo có SCORM mới cho Sub-Lesson
 - Xem nội dung SCORM trực tiếp trên hệ thống
 - Thực hiện **Approve** hoặc **Reject**:
-  - **Reject**: Gửi comment → Email tới Converter → Converter sửa và upload lại
-  - **Approve**: Sub-Lesson chuyển sang APPROVED → hoàn thành
+  - **Reject**: Gửi comment → Email tới Converter → Sub-Lesson ở trạng thái `SCORM_REVIEWING` → Converter sửa và upload lại
+  - **Approve**: Sub-Lesson chuyển sang `APPROVED` → hoàn thành
 
 #### Bước 6 — Admin xuất bản (Publish) Course
 
@@ -198,13 +198,15 @@ Course (Khóa học HSK)
 | Trạng thái | Actor | Mô tả |
 |---|---|---|
 | `DRAFT` | System | Mới tạo, Teacher chưa làm gì |
-| `IN_PROGRESS` | Teacher | Đang upload file content và soạn câu hỏi |
-| `SUBMITTED` | Teacher | Đã gửi, chờ Expert nhận review |
-| `REVIEWING` | Expert | Expert đang review content + câu hỏi cùng lúc |
-| `IN_CONVERSION` | System | Converter nhận việc, đang làm SCORM trên máy local |
-| `SCORM_UPLOADED` | Converter | Đã upload .zip, chờ Expert review lần 2 |
-| `SCORM_REVIEWING` | Expert | Expert đang chạy thử SCORM player, kiểm tra hiển thị |
+| `IN_PROGRESS` | Teacher | Đã tương tác (upload document / upload SCORM sau reject), đang chuẩn bị nhưng chưa gửi duyệt |
+| `REVIEWING` | Teacher | Đã gửi duyệt, đang chờ Expert phê duyệt |
+| `CONVERTING` | Expert → Converter | Expert đã approve content, chờ Converter chuyển đổi SCORM |
+| `SCORM_REVIEWING` | Converter → Expert | Converter đã upload SCORM, đang chờ Expert phê duyệt lần 2 |
 | `APPROVED` | System | Hoàn thành, tính vào điều kiện của Course |
+
+> **Reject logic:**
+> - Expert reject content → chuyển về `IN_PROGRESS` (Teacher sửa và gửi lại)
+> - Expert reject SCORM → chuyển về `SCORM_REVIEWING` (Converter upload lại)
 
 #### Trạng thái Lesson
 
@@ -228,18 +230,43 @@ Course (Khóa học HSK)
 
 ## 4. Luồng phê duyệt & thẩm định
 
-### 4.1 Lặp lại quy trình
+### 4.1 Luồng phê duyệt
 
 ```
-Teacher nộp nội dung (SUBMITTED)
-    └─► Expert nhận review (REVIEWING)
-              └─► Expert Reject ──► Teacher chỉnh sửa (DRAFT)
-              └─► Expert Approve ──► System chuyển Converter (IN_CONVERSION)
-                                            └─► Converter upload SCORM (SCORM_UPLOADED)
-                                                  └─► Expert review SCORM (SCORM_REVIEWING)
-                                                          └─► Expert Reject SCORM ──► Converter chỉnh sửa (SCORM_UPLOADED)
-                                                          └─► Expert Approve SCORM ──► APPROVED
+Draft
+  │
+  │ Teacher upload document & submit
+  ▼
+Reviewing
+  │
+  │ Expert Reject ──► In Progress ──► (Teacher sửa) ──► Reviewing
+  │
+  │ Expert Approve
+  ▼
+Converting (chờ Converter chuyển đổi SCORM)
+  │
+  │ Converter upload SCORM & submit
+  ▼
+Scorm Reviewing
+  │
+  │ Expert Reject ──► Scorm Reviewing ──► (Converter upload lại)
+  │
+  │ Expert Approve
+  ▼
+Approved
 ```
+
+#### Các hành động & Actor
+
+| Action | Actor | Điều kiện status | Kết quả |
+|---|---|---|---|
+| Upload document | Teacher, Admin | `DRAFT`, `IN_PROGRESS`, `REJECTED` | Status không đổi (chuyển `DRAFT` → `IN_PROGRESS`) |
+| Submit content | Teacher, Admin | `DRAFT`, `IN_PROGRESS`, `REJECTED` | → `REVIEWING` |
+| Approve content | Expert, Admin | `REVIEWING` | → `CONVERTING` |
+| Reject content | Expert, Admin | `REVIEWING` | → `IN_PROGRESS` |
+| Upload SCORM | Converter, Admin | `CONVERTING` | → `SCORM_REVIEWING` |
+| Approve SCORM | Expert, Admin | `SCORM_REVIEWING` | → `APPROVED` |
+| Reject SCORM | Expert, Admin | `SCORM_REVIEWING` | → `SCORM_REVIEWING` (Converter upload lại)
 
 > Quy trình có thể lặp lại nhiều lần cho đến khi nội dung được phê duyệt. Khi Sub-Lesson APPROVED, hệ thống tự động kiểm tra trạng thái Lesson và Course tương ứng.
 
@@ -387,9 +414,9 @@ Hệ thống phân biệt rõ Quiz và Question:
 | # | Sự kiện | Người nhận | Nội dung |
 |---|---|---|---|
 | 1 | Teacher gửi phê duyệt | Expert | Có Sub-Lesson mới cần kiểm duyệt, link tới Sub-Lesson |
-| 2 | Expert Reject Sub-Lesson | Teacher | Sub-Lesson bị từ chối, danh sách issue, comment |
-| 3 | Expert Approve content | Converter (Lesson) | Sub-Lesson content/câu hỏi đã phê duyệt, cần chuyển đổi SCORM |
-| 4 | Converter upload SCORM | Expert | Có SCORM mới cần kiểm duyệt lần 2 |
+| 2 | Expert Reject Sub-Lesson | Teacher | Sub-Lesson bị từ chối, danh sách issue, comment, trạng thái chuyển về `IN_PROGRESS` |
+| 3 | Expert Approve content | Converter (Lesson) | Sub-Lesson content/câu hỏi đã phê duyệt, trạng thái `CONVERTING`, cần chuyển đổi SCORM |
+| 4 | Converter upload SCORM | Expert | Có SCORM mới cần kiểm duyệt, trạng thái `SCORM_REVIEWING` |
 | 5 | Expert Reject SCORM | Converter (Lesson) | SCORM bị từ chối, comment |
 | 6 | Expert Approve SCORM | Admin, Teacher, Converter (Lesson) | Sub-Lesson hoàn thành, sẵn sàng xuất bản |
 | 7 | Admin publish Course | Admin, Teacher, Expert, Converter (Lesson) | Toàn bộ Course đã được xuất bản |
@@ -443,7 +470,7 @@ Mỗi người dùng có thể được gán **nhiều vai trò**. Quyền hạn
 
 ---
 
-*Document version: 1.9*
+*Document version: 2.0*
 *Created: 2026-04-18*
-*Last updated: 2026-04-29*
+*Last updated: 2026-05-07*
 *Project: nexvia-hsk-lcms*
