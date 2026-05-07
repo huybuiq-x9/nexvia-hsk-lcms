@@ -21,7 +21,7 @@ export function useUserCache() {
           return next;
         });
       });
-  }, [cache, loading]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { cache, loading, loadUser };
 }

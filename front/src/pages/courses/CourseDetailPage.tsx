@@ -27,16 +27,19 @@ export default function CourseDetailPage() {
     if (lessonsData[lessonId]) return;
     const data = await courseService.getLesson(lessonId);
     setLessonsData(prev => ({ ...prev, [lessonId]: data }));
-  }, [lessonsData]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleLesson = useCallback((lessonId: string) => {
     setOpenLessons(prev => {
       const next = new Set(prev);
       if (next.has(lessonId)) { next.delete(lessonId); }
-      else { next.add(lessonId); loadLesson(lessonId); }
+      else { next.add(lessonId); }
       return next;
     });
-  }, [loadLesson]);
+    if (!openLessons.has(lessonId)) {
+      loadLesson(lessonId);
+    }
+  }, [loadLesson, openLessons]);
 
   useEffect(() => {
     if (!courseId) return;
