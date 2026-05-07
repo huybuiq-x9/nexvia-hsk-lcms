@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
-import client from '../services/apiClient';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import client from '../../services/apiClient';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 export default function ForgotPasswordPage() {
   const { t } = useTranslation();
@@ -31,16 +31,13 @@ export default function ForgotPasswordPage() {
         <div className="fixed right-4 top-4 z-10">
           <LanguageSwitcher />
         </div>
-
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={28} className="text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('auth.forgot.checkEmail')}</h1>
           <p className="text-sm text-slate-500 mb-6">{t('auth.forgot.emailSent')}</p>
-          <Link to="/" className="btn btn-primary">
-            {t('auth.backToLogin')}
-          </Link>
+          <Link to="/" className="btn btn-primary">{t('auth.backToLogin')}</Link>
         </div>
       </div>
     );
@@ -51,10 +48,7 @@ export default function ForgotPasswordPage() {
       <div className="fixed right-4 top-4 z-10">
         <LanguageSwitcher />
       </div>
-
       <div className="w-full max-w-sm">
-
-        {/* Brand */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-md">
             <span className="text-white font-bold text-lg">NX</span>
@@ -80,7 +74,6 @@ export default function ForgotPasswordPage() {
                 />
               </div>
             </div>
-
             <button
               type="submit"
               disabled={loading || !email}
@@ -93,21 +86,14 @@ export default function ForgotPasswordPage() {
               )}
             </button>
           </form>
-
           <div className="mt-4 text-center">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors"
-            >
+            <Link to="/" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600 transition-colors">
               <ArrowLeft size={14} />
               {t('auth.backToLogin')}
             </Link>
           </div>
         </div>
-
-        <p className="text-center text-xs text-slate-400 mt-6">
-          {t('app.footer')}
-        </p>
+        <p className="text-center text-xs text-slate-400 mt-6">{t('app.footer')}</p>
       </div>
     </div>
   );

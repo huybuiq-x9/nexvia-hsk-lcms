@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -40,8 +40,6 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-sm">
-
-        {/* Brand */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-md">
             <span className="text-white font-bold text-lg">NX</span>
@@ -50,7 +48,6 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 mt-1">{t('auth.loginTitle')}</p>
         </div>
 
-        {/* Form card */}
         <div className="card p-6">
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
@@ -113,10 +110,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-3 text-right">
-            <Link
-              to="/forgot-password"
-              className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
-            >
+            <Link to="/forgot-password" className="text-xs text-blue-600 hover:text-blue-700 hover:underline">
               {t('auth.forgot.link')}
             </Link>
           </div>

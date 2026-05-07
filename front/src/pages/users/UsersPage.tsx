@@ -13,10 +13,10 @@ import {
   EyeOff,
   Plus,
 } from 'lucide-react';
-import { userService } from '../services';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
-import { API_ROLES, ROLE_COLORS, type ApiUserWithRoles, type ApiRole, type ApiUserCreate } from '../types/api';
+import { userService } from '../../services';
+import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { API_ROLES, ROLE_COLORS, type ApiUserWithRoles, type ApiRole, type ApiUserCreate } from '../../types/api';
 
 const PER_PAGE = 10;
 

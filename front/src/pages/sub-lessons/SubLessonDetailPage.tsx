@@ -1,0 +1,93 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSubLesson } from './hooks/useSubLesson';
+import { SubLessonBreadcrumb } from './components/SubLessonBreadcrumb';
+import { SubLessonHeader } from './components/SubLessonHeader';
+import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper';
+import { SubLessonTabs } from './components/SubLessonTabs';
+import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
+import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
+import { SubLessonScormTab } from './components/SubLessonScormTab';
+import { SubLessonHistoryTab } from './components/SubLessonHistoryTab';
+import { SubLessonActionModal } from './components/SubLessonActionModal';
+import { API_ROLE } from '../../types/api';
+
+type Tab = 'documents' | 'questions' | 'scorm' | 'history';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
+
+export default function SubLessonDetailPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { subLessonId } = useParams<{ subLessonId: string }>();
+  const { isAdmin, selectedRole } = useAuth();
+  const { subLesson, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
+
+  const [activeTab, setActiveTab] = useState<Tab>('documents');
+  const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
+
+  const canUploadDocuments =
+    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!subLesson) {
+    return (
+      <div className="text-center py-20 text-slate-400">
+        <p>{t('courses.modal.notFound')}</p>
+        <button onClick={() => navigate(-1)} className="btn btn-secondary mt-4">
+          {t('courses.backToList')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <SubLessonBreadcrumb
+        courseInfo={courseInfo}
+        lessonInfo={lessonInfo}
+        subLessonTitle={subLesson.title}
+      />
+
+      <SubLessonHeader subLesson={subLesson} lessonTitle={lessonInfo?.title} />
+
+      <SubLessonWorkflowStepper currentStatus={subLesson.status} />
+
+      <div className="card overflow-hidden">
+        <SubLessonTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="p-5">
+          {activeTab === 'documents' && (
+            <SubLessonDocumentsTab
+              subLessonId={subLesson.id}
+              onRefresh={reload}
+              canUpload={canUploadDocuments}
+            />
+          )}
+          {activeTab === 'questions' && <SubLessonQuestionsTab />}
+          {activeTab === 'scorm' && <SubLessonScormTab />}
+          {activeTab === 'history' && <SubLessonHistoryTab />}
+        </div>
+      </div>
+
+      {modal.show && (
+        <SubLessonActionModal
+          type={modal.type}
+          onClose={() => setModal(m => ({ ...m, show: false }))}
+          onDone={() => {
+            setModal(m => ({ ...m, show: false }));
+            reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}

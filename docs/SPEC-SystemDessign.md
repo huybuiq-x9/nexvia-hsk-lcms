@@ -44,6 +44,110 @@ lcms/                           ← root monorepo
     └── github-actions/
 ```
 
+
+front/src/
+├── App.tsx
+├── main.tsx
+├── index.css
+│
+├── assets/
+│   └── vite.svg
+│
+├── components/                    # Shared / reusable components
+│   ├── layouts/
+│   │   └── DashboardLayout.tsx
+│   ├── ui/                        # Generic UI primitives
+│   │   ├── StatusBadge.tsx        # Badge cho course/lesson/sub-lesson status
+│   │   ├── UserAvatar.tsx         # Avatar với initials
+│   │   ├── EmptyState.tsx         # Empty state với icon + message + action
+│   │   ├── Modal.tsx              # Generic modal wrapper
+│   │   ├── ConfirmModal.tsx       # Confirm dialog (delete, reject,...)
+│   │   ├── FileIcon.tsx           # Icon theo file extension
+│   │   ├── FileDropzone.tsx       # Drag-drop upload zone
+│   │   └── FilePreviewModal.tsx   # Preview file (PDF, image,...)
+│   ├── FilterBar.tsx
+│   └── LanguageSwitcher.tsx
+│
+├── contexts/
+│   ├── AuthContext.tsx
+│   └── ToastContext.tsx
+│
+├── hooks/                         # Shared custom hooks
+│   ├── useUserCache.ts            # Cache + lazy-load user data (thay thế loadUser trùng lặp)
+│   ├── usePagination.ts           # Trang hiện tại, tổng trang, next/prev
+│   └── useDebounce.ts             # Debounce search input
+│
+├── utils/                         # Shared utilities
+│   ├── formatters.ts              # formatFileSize, formatDate
+│   └── api-error.ts               # Trích xuất error message từ AxiosError
+│
+├── pages/                         # Feature-based page folders
+│   ├── auth/
+│   │   ├── index.ts               # Barrel export
+│   │   ├── LoginPage.tsx
+│   │   ├── ForgotPasswordPage.tsx
+│   │   └── ResetPasswordPage.tsx
+│   │
+│   ├── dashboard/
+│   │   ├── index.ts
+│   │   └── DashboardPage.tsx
+│   │
+│   ├── courses/
+│   │   ├── index.ts
+│   │   ├── CoursesPage.tsx
+│   │   ├── CourseDetailPage.tsx
+│   │   ├── CourseFormPage.tsx
+│   │   └── components/
+│   │       └── CourseCard.tsx     # Card hiển thị course trong danh sách
+│   │
+│   ├── lessons/
+│   │   ├── index.ts
+│   │   ├── LessonsPage.tsx
+│   │   ├── LessonDetailPage.tsx
+│   │   └── components/
+│   │       └── LessonRow.tsx     # Row hiển thị lesson trong danh sách
+│   │
+│   ├── sub-lessons/
+│   │   ├── index.ts
+│   │   ├── SubLessonDetailPage.tsx
+│   │   ├── SubLessonsPage.tsx
+│   │   ├── components/
+│   │   │   ├── SubLessonBreadcrumb.tsx   # Breadcrumb: Course → Lesson → SubLesson
+│   │   │   ├── SubLessonHeader.tsx       # Header card (status badge, title, meta)
+│   │   │   ├── SubLessonWorkflowStepper.tsx  # Workflow progress stepper
+│   │   │   ├── SubLessonTabs.tsx         # Tab navigation
+│   │   │   ├── SubLessonDocumentsTab.tsx  # Tab: document list + upload zone
+│   │   │   ├── SubLessonQuestionsTab.tsx # Tab: câu hỏi (hiện tại placeholder)
+│   │   │   ├── SubLessonScormTab.tsx      # Tab: SCORM (hiện tại placeholder)
+│   │   │   ├── SubLessonHistoryTab.tsx    # Tab: lịch sử (hiện tại placeholder)
+│   │   │   └── SubLessonActionModal.tsx   # Modal: submit/approve/reject/upload
+│   │   └── hooks/
+│   │       ├── useSubLesson.ts             # Fetch sub-lesson + lesson info + course info
+│   │       ├── useSubLessonDocuments.ts    # CRUD documents, upload, delete, preview
+│   │       └── useSubLessonWorkflow.ts     # Workflow actions: submit, approve, reject
+│   │
+│   ├── users/
+│   │   ├── index.ts
+│   │   └── UsersPage.tsx
+│   │
+│   ├── question-bank/
+│   │   ├── index.ts
+│   │   └── QuestionBankPage.tsx
+│   │
+│   └── notifications/
+│       ├── index.ts
+│       └── NotificationsPage.tsx
+│
+├── services/
+│   ├── apiClient.ts
+│   └── index.ts
+│
+└── types/
+    ├── index.ts                   # Barrel export — KHÔNG thay đổi import paths
+    ├── auth.ts                    # User, Auth, Token, Roles, Colors
+    ├── course.ts                  # Course, Lesson, SubLesson, System Stats
+    └── document.ts                # Document, File Types
+    
 ---
 
 ## Chi tiết từng thành phần quan trọng

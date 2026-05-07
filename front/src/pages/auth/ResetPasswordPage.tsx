@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
-import client from '../services/apiClient';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import client from '../../services/apiClient';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 export default function ResetPasswordPage() {
   const { t } = useTranslation();
@@ -22,20 +22,9 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (password.length < 8) {
-      setError(t('auth.reset.passwordTooShort'));
-      return;
-    }
-    if (password !== confirm) {
-      setError(t('auth.reset.passwordMismatch'));
-      return;
-    }
-    if (!token) {
-      setError(t('auth.reset.invalidToken'));
-      return;
-    }
-
+    if (password.length < 8) { setError(t('auth.reset.passwordTooShort')); return; }
+    if (password !== confirm) { setError(t('auth.reset.passwordMismatch')); return; }
+    if (!token) { setError(t('auth.reset.invalidToken')); return; }
     setLoading(true);
     try {
       await client.post('/auth/reset-password', { token, new_password: password });
@@ -53,19 +42,14 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
-        <div className="fixed right-4 top-4 z-10">
-          <LanguageSwitcher />
-        </div>
-
+        <div className="fixed right-4 top-4 z-10"><LanguageSwitcher /></div>
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={28} className="text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('auth.reset.successTitle')}</h1>
           <p className="text-sm text-slate-500 mb-6">{t('auth.reset.successMessage')}</p>
-          <button onClick={() => navigate('/')} className="btn btn-primary">
-            {t('auth.login')}
-          </button>
+          <button onClick={() => navigate('/')} className="btn btn-primary">{t('auth.login')}</button>
         </div>
       </div>
     );
@@ -74,19 +58,14 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
-        <div className="fixed right-4 top-4 z-10">
-          <LanguageSwitcher />
-        </div>
-
+        <div className="fixed right-4 top-4 z-10"><LanguageSwitcher /></div>
         <div className="w-full max-w-sm text-center">
           <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={28} className="text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('auth.reset.invalidToken')}</h1>
           <p className="text-sm text-slate-500 mb-6">{t('auth.reset.tokenExpired')}</p>
-          <Link to="/forgot-password" className="btn btn-primary">
-            {t('auth.forgot.title')}
-          </Link>
+          <Link to="/forgot-password" className="btn btn-primary">{t('auth.forgot.title')}</Link>
         </div>
       </div>
     );
@@ -94,13 +73,8 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center p-4">
-      <div className="fixed right-4 top-4 z-10">
-        <LanguageSwitcher />
-      </div>
-
+      <div className="fixed right-4 top-4 z-10"><LanguageSwitcher /></div>
       <div className="w-full max-w-sm">
-
-        {/* Brand */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-md">
             <span className="text-white font-bold text-lg">NX</span>
@@ -131,17 +105,11 @@ export default function ResetPasswordPage() {
                   required
                   autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" tabIndex={-1}>
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
-
             <div>
               <label className="label">{t('auth.reset.confirmPassword')}</label>
               <div className="relative">
@@ -154,17 +122,11 @@ export default function ResetPasswordPage() {
                   className="input pl-9 pr-9"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" tabIndex={-1}>
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
-
             <button
               type="submit"
               disabled={loading || !password || !confirm}
@@ -178,10 +140,7 @@ export default function ResetPasswordPage() {
             </button>
           </form>
         </div>
-
-        <p className="text-center text-xs text-slate-400 mt-6">
-          {t('app.footer')}
-        </p>
+        <p className="text-center text-xs text-slate-400 mt-6">{t('app.footer')}</p>
       </div>
     </div>
   );

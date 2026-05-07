@@ -15,15 +15,15 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { courseService, userService } from '../services';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
+import { courseService, userService } from '../../services';
+import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import type {
   ApiLessonWithSubLessons,
   ApiSubLessonResponse,
   ApiUserWithRoles,
-} from '../types/api';
-import { API_ROLE, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../types/api';
+} from '../../types/api';
+import { API_ROLE, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 

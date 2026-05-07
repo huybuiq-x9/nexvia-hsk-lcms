@@ -1,0 +1,228 @@
+// Course / Lesson / SubLesson types matching FastAPI backend
+
+
+// ─── Status Enums ─────────────────────────────────────────────────────────────
+
+export const COURSE_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  READY_TO_PUBLISH: 'ready_to_publish',
+  PUBLISHED: 'published',
+  UNPUBLISHED: 'unpublished',
+} as const;
+
+export type CourseStatus = (typeof COURSE_STATUS)[keyof typeof COURSE_STATUS];
+
+export const COURSE_STATUSES: CourseStatus[] = Object.values(COURSE_STATUS);
+
+export const LESSON_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  APPROVED: 'approved',
+} as const;
+
+export type LessonStatus = (typeof LESSON_STATUS)[keyof typeof LESSON_STATUS];
+
+export const LESSON_STATUSES: LessonStatus[] = Object.values(LESSON_STATUS);
+
+export const SUB_LESSON_STATUS = {
+  DRAFT: 'draft',
+  IN_PROGRESS: 'in_progress',
+  SUBMITTED: 'submitted',
+  REVIEWING: 'reviewing',
+  IN_CONVERSION: 'in_conversion',
+  SCORM_UPLOADED: 'scorm_uploaded',
+  SCORM_REVIEWING: 'scorm_reviewing',
+  APPROVED: 'approved',
+  PUBLISHED: 'published',
+} as const;
+
+export type SubLessonStatus = (typeof SUB_LESSON_STATUS)[keyof typeof SUB_LESSON_STATUS];
+
+export const SUB_LESSON_STATUSES: SubLessonStatus[] = Object.values(SUB_LESSON_STATUS);
+
+// ─── Status Colors ────────────────────────────────────────────────────────────
+
+export const COURSE_STATUS_COLORS: Record<CourseStatus, string> = {
+  [COURSE_STATUS.DRAFT]:            'bg-slate-50 text-slate-600 border-slate-200',
+  [COURSE_STATUS.IN_PROGRESS]:      'bg-blue-50 text-blue-700 border-blue-200',
+  [COURSE_STATUS.READY_TO_PUBLISH]: 'bg-amber-50 text-amber-700 border-amber-200',
+  [COURSE_STATUS.PUBLISHED]:        'bg-green-50 text-green-700 border-green-200',
+  [COURSE_STATUS.UNPUBLISHED]:      'bg-red-50 text-red-600 border-red-200',
+};
+
+export const LESSON_STATUS_COLORS: Record<LessonStatus, string> = {
+  [LESSON_STATUS.DRAFT]:       'bg-slate-50 text-slate-600 border-slate-200',
+  [LESSON_STATUS.IN_PROGRESS]: 'bg-blue-50 text-blue-700 border-blue-200',
+  [LESSON_STATUS.APPROVED]:    'bg-green-50 text-green-700 border-green-200',
+};
+
+export const SUB_LESSON_STATUS_COLORS: Record<SubLessonStatus, string> = {
+  [SUB_LESSON_STATUS.DRAFT]:           'bg-slate-50 text-slate-600 border-slate-200',
+  [SUB_LESSON_STATUS.IN_PROGRESS]:     'bg-blue-50 text-blue-700 border-blue-200',
+  [SUB_LESSON_STATUS.SUBMITTED]:       'bg-amber-50 text-amber-700 border-amber-200',
+  [SUB_LESSON_STATUS.REVIEWING]:       'bg-orange-50 text-orange-700 border-orange-200',
+  [SUB_LESSON_STATUS.IN_CONVERSION]:   'bg-violet-50 text-violet-700 border-violet-200',
+  [SUB_LESSON_STATUS.SCORM_UPLOADED]:  'bg-violet-50 text-violet-700 border-violet-200',
+  [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'bg-orange-50 text-orange-700 border-orange-200',
+  [SUB_LESSON_STATUS.APPROVED]:        'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.PUBLISHED]:       'bg-green-50 text-green-700 border-green-200',
+};
+
+// ─── SubLesson ────────────────────────────────────────────────────────────────
+
+export interface ApiSubLessonResponse {
+  id: string;
+  lesson_id: string;
+  title: string;
+  description: string | null;
+  status: SubLessonStatus;
+  order_index: number;
+  submitted_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiSubLessonCreate {
+  title: string;
+  description?: string | null;
+  order_index?: number;
+}
+
+export interface ApiSubLessonListItem {
+  id: string;
+  lesson_id: string;
+  title: string;
+  description: string | null;
+  status: SubLessonStatus;
+  order_index: number;
+  submitted_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  lesson_title: string | null;
+  course_id: string | null;
+  course_title: string | null;
+}
+
+export interface ApiSubLessonListResponse {
+  total: number;
+  items: ApiSubLessonListItem[];
+}
+
+export interface ApiSubLessonUpdate {
+  title?: string;
+  description?: string | null;
+  order_index?: number;
+}
+
+export interface ApiSubLessonBatchDelete {
+  ids: string[];
+}
+
+// ─── Lesson ──────────────────────────────────────────────────────────────────
+
+export interface ApiLessonResponse {
+  id: string;
+  course_id: string;
+  assigned_teacher_id: string | null;
+  assigned_converter_id: string | null;
+  title: string;
+  description: string | null;
+  status: LessonStatus;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiLessonBrief {
+  id: string;
+  title: string;
+  description: string | null;
+  status: LessonStatus;
+  order_index: number;
+  assigned_teacher_id: string | null;
+  assigned_converter_id: string | null;
+  sub_lessons_count: number;
+}
+
+export interface ApiLessonListItem extends ApiLessonBrief {
+  course_title: string | null;
+}
+
+export interface ApiLessonListResponse {
+  total: number;
+  items: ApiLessonListItem[];
+}
+
+export interface ApiLessonWithSubLessons extends ApiLessonResponse {
+  sub_lessons: ApiSubLessonResponse[];
+}
+
+export interface ApiLessonCreate {
+  id?: string;
+  title: string;
+  description?: string | null;
+  order_index?: number;
+  teacher_id?: string | null;
+  converter_id?: string | null;
+}
+
+export interface ApiLessonAssign {
+  teacher_id?: string | null;
+  converter_id?: string | null;
+}
+
+// ─── Course ──────────────────────────────────────────────────────────────────
+
+export interface ApiCourseResponse {
+  id: string;
+  assigned_expert_id: string;
+  title: string;
+  description: string | null;
+  status: CourseStatus;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApiCourseWithLessons extends ApiCourseResponse {
+  lessons: ApiLessonBrief[];
+}
+
+export interface ApiCourseUpdate {
+  title?: string;
+  description?: string | null;
+  assigned_expert_id?: string;
+  lessons?: ApiLessonCreate[];
+  delete_lesson_ids?: string[];
+}
+
+export interface ApiCourseCreate {
+  title: string;
+  description?: string | null;
+  assigned_expert_id: string;
+  lessons?: ApiLessonCreate[];
+}
+
+export interface ApiCourseListResponse {
+  total: number;
+  items: ApiCourseWithLessons[];
+}
+
+// ─── System ──────────────────────────────────────────────────────────────────
+
+export interface ApiSystemStats {
+  cpu_percent: number;
+  memory_percent: number;
+  memory_used_mb: number;
+  memory_total_mb: number;
+  disk_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+  active_users: number;
+  total_users: number;
+  uptime_seconds: number;
+  timestamp: string;
+}

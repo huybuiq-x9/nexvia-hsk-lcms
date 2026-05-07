@@ -1,70 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
-import LoginPage from './pages/LoginPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import DashboardPage from './pages/DashboardPage';
-import UsersPage from './pages/UsersPage';
-import CoursesPage from './pages/CoursesPage';
-import CourseDetailPage from './pages/CourseDetailPage';
-import LessonsPage from './pages/LessonsPage';
-import LessonDetailPage from './pages/LessonDetailPage';
-import SubLessonsPage from './pages/SubLessonsPage';
-import SubLessonDetailPage from './pages/SubLessonDetailPage';
-import CourseFormPage from './pages/CourseFormPage';
-import QuestionBankPage from './pages/QuestionBankPage';
-import NotificationsPage from './pages/NotificationsPage';
 import DashboardLayout from './components/layouts/DashboardLayout';
 
-function LoadingScreen() {
-  const { t } = useTranslation();
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-sky-50 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-slate-500">{t('app.loading')}</p>
-      </div>
-    </div>
-  );
+import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from './pages/auth';
+import { default as DashboardPage } from './pages/dashboard';
+import { default as CoursesPage, CourseDetailPage, CourseFormPage } from './pages/courses';
+import { default as LessonsPage, LessonDetailPage } from './pages/lessons';
+import { default as SubLessonsPage, SubLessonDetailPage } from './pages/sub-lessons';
+import { default as UsersPage } from './pages/users';
+import { default as NotificationsPage } from './pages/notifications';
+import { default as QuestionBankPage } from './pages/question-bank';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('access_token');
+  if (!token) return <Navigate to="/" replace />;
+  return <DashboardLayout>{children}</DashboardLayout>;
 }
 
-function AppRoutes() {
-  const { isAuthenticated, isLoading, isAdmin } = useAuth();
-
-  if (isLoading) return <LoadingScreen />;
-
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    );
-  }
-
-  return (
-    <DashboardLayout>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/create" element={<CourseFormPage />} />
-        <Route path="/courses/edit/:courseId" element={<CourseFormPage />} />
-        <Route path="/courses/:courseId" element={<CourseDetailPage />} />
-        <Route path="/lessons" element={<LessonsPage />} />
-        <Route path="/lessons/:lessonId" element={<LessonDetailPage />} />
-        <Route path="/sub-lessons" element={<SubLessonsPage />} />
-        <Route path="/sub-lessons/:subLessonId" element={<SubLessonDetailPage />} />
-        <Route path="/question-bank" element={<QuestionBankPage />} />
-        {isAdmin && <Route path="/users" element={<UsersPage />} />}
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </DashboardLayout>
-  );
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('access_token');
+  if (token) return <Navigate to="/home" replace />;
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -72,7 +29,29 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <Routes>
+            <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+            <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+            <Route path="/home" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+
+            <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
+            <Route path="/courses/create" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
+            <Route path="/courses/edit/:courseId" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
+
+            <Route path="/lessons" element={<ProtectedRoute><LessonsPage /></ProtectedRoute>} />
+            <Route path="/lessons/:lessonId" element={<ProtectedRoute><LessonDetailPage /></ProtectedRoute>} />
+
+            <Route path="/sub-lessons" element={<ProtectedRoute><SubLessonsPage /></ProtectedRoute>} />
+            <Route path="/sub-lessons/:subLessonId" element={<ProtectedRoute><SubLessonDetailPage /></ProtectedRoute>} />
+
+            <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/question-bank" element={<ProtectedRoute><QuestionBankPage /></ProtectedRoute>} />
+
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Routes>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
