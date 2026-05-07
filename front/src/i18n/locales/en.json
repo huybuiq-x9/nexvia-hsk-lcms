@@ -270,6 +270,8 @@
     "deleteSuccess": "Document deleted.",
     "download": "Download",
     "preview": "Preview",
+    "previewNotSupported": "Preview is not available for this file type.",
+    "downloadToView": "Download to view",
     "fileSize": "File size",
     "uploadedBy": "Uploaded by",
     "uploadedAt": "Uploaded at",

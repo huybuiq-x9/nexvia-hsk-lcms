@@ -269,6 +269,8 @@
     "deleteSuccess": "Đã xóa tài liệu.",
     "download": "Tải về",
     "preview": "Xem trước",
+    "previewNotSupported": "Không thể xem trước loại file này.",
+    "downloadToView": "Tải về để xem",
     "fileSize": "Kích thước",
     "uploadedBy": "Người tải lên",
     "uploadedAt": "Ngày tải lên",
