@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import (
     DocumentCommentAccessToDocument,
     DocumentDeleteAccessToDocument,
+    DocumentUploadAccessToDocument,
     DocumentUploadAccessToSubLesson,
     DocumentViewAccessToDocument,
     DocumentViewAccessToSubLesson,
@@ -13,6 +14,7 @@ from app.core.deps import (
 from app.modules.documents import service
 from app.modules.documents.schema import (
     DocumentListResponse,
+    DocumentResponse,
     DocumentUploadResponse,
 )
 
@@ -49,6 +51,25 @@ async def upload_documents(
         sub_lesson_id=sublesson_id,
         uploader_id=current_user.id,
         files=files,
+    )
+
+
+@router.post(
+    "/{document_id}/reupload",
+    response_model=DocumentResponse,
+    status_code=201,
+)
+async def reupload_document(
+    document_id: uuid.UUID,
+    current_user: DocumentUploadAccessToDocument,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: UploadFile = File(...),
+) -> DocumentResponse:
+    return await service.reupload_document(
+        db=db,
+        document_id=document_id,
+        uploader_id=current_user.id,
+        file=file,
     )
 
 

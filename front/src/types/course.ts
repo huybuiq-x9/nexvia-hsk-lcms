@@ -126,6 +126,7 @@ export interface ApiSubLessonBatchDelete {
 // ─── SCORM ───────────────────────────────────────────────────────────────────
 
 export interface ApiScormPackageInfo {
+  id: string | null;
   sub_lesson_id: string;
   title: string;
   schema: string;
@@ -138,6 +139,8 @@ export interface ApiScormPackageInfo {
   uploaded_at: string | null;
   uploaded_by_id: string | null;
   files_count: number;
+  version: number;
+  is_current: boolean;
   comments_count: number;
 }
 

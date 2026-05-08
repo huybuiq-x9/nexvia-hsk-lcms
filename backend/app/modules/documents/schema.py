@@ -47,6 +47,10 @@ class DocumentResponse(BaseModel):
     file_extension: str
     file_size: int
     mime_type: str
+    version_group_id: uuid.UUID
+    version: int
+    is_current: bool
+    review_round: int
     created_at: datetime
     updated_at: datetime
 

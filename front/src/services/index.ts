@@ -22,6 +22,7 @@ import type {
   ApiSubLessonResponse,
   ApiSubLessonListResponse,
   ApiDocumentListResponse,
+  ApiDocumentResponse,
   ApiDocumentUploadResponse,
   ApiDocumentComment,
   ApiDocumentCommentListResponse,
@@ -311,6 +312,17 @@ export const documentService = {
     files.forEach(file => formData.append('files', file));
     const res = await client.post<ApiDocumentUploadResponse>(
       `/documents/sub-lessons/${sublessonId}/documents`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async reuploadDocument(documentId: string, file: File): Promise<ApiDocumentResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiDocumentResponse>(
+      `/documents/${documentId}/reupload`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );

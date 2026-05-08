@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScormPackageInfo(BaseModel):
+    id: uuid.UUID | None = None
     sub_lesson_id: uuid.UUID
     title: str
     schema: str
@@ -17,6 +18,8 @@ class ScormPackageInfo(BaseModel):
     uploaded_at: datetime | None = None
     uploaded_by_id: uuid.UUID | None = None
     files_count: int
+    version: int = 1
+    is_current: bool = True
     comments_count: int = 0
 
 

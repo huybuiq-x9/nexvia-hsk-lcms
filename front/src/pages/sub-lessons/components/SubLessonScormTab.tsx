@@ -173,6 +173,7 @@ export function SubLessonScormTab({
                   <h3 className="text-sm font-semibold text-slate-900 truncate">{info.title}</h3>
                   <p className="text-xs text-slate-500 truncate mt-0.5">{info.filename}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 mt-1">
+                    <span className="font-medium text-slate-500">v{info.version}</span>
                     {info.file_size !== null && <span>{formatFileSize(info.file_size)}</span>}
                     <span>{info.schema_version || info.schema}</span>
                     <span>{t('scorm.filesCount', { count: info.files_count })}</span>

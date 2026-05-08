@@ -9,6 +9,10 @@ export interface ApiDocumentResponse {
   file_extension: string;
   file_size: number;
   mime_type: string;
+  version_group_id: string;
+  version: number;
+  is_current: boolean;
+  review_round: number;
   created_at: string;
   updated_at: string;
 }

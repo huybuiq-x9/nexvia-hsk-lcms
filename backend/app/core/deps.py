@@ -421,6 +421,21 @@ async def document_delete_access_to_document(
     )
 
 
+async def document_upload_access_to_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_document_sublesson_for_access(document_id, db)
+    if _can_upload_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned teacher can re-upload documents before content review",
+    )
+
+
 async def scorm_view_access_to_sublesson(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -490,6 +505,7 @@ DocumentUploadAccessToSubLesson = Annotated[User, Depends(document_upload_access
 DocumentViewAccessToDocument = Annotated[User, Depends(document_view_access_to_document)]
 DocumentCommentAccessToDocument = Annotated[User, Depends(document_comment_access_to_document)]
 DocumentDeleteAccessToDocument = Annotated[User, Depends(document_delete_access_to_document)]
+DocumentUploadAccessToDocument = Annotated[User, Depends(document_upload_access_to_document)]
 ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
 ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
 ScormCommentAccessToSubLesson = Annotated[User, Depends(scorm_comment_access_to_sublesson)]

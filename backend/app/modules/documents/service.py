@@ -57,6 +57,10 @@ def _to_document_response(doc: Document) -> DocumentResponse:
         file_extension=doc.file_extension,
         file_size=doc.file_size,
         mime_type=doc.mime_type,
+        version_group_id=doc.version_group_id,
+        version=doc.version,
+        is_current=doc.is_current,
+        review_round=doc.review_round,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
     )
@@ -73,6 +77,10 @@ def _to_document_with_uploader(doc: Document) -> DocumentWithUploaderResponse:
         file_extension=doc.file_extension,
         file_size=doc.file_size,
         mime_type=doc.mime_type,
+        version_group_id=doc.version_group_id,
+        version=doc.version,
+        is_current=doc.is_current,
+        review_round=doc.review_round,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
         uploader=UploaderInfo(
@@ -102,6 +110,21 @@ def _to_comment_response(comment: DocumentComment) -> DocumentCommentResponse:
     )
 
 
+def _validate_document_file(file: UploadFile, content: bytes) -> tuple[str, str]:
+    ext = (file.filename or "unknown").rsplit(".", 1)[-1].lower()
+
+    if len(content) > MAX_FILE_SIZE:
+        raise ForbiddenError(
+            f"File '{file.filename}' exceeds maximum size of {MAX_FILE_SIZE // (1024*1024)} MB"
+        )
+    if f".{ext}" not in ALLOWED_EXTENSIONS:
+        raise ForbiddenError(
+            f"File type '.{ext}' is not allowed. Allowed types: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+        )
+
+    return ext, storage_service.guess_mime_type(file.filename or "unknown")
+
+
 async def list_documents(
     db: AsyncSession,
     sub_lesson_id: uuid.UUID,
@@ -115,6 +138,7 @@ async def list_documents(
         .options(selectinload(Document.uploader), selectinload(Document.comments))
         .where(Document.sub_lesson_id == sub_lesson_id)
         .where(Document.deleted_at.is_(None))
+        .where(Document.is_current.is_(True))
         .order_by(Document.created_at.desc())
     )
 
@@ -152,24 +176,34 @@ async def upload_documents(
     results = []
     for file in files:
         content = await file.read()
-        ext = (file.filename or "unknown").rsplit(".", 1)[-1].lower()
-
-        if len(content) > MAX_FILE_SIZE:
-            raise ForbiddenError(
-                f"File '{file.filename}' exceeds maximum size of {MAX_FILE_SIZE // (1024*1024)} MB"
-            )
-        if f".{ext}" not in ALLOWED_EXTENSIONS:
-            raise ForbiddenError(
-                f"File type '.{ext}' is not allowed. Allowed types: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
-            )
-
-        mime_type = storage_service.guess_mime_type(file.filename or "unknown")
+        ext, mime_type = _validate_document_file(file, content)
         stored_name, download_url = storage_service.upload_file(
             file_content=content,
             original_filename=file.filename or "unknown",
             content_type=mime_type,
             sub_lesson_id=str(sub_lesson_id),
         )
+
+        existing_result = await db.execute(
+            select(Document)
+            .where(Document.sub_lesson_id == sub_lesson_id)
+            .where(Document.original_name == (file.filename or "unknown"))
+            .where(Document.deleted_at.is_(None))
+            .order_by(Document.version.desc())
+        )
+        existing_versions = list(existing_result.scalars().all())
+        previous_version = existing_versions[0] if existing_versions else None
+        version_group_id = (
+            previous_version.version_group_id
+            if previous_version and previous_version.version_group_id
+            else uuid.uuid4()
+        )
+        next_version = (previous_version.version + 1) if previous_version else 1
+        review_round = (previous_version.review_round + 1) if previous_version else 1
+
+        if existing_versions:
+            for existing in existing_versions:
+                existing.is_current = False
 
         doc = Document(
             sub_lesson_id=sub_lesson_id,
@@ -179,6 +213,10 @@ async def upload_documents(
             file_extension=ext,
             file_size=len(content),
             mime_type=mime_type,
+            version_group_id=version_group_id,
+            version=next_version,
+            is_current=True,
+            review_round=review_round,
         )
         db.add(doc)
         results.append((doc, download_url))
@@ -191,6 +229,67 @@ async def upload_documents(
         documents=[_to_document_response(doc) for doc, _ in results],
         download_urls=[url for _, url in results],
     )
+
+
+async def reupload_document(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> DocumentResponse:
+    current_doc = await _get_document_orm(db, document_id)
+    sublesson = await _get_sublesson_orm(db, current_doc.sub_lesson_id)
+    if sublesson.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
+        raise ForbiddenError(
+            f"Cannot re-upload document: sublesson status is '{sublesson.status.value}'. "
+            "Documents can only be re-uploaded when the sublesson is in DRAFT or IN_PROGRESS status."
+        )
+    if sublesson.status == SubLessonStatus.DRAFT:
+        sublesson.status = SubLessonStatus.IN_PROGRESS
+
+    content = await file.read()
+    ext, mime_type = _validate_document_file(file, content)
+    if ext != current_doc.file_extension:
+        raise ForbiddenError(
+            f"Replacement file must be '.{current_doc.file_extension}' to match the current document."
+        )
+
+    stored_name, _ = storage_service.upload_file(
+        file_content=content,
+        original_filename=current_doc.original_name,
+        content_type=mime_type,
+        sub_lesson_id=str(current_doc.sub_lesson_id),
+    )
+
+    existing_result = await db.execute(
+        select(Document)
+        .where(Document.version_group_id == current_doc.version_group_id)
+        .where(Document.deleted_at.is_(None))
+        .order_by(Document.version.desc())
+    )
+    existing_versions = list(existing_result.scalars().all())
+    previous_version = existing_versions[0] if existing_versions else current_doc
+
+    for existing in existing_versions:
+        existing.is_current = False
+
+    doc = Document(
+        sub_lesson_id=current_doc.sub_lesson_id,
+        uploader_id=uploader_id,
+        original_name=current_doc.original_name,
+        stored_name=stored_name,
+        file_extension=current_doc.file_extension,
+        file_size=len(content),
+        mime_type=mime_type,
+        version_group_id=current_doc.version_group_id,
+        version=previous_version.version + 1,
+        is_current=True,
+        review_round=previous_version.review_round + 1,
+    )
+    db.add(doc)
+    await db.commit()
+    await db.refresh(doc)
+    return _to_document_response(doc)
 
 
 async def delete_document(

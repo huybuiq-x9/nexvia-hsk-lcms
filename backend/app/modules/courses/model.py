@@ -12,7 +12,7 @@ from app.shared.enums import CourseStatus, LessonStatus, SubLessonStatus
 if TYPE_CHECKING:
     from app.modules.users.model import User
     from app.modules.documents.model import Document
-    from app.modules.scorm.model import ScormComment
+    from app.modules.scorm.model import ScormComment, ScormPackage
 
 
 class Course(BaseModel):
@@ -135,4 +135,10 @@ class SubLesson(BaseModel):
         back_populates="sub_lesson",
         cascade="all, delete-orphan",
         order_by="ScormComment.created_at",
+    )
+    scorm_packages: Mapped[list["ScormPackage"]] = relationship(
+        "ScormPackage",
+        back_populates="sub_lesson",
+        cascade="all, delete-orphan",
+        order_by="ScormPackage.version",
     )

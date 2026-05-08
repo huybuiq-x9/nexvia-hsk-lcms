@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, BigInteger, ForeignKey, Text
+from sqlalchemy import Boolean, Integer, String, BigInteger, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -33,6 +33,15 @@ class Document(BaseModel):
     file_extension: Mapped[str] = mapped_column(String(50), nullable=False)
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    version_group_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+        default=uuid.uuid4,
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    review_round: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     sub_lesson: Mapped["SubLesson"] = relationship(
         "SubLesson",

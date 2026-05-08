@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Download, Trash2, Eye, MessageSquare, Send } from 'lucide-react';
+import { FileText, Download, Trash2, Eye, MessageSquare, Send, Upload } from 'lucide-react';
 import { useSubLessonDocuments } from '../hooks/useSubLessonDocuments';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { FileIcon } from '../../../components/ui/FileIcon';
@@ -46,10 +46,12 @@ export function SubLessonDocumentsTab({
     uploadDocuments,
     deleteDocument,
     getDownloadUrl,
+    reload,
   } = useSubLessonDocuments(subLessonId, onRefresh);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [reuploadingDocId, setReuploadingDocId] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<ApiDocumentWithUploader | null>(null);
   const [, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export function SubLessonDocumentsTab({
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [sendingComment, setSendingComment] = useState<Record<string, boolean>>({});
   const commentInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const reuploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const isLocked = !(
     subLessonStatus === SUB_LESSON_STATUS.DRAFT ||
@@ -98,6 +101,28 @@ export function SubLessonDocumentsTab({
       window.open(url, '_blank');
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
+    }
+  };
+
+  const handleReupload = async (
+    doc: ApiDocumentWithUploader,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (!canUpload || isLocked) return;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setReuploadingDocId(doc.id);
+    try {
+      await documentService.reuploadDocument(doc.id, file);
+      await reload();
+      onRefresh();
+      toast.success(t('documents.reuploadSuccess'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('documents.reuploadError')));
+    } finally {
+      setReuploadingDocId(null);
     }
   };
 
@@ -202,6 +227,7 @@ export function SubLessonDocumentsTab({
             const isLoadingCmt = loadingComments[doc.id];
             const isSendingCmt = sendingComment[doc.id];
             const docCommentText = commentText[doc.id] || '';
+            const isReuploading = reuploadingDocId === doc.id;
 
             return (
               <div key={doc.id} className="group">
@@ -222,6 +248,8 @@ export function SubLessonDocumentsTab({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800 truncate">{doc.original_name}</p>
                     <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                      <span className="font-medium text-slate-500">v{doc.version}</span>
+                      <span>·</span>
                       <span>{formatFileSize(doc.file_size)}</span>
                       <span>·</span>
                       <span>{formatDate(doc.created_at)}</span>
@@ -234,7 +262,7 @@ export function SubLessonDocumentsTab({
                     {canPreview && doc.file_extension === 'pdf' && (
                       <button
                         onClick={() => handlePreview(doc)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
                         title={t('documents.preview')}
                       >
                         <Eye size={15} />
@@ -262,16 +290,39 @@ export function SubLessonDocumentsTab({
                     {canDownload && (
                       <button
                         onClick={() => handleDownload(doc)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
                         title={t('documents.download')}
                       >
                         <Download size={15} />
                       </button>
                     )}
+                    {canUpload && !isLocked && (
+                      <>
+                        <input
+                          ref={el => { reuploadInputRefs.current[doc.id] = el; }}
+                          type="file"
+                          accept={`.${doc.file_extension}`}
+                          className="hidden"
+                          onChange={event => handleReupload(doc, event)}
+                        />
+                        <button
+                          onClick={() => reuploadInputRefs.current[doc.id]?.click()}
+                          disabled={isReuploading}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                          title={t('documents.reupload')}
+                        >
+                          {isReuploading ? (
+                            <span className="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Upload size={15} />
+                          )}
+                        </button>
+                      </>
+                    )}
                     {canDelete && !isLocked && (
                       <button
                         onClick={() => setDeleteId(doc.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
                         title={t('documents.delete')}
                       >
                         <Trash2 size={15} />
