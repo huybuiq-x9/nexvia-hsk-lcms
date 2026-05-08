@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { courseService } from '../../../services';
-import type { ApiSubLessonResponse } from '../../../types/api';
+import type { ApiReviewLog, ApiSubLessonResponse } from '../../../types/api';
 
 interface LessonInfo {
   id: string;
@@ -15,6 +15,7 @@ interface CourseInfo {
 
 export function useSubLesson(subLessonId: string | undefined) {
   const [subLesson, setSubLesson] = useState<ApiSubLessonResponse | null>(null);
+  const [reviewLogs, setReviewLogs] = useState<ApiReviewLog[]>([]);
   const [lessonInfo, setLessonInfo] = useState<LessonInfo | null>(null);
   const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,19 +23,36 @@ export function useSubLesson(subLessonId: string | undefined) {
   const loadSubLesson = useCallback(async () => {
     if (!subLessonId) return;
     try {
-      const sl = await courseService.getSubLesson(subLessonId);
+      const [sl, logs] = await Promise.all([
+        courseService.getSubLesson(subLessonId),
+        courseService.listSubLessonReviewLogs(subLessonId).catch(() => ({ total: 0, items: [] })),
+      ]);
       setSubLesson(sl);
+      setReviewLogs(logs.items);
     } catch {
       setSubLesson(null);
+      setReviewLogs([]);
     }
   }, [subLessonId]);
 
   useEffect(() => {
     if (!subLessonId) return;
-    setIsLoading(true);
-    loadSubLesson()
-      .catch(() => { setSubLesson(null); })
-      .finally(() => { setIsLoading(false); });
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setIsLoading(true);
+      loadSubLesson()
+        .catch(() => {
+          if (!cancelled) {
+            setSubLesson(null);
+            setReviewLogs([]);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+    });
+    return () => { cancelled = true; };
   }, [subLessonId, loadSubLesson]);
 
   useEffect(() => {
@@ -49,6 +67,7 @@ export function useSubLesson(subLessonId: string | undefined) {
 
   return {
     subLesson,
+    reviewLogs,
     lessonInfo,
     courseInfo,
     isLoading,

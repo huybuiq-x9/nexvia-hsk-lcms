@@ -17,7 +17,8 @@ from app.modules.documents.schema import (
     CommentAuthorInfo,
 )
 from app.modules.courses.model import SubLesson
-from app.shared.enums import SubLessonStatus
+from app.modules.courses.service import add_review_log
+from app.shared.enums import ReviewAction, SubLessonStatus
 from app.core.storage import storage_service
 from app.core.exceptions import NotFoundError, ForbiddenError
 
@@ -167,9 +168,10 @@ async def upload_documents(
     sublesson = await _get_sublesson_orm(db, sub_lesson_id)
     if sublesson.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
         raise ForbiddenError(
-            f"Cannot upload documents: sublesson status is '{sublesson.status.value}'. "
+            f"Cannot upload documents: sublesson status is '{getattr(sublesson.status, 'value', sublesson.status)}'. "
             "Documents can only be uploaded when the sublesson is in DRAFT or IN_PROGRESS status."
         )
+    initial_status = sublesson.status
     if sublesson.status == SubLessonStatus.DRAFT:
         sublesson.status = SubLessonStatus.IN_PROGRESS
 
@@ -219,6 +221,15 @@ async def upload_documents(
             review_round=review_round,
         )
         db.add(doc)
+        add_review_log(
+            db,
+            actor_id=uploader_id,
+            sublesson=sublesson,
+            action=ReviewAction.REUPLOAD_DOCUMENT if previous_version else ReviewAction.UPLOAD_DOCUMENT,
+            from_status=initial_status if not results else sublesson.status,
+            to_status=sublesson.status,
+            comment=f"{doc.original_name} v{doc.version}",
+        )
         results.append((doc, download_url))
 
     await db.commit()
@@ -241,9 +252,10 @@ async def reupload_document(
     sublesson = await _get_sublesson_orm(db, current_doc.sub_lesson_id)
     if sublesson.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
         raise ForbiddenError(
-            f"Cannot re-upload document: sublesson status is '{sublesson.status.value}'. "
+            f"Cannot re-upload document: sublesson status is '{getattr(sublesson.status, 'value', sublesson.status)}'. "
             "Documents can only be re-uploaded when the sublesson is in DRAFT or IN_PROGRESS status."
         )
+    from_status = sublesson.status
     if sublesson.status == SubLessonStatus.DRAFT:
         sublesson.status = SubLessonStatus.IN_PROGRESS
 
@@ -287,6 +299,15 @@ async def reupload_document(
         review_round=previous_version.review_round + 1,
     )
     db.add(doc)
+    add_review_log(
+        db,
+        actor_id=uploader_id,
+        sublesson=sublesson,
+        action=ReviewAction.REUPLOAD_DOCUMENT,
+        from_status=from_status,
+        to_status=sublesson.status,
+        comment=f"{doc.original_name} v{doc.version}",
+    )
     await db.commit()
     await db.refresh(doc)
     return _to_document_response(doc)

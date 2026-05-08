@@ -423,6 +423,26 @@
       "lastUpdated": "Last Updated",
       "createdAt": "Created At"
     },
+    "reviewLog": {
+      "title": "Approval Log",
+      "empty": "No approval log yet",
+      "unknownActor": "Unknown actor",
+      "submit": "Submitted for review",
+      "submitScorm": "Submitted SCORM for review",
+      "approveContent": "Approved content",
+      "rejectContent": "Rejected content",
+      "uploadDocument": "Uploaded document",
+      "reuploadDocument": "Re-uploaded document",
+      "uploadScorm": "Uploaded SCORM",
+      "reuploadScorm": "Re-uploaded SCORM",
+      "approveScorm": "Approved SCORM",
+      "rejectScorm": "Rejected SCORM",
+      "assign_converter": "Assigned converter",
+      "publish": "Published",
+      "unpublish": "Unpublished",
+      "assign_teacher": "Assigned teacher",
+      "assign_expert": "Assigned expert"
+    },
     "actions": {
       "submitForReview": "Submit for Review",
       "approve": "Approve",

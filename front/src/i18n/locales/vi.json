@@ -422,6 +422,26 @@
       "lastUpdated": "Cập nhật lần cuối",
       "createdAt": "Ngày tạo"
     },
+    "reviewLog": {
+      "title": "Log phê duyệt",
+      "empty": "Chưa có log phê duyệt",
+      "unknownActor": "Không rõ người thực hiện",
+      "submit": "Gửi phê duyệt",
+      "submitScorm": "Gửi SCORM phê duyệt",
+      "approveContent": "Duyệt nội dung",
+      "rejectContent": "Từ chối nội dung",
+      "uploadDocument": "Upload tài liệu",
+      "reuploadDocument": "Re-upload tài liệu",
+      "uploadScorm": "Upload SCORM",
+      "reuploadScorm": "Re-upload SCORM",
+      "approveScorm": "Duyệt SCORM",
+      "rejectScorm": "Từ chối SCORM",
+      "assign_converter": "Gán converter",
+      "publish": "Xuất bản",
+      "unpublish": "Hủy xuất bản",
+      "assign_teacher": "Gán giáo viên",
+      "assign_expert": "Gán expert"
+    },
     "actions": {
       "submitForReview": "Gửi phê duyệt",
       "approve": "Duyệt",

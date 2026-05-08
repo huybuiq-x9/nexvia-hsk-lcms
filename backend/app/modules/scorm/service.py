@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.exceptions import ForbiddenError, LCMSException, NotFoundError
 from app.core.storage import storage_service
 from app.modules.courses.model import SubLesson
+from app.modules.courses.service import add_review_log
 from app.modules.scorm.manifest import parse_imsmanifest
 from app.modules.scorm.model import ScormComment, ScormPackage
 from app.modules.scorm.schema import (
@@ -26,7 +27,7 @@ from app.modules.scorm.schema import (
     ScormFileListResponse,
     ScormPackageInfo,
 )
-from app.shared.enums import SubLessonStatus
+from app.shared.enums import ReviewAction, SubLessonStatus
 
 
 MAX_SCORM_SIZE = 500 * 1024 * 1024
@@ -156,6 +157,7 @@ class ScormService:
         info, names = self._inspect_package(content)
         current_package = await self._get_current_package(db, sublesson_id)
         max_version = await self._get_max_package_version(db, sublesson_id)
+        is_reupload = current_package is not None or sublesson.scorm_stored_name is not None
 
         if not current_package and sublesson.scorm_stored_name:
             legacy_info = self.get_package_info_from_sublesson(sublesson)
@@ -214,6 +216,15 @@ class ScormService:
         sublesson.scorm_file_size = len(content)
         sublesson.scorm_uploaded_at = uploaded_at
         sublesson.scorm_uploaded_by_id = uploader_id
+        add_review_log(
+            db,
+            actor_id=uploader_id,
+            sublesson=sublesson,
+            action=ReviewAction.REUPLOAD_SCORM if is_reupload else ReviewAction.UPLOAD_SCORM,
+            from_status=sublesson.status,
+            to_status=sublesson.status,
+            comment=f"{filename} v{package.version}",
+        )
 
         await db.commit()
         await db.refresh(package)

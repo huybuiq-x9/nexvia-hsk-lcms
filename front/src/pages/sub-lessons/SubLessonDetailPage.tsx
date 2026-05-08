@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,7 +10,6 @@ import { SubLessonTabs, type Tab } from './components/SubLessonTabs';
 import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
 import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonScormTab } from './components/SubLessonScormTab';
-import { SubLessonHistoryTab } from './components/SubLessonHistoryTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
 import { API_ROLE, SUB_LESSON_STATUS } from '../../types/api';
 
@@ -21,7 +20,7 @@ export default function SubLessonDetailPage() {
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
   const { isAdmin, isExpert, selectedRole } = useAuth();
-  const { subLesson, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
+  const { subLesson, reviewLogs, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
 
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
@@ -82,15 +81,9 @@ export default function SubLessonDetailPage() {
     ...(canViewDocuments ? (['documents'] as Tab[]) : []),
     'questions',
     ...(canViewScorm ? (['scorm'] as Tab[]) : []),
-    'history',
   ], [canViewDocuments, canViewScorm]);
 
-  useEffect(() => {
-    if (isLoading || !subLesson) return;
-    if (!visibleTabs.includes(activeTab)) {
-      setActiveTab(visibleTabs[0] ?? 'history');
-    }
-  }, [activeTab, isLoading, subLesson, visibleTabs]);
+  const currentTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? 'questions');
 
   if (isLoading) {
     return (
@@ -135,6 +128,7 @@ export default function SubLessonDetailPage() {
       <SubLessonInfoDrawer
         subLesson={subLesson}
         lessonTitle={lessonInfo?.title}
+        reviewLogs={reviewLogs}
         isOpen={isInfoDrawerOpen}
         onToggle={() => setIsInfoDrawerOpen(open => !open)}
       />
@@ -142,10 +136,10 @@ export default function SubLessonDetailPage() {
       <SubLessonWorkflowStepper currentStatus={subLesson.status} />
 
       <div className="card overflow-hidden">
-        <SubLessonTabs activeTab={activeTab} onTabChange={setActiveTab} visibleTabs={visibleTabs} />
+        <SubLessonTabs activeTab={currentTab} onTabChange={setActiveTab} visibleTabs={visibleTabs} />
 
         <div className="p-5">
-          {activeTab === 'documents' && canViewDocuments && (
+          {currentTab === 'documents' && canViewDocuments && (
             <SubLessonDocumentsTab
               subLessonId={subLesson.id}
               subLessonStatus={subLesson.status}
@@ -157,8 +151,8 @@ export default function SubLessonDetailPage() {
               canDelete={canDeleteDocuments}
             />
           )}
-          {activeTab === 'questions' && <SubLessonQuestionsTab />}
-          {activeTab === 'scorm' && canViewScorm && (
+          {currentTab === 'questions' && <SubLessonQuestionsTab />}
+          {currentTab === 'scorm' && canViewScorm && (
             <SubLessonScormTab
               subLessonId={subLesson.id}
               canUpload={canUploadScorm}
@@ -168,7 +162,6 @@ export default function SubLessonDetailPage() {
               onUploaded={reload}
             />
           )}
-          {activeTab === 'history' && <SubLessonHistoryTab />}
         </div>
       </div>
 

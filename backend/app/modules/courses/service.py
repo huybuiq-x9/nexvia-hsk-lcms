@@ -5,11 +5,11 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.courses.model import Course, Lesson, SubLesson
+from app.modules.courses.model import Course, Lesson, ReviewLog, SubLesson
 from app.modules.courses import schema as course_schema
 from app.modules.users.model import User
 from app.core.exceptions import NotFoundError
-from app.shared.enums import LessonStatus, SubLessonStatus, UserRole
+from app.shared.enums import LessonStatus, ReviewAction, SubLessonStatus, UserRole
 
 
 def _to_course_response(course: Course) -> course_schema.CourseResponse:
@@ -57,6 +57,51 @@ def _to_sublesson_response(sl: SubLesson) -> course_schema.SubLessonResponse:
         created_at=sl.created_at,
         updated_at=sl.updated_at,
     )
+
+
+def _status_value(status: SubLessonStatus | str | None) -> str | None:
+    if status is None:
+        return None
+    return status.value if hasattr(status, "value") else str(status)
+
+
+def _sublesson_snapshot(sl: SubLesson) -> dict:
+    return {
+        "id": str(sl.id),
+        "lesson_id": str(sl.lesson_id),
+        "title": sl.title,
+        "description": sl.description,
+        "status": _status_value(sl.status),
+        "order_index": sl.order_index,
+        "submitted_at": sl.submitted_at.isoformat() if sl.submitted_at else None,
+        "approved_at": sl.approved_at.isoformat() if sl.approved_at else None,
+        "scorm_filename": sl.scorm_filename,
+        "scorm_file_size": sl.scorm_file_size,
+        "scorm_uploaded_at": sl.scorm_uploaded_at.isoformat() if sl.scorm_uploaded_at else None,
+        "scorm_uploaded_by_id": str(sl.scorm_uploaded_by_id) if sl.scorm_uploaded_by_id else None,
+    }
+
+
+def add_review_log(
+    db: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    sublesson: SubLesson,
+    action: ReviewAction,
+    from_status: SubLessonStatus | str | None,
+    to_status: SubLessonStatus | str | None,
+    comment: str | None = None,
+) -> None:
+    db.add(ReviewLog(
+        actor_id=actor_id,
+        entity_type="sub_lesson",
+        entity_id=sublesson.id,
+        action=action.value,
+        from_status=_status_value(from_status),
+        to_status=_status_value(to_status),
+        comment=comment,
+        snapshot=_sublesson_snapshot(sublesson),
+    ))
 
 
 def _lesson_brief(lesson: Lesson) -> course_schema.LessonBrief:
@@ -436,6 +481,29 @@ async def get_sublesson(
     return _to_sublesson_response(sl)
 
 
+async def list_sublesson_review_logs(
+    db: AsyncSession,
+    sublesson_id: uuid.UUID,
+) -> course_schema.ReviewLogListResponse:
+    await _get_sublesson_orm(db, sublesson_id)
+
+    count_result = await db.execute(
+        select(func.count(ReviewLog.id))
+        .where(ReviewLog.entity_type == "sub_lesson")
+        .where(ReviewLog.entity_id == sublesson_id)
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(ReviewLog)
+        .options(selectinload(ReviewLog.actor))
+        .where(ReviewLog.entity_type == "sub_lesson")
+        .where(ReviewLog.entity_id == sublesson_id)
+        .order_by(ReviewLog.created_at.desc())
+    )
+    return course_schema.ReviewLogListResponse(total=total, items=list(result.scalars().all()))
+
+
 async def create_sublesson(
     db: AsyncSession,
     lesson_id: uuid.UUID,
@@ -475,16 +543,26 @@ async def update_sublesson(
 async def submit_sublesson(
     db: AsyncSession,
     sublesson_id: uuid.UUID,
+    actor_id: uuid.UUID,
 ) -> course_schema.SubLessonResponse:
     sl = await _get_sublesson_orm(db, sublesson_id)
     if sl.status not in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
         from app.core.exceptions import InvalidStatusTransitionError
         raise InvalidStatusTransitionError(
-            f"Cannot submit sublesson: current status is '{sl.status.value}', "
+            f"Cannot submit sublesson: current status is '{_status_value(sl.status)}', "
             "only DRAFT or IN_PROGRESS can be submitted."
         )
+    from_status = sl.status
     sl.status = SubLessonStatus.REVIEWING
     sl.submitted_at = datetime.now(timezone.utc)
+    add_review_log(
+        db,
+        actor_id=actor_id,
+        sublesson=sl,
+        action=ReviewAction.SUBMIT,
+        from_status=from_status,
+        to_status=sl.status,
+    )
     await db.commit()
     await db.refresh(sl)
     return _to_sublesson_response(sl)
@@ -494,8 +572,10 @@ async def review_sublesson(
     db: AsyncSession,
     sublesson_id: uuid.UUID,
     action: str,
+    actor_id: uuid.UUID,
 ) -> course_schema.SubLessonResponse:
     sl = await _get_sublesson_orm(db, sublesson_id)
+    from_status = sl.status
 
     # Review CONTENT (REVIEWING → CONVERTING hoặc → IN_PROGRESS)
     if sl.status == SubLessonStatus.REVIEWING:
@@ -523,10 +603,18 @@ async def review_sublesson(
     else:
         from app.core.exceptions import InvalidStatusTransitionError
         raise InvalidStatusTransitionError(
-            f"Cannot review sublesson: current status is '{sl.status.value}', "
+            f"Cannot review sublesson: current status is '{_status_value(sl.status)}', "
             "only REVIEWING or SCORM_REVIEWING can be reviewed."
         )
 
+    add_review_log(
+        db,
+        actor_id=actor_id,
+        sublesson=sl,
+        action=ReviewAction.APPROVE if action == "approve" else ReviewAction.REJECT,
+        from_status=from_status,
+        to_status=sl.status,
+    )
     await db.commit()
     await db.refresh(sl)
     return _to_sublesson_response(sl)
@@ -535,19 +623,29 @@ async def review_sublesson(
 async def submit_scorm_sublesson(
     db: AsyncSession,
     sublesson_id: uuid.UUID,
+    actor_id: uuid.UUID,
 ) -> course_schema.SubLessonResponse:
     """Converter gửi SCORM đã upload lên để Expert review lần 2."""
     sl = await _get_sublesson_orm(db, sublesson_id)
     if sl.status != SubLessonStatus.CONVERTING:
         from app.core.exceptions import InvalidStatusTransitionError
         raise InvalidStatusTransitionError(
-            f"Cannot submit SCORM: current status is '{sl.status.value}', "
+            f"Cannot submit SCORM: current status is '{_status_value(sl.status)}', "
             "only CONVERTING can submit SCORM for review."
         )
     if not sl.scorm_stored_name:
         from app.core.exceptions import InvalidStatusTransitionError
         raise InvalidStatusTransitionError("Cannot submit SCORM: no SCORM package has been uploaded.")
+    from_status = sl.status
     sl.status = SubLessonStatus.SCORM_REVIEWING
+    add_review_log(
+        db,
+        actor_id=actor_id,
+        sublesson=sl,
+        action=ReviewAction.SUBMIT,
+        from_status=from_status,
+        to_status=sl.status,
+    )
     await db.commit()
     await db.refresh(sl)
     return _to_sublesson_response(sl)

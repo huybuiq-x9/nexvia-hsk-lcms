@@ -123,6 +123,43 @@ export interface ApiSubLessonBatchDelete {
   ids: string[];
 }
 
+export type ReviewLogAction =
+  | 'submit'
+  | 'approve'
+  | 'reject'
+  | 'upload_document'
+  | 'reupload_document'
+  | 'upload_scorm'
+  | 'reupload_scorm'
+  | 'assign_converter'
+  | 'publish'
+  | 'unpublish'
+  | 'assign_teacher'
+  | 'assign_expert';
+
+export interface ApiReviewLogActor {
+  id: string;
+  full_name: string;
+}
+
+export interface ApiReviewLog {
+  id: string;
+  actor_id: string;
+  entity_type: string;
+  entity_id: string;
+  action: ReviewLogAction;
+  from_status: string | null;
+  to_status: string | null;
+  comment: string | null;
+  created_at: string;
+  actor: ApiReviewLogActor | null;
+}
+
+export interface ApiReviewLogListResponse {
+  total: number;
+  items: ApiReviewLog[];
+}
+
 // ─── SCORM ───────────────────────────────────────────────────────────────────
 
 export interface ApiScormPackageInfo {

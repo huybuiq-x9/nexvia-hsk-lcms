@@ -172,3 +172,28 @@ class SubLessonReviewRequest(BaseModel):
 class SubLessonListResponse(BaseModel):
     total: int
     items: list[SubLessonListItem]
+
+
+class ReviewLogActor(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    full_name: str
+
+
+class ReviewLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    actor_id: uuid.UUID
+    entity_type: str
+    entity_id: uuid.UUID
+    action: str
+    from_status: str | None
+    to_status: str | None
+    comment: str | None
+    created_at: datetime
+    actor: ReviewLogActor | None = None
+
+
+class ReviewLogListResponse(BaseModel):
+    total: int
+    items: list[ReviewLogResponse]

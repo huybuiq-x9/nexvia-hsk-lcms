@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Send, CheckCircle, XCircle } from 'lucide-react';
+import { Send, CheckCircle, XCircle, UploadCloud } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { CollapsibleDrawer } from '../../../components/ui/CollapsibleDrawer';
-import { formatDateShort } from '../../../utils/formatters';
-import type { ApiSubLessonResponse } from '../../../types/api';
+import { formatDate, formatDateShort } from '../../../utils/formatters';
+import type { ApiReviewLog, ApiSubLessonResponse } from '../../../types/api';
 
 interface SubLessonHeaderProps {
   canSubmitForReview?: boolean;
@@ -100,15 +100,47 @@ export function SubLessonHeader({
 export function SubLessonInfoDrawer({
   subLesson,
   lessonTitle,
+  reviewLogs,
   isOpen,
   onToggle,
 }: {
   subLesson: ApiSubLessonResponse;
   lessonTitle: string | undefined;
+  reviewLogs: ApiReviewLog[];
   isOpen: boolean;
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
+  const getReviewLogLabel = (log: ApiReviewLog) => {
+    if (log.action === 'submit' && log.to_status === 'scorm_reviewing') {
+      return t('subLessons.reviewLog.submitScorm');
+    }
+    if (log.action === 'approve' && log.to_status === 'approved') {
+      return t('subLessons.reviewLog.approveScorm');
+    }
+    if (log.action === 'approve') {
+      return t('subLessons.reviewLog.approveContent');
+    }
+    if (log.action === 'reject' && log.from_status === 'scorm_reviewing') {
+      return t('subLessons.reviewLog.rejectScorm');
+    }
+    if (log.action === 'reject') {
+      return t('subLessons.reviewLog.rejectContent');
+    }
+    if (log.action === 'upload_document') {
+      return t('subLessons.reviewLog.uploadDocument');
+    }
+    if (log.action === 'reupload_document') {
+      return t('subLessons.reviewLog.reuploadDocument');
+    }
+    if (log.action === 'upload_scorm') {
+      return t('subLessons.reviewLog.uploadScorm');
+    }
+    if (log.action === 'reupload_scorm') {
+      return t('subLessons.reviewLog.reuploadScorm');
+    }
+    return t(`subLessons.reviewLog.${log.action}`);
+  };
 
   return (
     <CollapsibleDrawer
@@ -145,6 +177,59 @@ export function SubLessonInfoDrawer({
               {formatDateShort(subLesson.created_at)}
             </div>
           </div>
+        </div>
+
+        <div className="space-y-3 pt-4 border-t border-slate-100">
+          <div className="text-sm font-semibold text-slate-900">
+            {t('subLessons.reviewLog.title')}
+          </div>
+          {reviewLogs.length === 0 ? (
+            <div className="rounded border border-dashed border-slate-200 px-3 py-4 text-sm text-slate-400">
+              {t('subLessons.reviewLog.empty')}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviewLogs.map((log) => {
+                const isReject = log.action === 'reject';
+                const isApprove = log.action === 'approve';
+                const isUpload = log.action === 'upload_document'
+                  || log.action === 'reupload_document'
+                  || log.action === 'upload_scorm'
+                  || log.action === 'reupload_scorm';
+                const iconClass = isReject
+                  ? 'bg-red-50 text-red-600'
+                  : isApprove
+                    ? 'bg-green-50 text-green-600'
+                    : isUpload
+                      ? 'bg-purple-50 text-purple-600'
+                      : 'bg-blue-50 text-blue-600';
+
+                return (
+                  <div key={log.id} className="flex gap-3">
+                    <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
+                      {isReject ? <XCircle size={15} /> : isApprove ? <CheckCircle size={15} /> : isUpload ? <UploadCloud size={15} /> : <Send size={15} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-slate-800">{getReviewLogLabel(log)}</div>
+                      <div className="mt-0.5 text-xs text-slate-400">
+                        {formatDate(log.created_at)} · {log.actor?.full_name ?? t('subLessons.reviewLog.unknownActor')}
+                      </div>
+                      {log.from_status && log.to_status && log.from_status !== log.to_status && (
+                        <div className="mt-1 text-xs text-slate-500">
+                          {t(`subLessons.status.${log.from_status}`)} → {t(`subLessons.status.${log.to_status}`)}
+                        </div>
+                      )}
+                      {log.comment && (
+                        <div className="mt-1 rounded bg-slate-50 px-2 py-1 text-xs text-slate-600 break-words">
+                          {log.comment}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </CollapsibleDrawer>

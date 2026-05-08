@@ -174,6 +174,18 @@ async def get_sublesson(
     return await service.get_sublesson(db, sublesson_id)
 
 
+@router.get(
+    "/sub-lessons/{sublesson_id}/review-logs",
+    response_model=course_schema.ReviewLogListResponse,
+)
+async def list_sublesson_review_logs(
+    sublesson_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: TeacherAssignedToSubLesson,
+):
+    return await service.list_sublesson_review_logs(db, sublesson_id)
+
+
 @router.post(
     "/lessons/{lesson_id}/sub-lessons",
     response_model=course_schema.SubLessonResponse,
@@ -232,7 +244,7 @@ async def submit_sublesson(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: TeacherSubmitAccessToSubLesson,
 ):
-    return await service.submit_sublesson(db, sublesson_id)
+    return await service.submit_sublesson(db, sublesson_id, current_user.id)
 
 
 @router.post(
@@ -245,7 +257,7 @@ async def review_sublesson(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: ExpertAssignedToSubLesson,
 ):
-    return await service.review_sublesson(db, sublesson_id, data.action)
+    return await service.review_sublesson(db, sublesson_id, data.action, current_user.id)
 
 
 @router.post(
@@ -258,4 +270,4 @@ async def submit_scorm_sublesson(
     current_user: ConverterSubmitAccessToSubLesson,
 ):
     """Converter gửi SCORM đã upload để Expert review lần 2."""
-    return await service.submit_scorm_sublesson(db, sublesson_id)
+    return await service.submit_scorm_sublesson(db, sublesson_id, current_user.id)

@@ -1,7 +1,7 @@
-import { FileText, HelpCircle, Package, History } from 'lucide-react';
+import { FileText, HelpCircle, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export type Tab = 'documents' | 'questions' | 'scorm' | 'history';
+export type Tab = 'documents' | 'questions' | 'scorm';
 
 interface SubLessonTabsProps {
   activeTab: Tab;
@@ -13,7 +13,6 @@ const TABS: { key: Tab; labelKey: string; icon: React.ReactNode }[] = [
   { key: 'documents', labelKey: 'documents', icon: <FileText size={16} /> },
   { key: 'questions', labelKey: 'questions', icon: <HelpCircle size={16} /> },
   { key: 'scorm',     labelKey: 'scorm',     icon: <Package size={16} /> },
-  { key: 'history',   labelKey: 'history',   icon: <History size={16} /> },
 ];
 
 export function SubLessonTabs({ activeTab, onTabChange, visibleTabs }: SubLessonTabsProps) {

@@ -19,6 +19,7 @@ import type {
   ApiLessonAssign,
   ApiLessonListResponse,
   ApiSubLessonCreate,
+  ApiReviewLogListResponse,
   ApiSubLessonResponse,
   ApiSubLessonListResponse,
   ApiDocumentListResponse,
@@ -169,6 +170,11 @@ export const courseService = {
 
   async getSubLesson(sublessonId: string): Promise<ApiSubLessonResponse> {
     const res = await client.get<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}`);
+    return res.data;
+  },
+
+  async listSubLessonReviewLogs(sublessonId: string): Promise<ApiReviewLogListResponse> {
+    const res = await client.get<ApiReviewLogListResponse>(`/courses/sub-lessons/${sublessonId}/review-logs`);
     return res.data;
   },
 
