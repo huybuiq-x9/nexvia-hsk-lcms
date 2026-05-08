@@ -6,11 +6,14 @@ interface LessonInfo {
   id: string;
   title: string;
   course_id: string;
+  assigned_teacher_id: string | null;
+  assigned_converter_id: string | null;
 }
 
 interface CourseInfo {
   id: string;
   title: string;
+  assigned_expert_id: string;
 }
 
 export function useSubLesson(subLessonId: string | undefined) {
@@ -58,9 +61,19 @@ export function useSubLesson(subLessonId: string | undefined) {
   useEffect(() => {
     if (!subLesson?.lesson_id) return;
     courseService.getLesson(subLesson.lesson_id).then(lesson => {
-      setLessonInfo({ id: lesson.id, title: lesson.title, course_id: lesson.course_id });
+      setLessonInfo({
+        id: lesson.id,
+        title: lesson.title,
+        course_id: lesson.course_id,
+        assigned_teacher_id: lesson.assigned_teacher_id,
+        assigned_converter_id: lesson.assigned_converter_id,
+      });
       courseService.getCourse(lesson.course_id).then(course => {
-        setCourseInfo({ id: course.id, title: course.title });
+        setCourseInfo({
+          id: course.id,
+          title: course.title,
+          assigned_expert_id: course.assigned_expert_id,
+        });
       }).catch(() => {});
     }).catch(() => {});
   }, [subLesson?.lesson_id]);

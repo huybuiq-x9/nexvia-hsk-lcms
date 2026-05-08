@@ -742,6 +742,7 @@ async def list_lessons(
             assigned_teacher_id=lesson.assigned_teacher_id,
             assigned_converter_id=lesson.assigned_converter_id,
             sub_lessons_count=len(active_sub),
+            assigned_expert_id=lesson.course.assigned_expert_id if lesson.course else None,
             course_title=lesson.course.title if lesson.course else None,
         ))
 
@@ -824,7 +825,10 @@ async def list_sub_lessons(
             created_at=sl.created_at,
             updated_at=sl.updated_at,
             lesson_title=lesson.title if lesson else None,
+            assigned_teacher_id=lesson.assigned_teacher_id if lesson else None,
+            assigned_converter_id=lesson.assigned_converter_id if lesson else None,
             course_id=course.id if course else None,
+            assigned_expert_id=course.assigned_expert_id if course else None,
             course_title=course.title if course else None,
         ))
 

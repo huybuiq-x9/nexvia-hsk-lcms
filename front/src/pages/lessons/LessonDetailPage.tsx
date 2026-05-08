@@ -8,6 +8,7 @@ import {
   FileText,
   Users,
   User,
+  UserCheck,
   Pencil,
   AlertCircle,
   X,
@@ -364,6 +365,7 @@ export default function LessonDetailPage() {
   const [lesson, setLesson] = useState<ApiLessonWithSubLessons | null>(null);
   const [courseTitle, setCourseTitle] = useState<string>('');
   const [courseId, setCourseId] = useState<string>('');
+  const [assignedExpertId, setAssignedExpertId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isEditingSubLessons, setIsEditingSubLessons] = useState(false);
@@ -406,6 +408,7 @@ export default function LessonDetailPage() {
     courseService.getCourse(lesson.course_id).then(c => {
       setCourseTitle(c.title);
       setCourseId(c.id);
+      setAssignedExpertId(c.assigned_expert_id);
       loadUser(c.assigned_expert_id);
     }).catch(() => {});
     if (lesson.assigned_teacher_id) loadUser(lesson.assigned_teacher_id);
@@ -430,6 +433,7 @@ export default function LessonDetailPage() {
     );
   }
 
+  const expert = assignedExpertId ? userCache[assignedExpertId] : null;
   const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
   const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
   const parentCoursePath = `/courses/${courseId || lesson.course_id}`;
@@ -494,6 +498,13 @@ export default function LessonDetailPage() {
           </div>
 
           <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <UserCheck size={14} />
+                <span>{t('courses.modal.expert')}</span>
+              </div>
+              <UserBadge user={expert} />
+            </div>
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs text-slate-400">
                 <Users size={14} />

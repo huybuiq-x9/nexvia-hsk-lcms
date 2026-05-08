@@ -133,6 +133,7 @@ class CourseListResponse(BaseModel):
 
 class LessonListItem(LessonBrief):
     model_config = ConfigDict(from_attributes=True)
+    assigned_expert_id: uuid.UUID | None = None
     course_title: str | None = None
 
 
@@ -161,7 +162,10 @@ class SubLessonListItem(BaseModel):
     updated_at: datetime
     # Enriched from parent lesson
     lesson_title: str | None = None
+    assigned_teacher_id: uuid.UUID | None = None
+    assigned_converter_id: uuid.UUID | None = None
     course_id: uuid.UUID | None = None
+    assigned_expert_id: uuid.UUID | None = None
     course_title: str | None = None
 
 

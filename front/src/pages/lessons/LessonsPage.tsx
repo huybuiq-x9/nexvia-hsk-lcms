@@ -51,6 +51,7 @@ export default function LessonsPage() {
 
   useEffect(() => {
     lessons.forEach(l => {
+      if (l.assigned_expert_id) loadUser(l.assigned_expert_id);
       if (l.assigned_teacher_id) loadUser(l.assigned_teacher_id);
       if (l.assigned_converter_id) loadUser(l.assigned_converter_id);
     });
@@ -112,6 +113,7 @@ export default function LessonsPage() {
             <LessonCard
               key={lesson.id}
               lesson={lesson}
+              expert={lesson.assigned_expert_id ? userCache[lesson.assigned_expert_id] : undefined}
               teacher={lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : undefined}
               converter={lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : undefined}
             />

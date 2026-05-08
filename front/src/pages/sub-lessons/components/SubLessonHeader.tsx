@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Send, CheckCircle, XCircle, UploadCloud } from 'lucide-react';
+import { Send, CheckCircle, XCircle, UploadCloud, User, UserCheck, Users } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { CollapsibleDrawer } from '../../../components/ui/CollapsibleDrawer';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 import { formatDate, formatDateShort } from '../../../utils/formatters';
-import type { ApiReviewLog, ApiSubLessonResponse } from '../../../types/api';
+import type { ApiReviewLog, ApiSubLessonResponse, ApiUserWithRoles } from '../../../types/api';
 
 interface SubLessonHeaderProps {
   canSubmitForReview?: boolean;
@@ -100,12 +101,24 @@ export function SubLessonHeader({
 export function SubLessonInfoDrawer({
   subLesson,
   lessonTitle,
+  expert,
+  teacher,
+  converter,
+  hasExpert,
+  hasTeacher,
+  hasConverter,
   reviewLogs,
   isOpen,
   onToggle,
 }: {
   subLesson: ApiSubLessonResponse;
   lessonTitle: string | undefined;
+  expert?: ApiUserWithRoles;
+  teacher?: ApiUserWithRoles;
+  converter?: ApiUserWithRoles;
+  hasExpert?: boolean;
+  hasTeacher?: boolean;
+  hasConverter?: boolean;
   reviewLogs: ApiReviewLog[];
   isOpen: boolean;
   onToggle: () => void;
@@ -142,6 +155,16 @@ export function SubLessonInfoDrawer({
     return t(`subLessons.reviewLog.${log.action}`);
   };
 
+  const renderUser = (user: ApiUserWithRoles | undefined, isAssigned: boolean | undefined) =>
+    user ? (
+      <div className="flex items-center gap-2">
+        <UserAvatar name={user.full_name} size="sm" />
+        <span className="text-sm text-slate-700">{user.full_name}</span>
+      </div>
+    ) : (
+      <span className="text-sm text-slate-400 italic">{isAssigned ? '...' : '—'}</span>
+    );
+
   return (
     <CollapsibleDrawer
       isOpen={isOpen}
@@ -176,6 +199,30 @@ export function SubLessonInfoDrawer({
             <div className="text-sm font-medium text-slate-800 mt-0.5">
               {formatDateShort(subLesson.created_at)}
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <UserCheck size={14} />
+              <span>{t('roles.expert')}</span>
+            </div>
+            {renderUser(expert, hasExpert)}
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Users size={14} />
+              <span>{t('roles.teacher')}</span>
+            </div>
+            {renderUser(teacher, hasTeacher)}
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <User size={14} />
+              <span>{t('roles.converter')}</span>
+            </div>
+            {renderUser(converter, hasConverter)}
           </div>
         </div>
 

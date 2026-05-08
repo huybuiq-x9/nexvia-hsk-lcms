@@ -1,19 +1,51 @@
 import { useState, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { FileText, ChevronRight, BookOpen, Layers } from 'lucide-react';
+import { FileText, ChevronRight, BookOpen, Layers, User, UserCheck, Users } from 'lucide-react';
 import { courseService } from '../../services';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { UserAvatar } from '../../components/ui/UserAvatar';
+import { useUserCache } from '../../hooks/useUserCache';
 import FilterBar from '../../components/FilterBar';
-import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem } from '../../types/api';
+import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem, ApiUserWithRoles } from '../../types/api';
 import type { SubLessonStatus } from '../../types/api';
 import { SUB_LESSON_STATUSES } from '../../types/api';
 
 const PER_PAGE = 20;
 
+const ManagerRow = ({
+  icon,
+  label,
+  user,
+  isAssigned,
+}: {
+  icon: ReactNode;
+  label: string;
+  user?: ApiUserWithRoles;
+  isAssigned: boolean;
+}) => (
+  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+    <span className="text-slate-400">{icon}</span>
+    {user ? (
+      <>
+        <UserAvatar name={user.full_name} size="sm" />
+        <span className="truncate max-w-[110px]" title={`${label}: ${user.full_name}`}>
+          {user.full_name}
+        </span>
+      </>
+    ) : (
+      <span className="truncate max-w-[110px] text-slate-400 italic">
+        {isAssigned ? '...' : '—'}
+      </span>
+    )}
+  </div>
+);
+
 export default function SubLessonsPage() {
   const { t } = useTranslation();
+  const { cache: userCache, loadUser } = useUserCache();
 
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -60,6 +92,14 @@ export default function SubLessonsPage() {
     }
     void fetchSubLessons();
   }, [page, search, selectedCourseId, selectedLessonId, selectedStatus]);
+
+  useEffect(() => {
+    subLessons.forEach(sl => {
+      if (sl.assigned_expert_id) loadUser(sl.assigned_expert_id);
+      if (sl.assigned_teacher_id) loadUser(sl.assigned_teacher_id);
+      if (sl.assigned_converter_id) loadUser(sl.assigned_converter_id);
+    });
+  }, [subLessons, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
@@ -147,6 +187,26 @@ export default function SubLessonsPage() {
                     <span className="flex items-center gap-1"><BookOpen size={11} />{sl.course_title}</span>
                   )}
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <ManagerRow
+                  icon={<UserCheck size={12} />}
+                  label={t('roles.expert')}
+                  user={sl.assigned_expert_id ? userCache[sl.assigned_expert_id] : undefined}
+                  isAssigned={Boolean(sl.assigned_expert_id)}
+                />
+                <ManagerRow
+                  icon={<Users size={12} />}
+                  label={t('roles.teacher')}
+                  user={sl.assigned_teacher_id ? userCache[sl.assigned_teacher_id] : undefined}
+                  isAssigned={Boolean(sl.assigned_teacher_id)}
+                />
+                <ManagerRow
+                  icon={<User size={12} />}
+                  label={t('roles.converter')}
+                  user={sl.assigned_converter_id ? userCache[sl.assigned_converter_id] : undefined}
+                  isAssigned={Boolean(sl.assigned_converter_id)}
+                />
               </div>
               <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 shrink-0 mt-1 transition-colors" />
             </Link>

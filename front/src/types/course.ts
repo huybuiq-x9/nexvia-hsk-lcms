@@ -104,7 +104,10 @@ export interface ApiSubLessonListItem {
   created_at: string;
   updated_at: string;
   lesson_title: string | null;
+  assigned_teacher_id: string | null;
+  assigned_converter_id: string | null;
   course_id: string | null;
+  assigned_expert_id: string | null;
   course_title: string | null;
 }
 
@@ -232,6 +235,7 @@ export interface ApiLessonBrief {
 }
 
 export interface ApiLessonListItem extends ApiLessonBrief {
+  assigned_expert_id: string | null;
   course_title: string | null;
 }
 

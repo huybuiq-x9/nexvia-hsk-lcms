@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Users, User } from 'lucide-react';
+import { ChevronRight, Users, User, UserCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
 import type { ApiLessonListItem, ApiUserWithRoles } from '../../../types/api';
 
 interface LessonCardProps {
   lesson: ApiLessonListItem;
+  expert?: ApiUserWithRoles;
   teacher?: ApiUserWithRoles;
   converter?: ApiUserWithRoles;
 }
 
-export function LessonCard({ lesson, teacher, converter }: LessonCardProps) {
+export function LessonCard({ lesson, expert, teacher, converter }: LessonCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Link
       to={`/lessons/${lesson.id}`}
@@ -42,18 +46,31 @@ export function LessonCard({ lesson, teacher, converter }: LessonCardProps) {
       </div>
 
       <div className="flex flex-col items-end gap-2 shrink-0">
+        {expert && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <UserCheck size={12} className="text-slate-400" />
+            <UserAvatar name={expert.full_name} size="sm" />
+            <span className="truncate max-w-[100px]" title={`${t('roles.expert')}: ${expert.full_name}`}>
+              {expert.full_name}
+            </span>
+          </div>
+        )}
         {teacher && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Users size={12} className="text-slate-400" />
             <UserAvatar name={teacher.full_name} size="sm" />
-            <span className="truncate max-w-[100px]">{teacher.full_name}</span>
+            <span className="truncate max-w-[100px]" title={`${t('roles.teacher')}: ${teacher.full_name}`}>
+              {teacher.full_name}
+            </span>
           </div>
         )}
         {converter && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <User size={12} className="text-slate-400" />
             <UserAvatar name={converter.full_name} size="sm" />
-            <span className="truncate max-w-[100px]">{converter.full_name}</span>
+            <span className="truncate max-w-[100px]" title={`${t('roles.converter')}: ${converter.full_name}`}>
+              {converter.full_name}
+            </span>
           </div>
         )}
       </div>

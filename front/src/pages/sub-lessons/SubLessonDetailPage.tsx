@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUserCache } from '../../hooks/useUserCache';
 import { useSubLesson } from './hooks/useSubLesson';
 import { SubLessonBreadcrumb } from './components/SubLessonBreadcrumb';
 import { SubLessonHeader, SubLessonInfoDrawer } from './components/SubLessonHeader';
@@ -20,6 +21,7 @@ export default function SubLessonDetailPage() {
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
   const { isAdmin, isExpert, selectedRole } = useAuth();
+  const { cache: userCache, loadUser } = useUserCache();
   const { subLesson, reviewLogs, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
 
   const [activeTab, setActiveTab] = useState<Tab>('documents');
@@ -83,6 +85,12 @@ export default function SubLessonDetailPage() {
     ...(canViewScorm ? (['scorm'] as Tab[]) : []),
   ], [canViewDocuments, canViewScorm]);
 
+  useEffect(() => {
+    if (courseInfo?.assigned_expert_id) loadUser(courseInfo.assigned_expert_id);
+    if (lessonInfo?.assigned_teacher_id) loadUser(lessonInfo.assigned_teacher_id);
+    if (lessonInfo?.assigned_converter_id) loadUser(lessonInfo.assigned_converter_id);
+  }, [courseInfo?.assigned_expert_id, lessonInfo?.assigned_teacher_id, lessonInfo?.assigned_converter_id, loadUser]);
+
   const currentTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? 'questions');
 
   if (isLoading) {
@@ -128,6 +136,12 @@ export default function SubLessonDetailPage() {
       <SubLessonInfoDrawer
         subLesson={subLesson}
         lessonTitle={lessonInfo?.title}
+        expert={courseInfo?.assigned_expert_id ? userCache[courseInfo.assigned_expert_id] : undefined}
+        teacher={lessonInfo?.assigned_teacher_id ? userCache[lessonInfo.assigned_teacher_id] : undefined}
+        converter={lessonInfo?.assigned_converter_id ? userCache[lessonInfo.assigned_converter_id] : undefined}
+        hasExpert={Boolean(courseInfo?.assigned_expert_id)}
+        hasTeacher={Boolean(lessonInfo?.assigned_teacher_id)}
+        hasConverter={Boolean(lessonInfo?.assigned_converter_id)}
         reviewLogs={reviewLogs}
         isOpen={isInfoDrawerOpen}
         onToggle={() => setIsInfoDrawerOpen(open => !open)}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronRight, ChevronLeft, Users, User, Pencil, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronLeft, Users, User, UserCheck, Pencil, FileText } from 'lucide-react';
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
@@ -216,6 +216,10 @@ export default function CourseDetailPage() {
                         ))
                       )}
                       <div className="px-5 py-3 bg-white border-t border-slate-100 flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <UserCheck size={11} />
+                          {expert ? <><UserAvatar name={expert.full_name} size="sm" /><span>{expert.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-slate-500">
                           <Users size={11} />
                           {teacher ? <><UserAvatar name={teacher.full_name} size="sm" /><span>{teacher.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
