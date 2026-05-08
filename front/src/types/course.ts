@@ -138,10 +138,31 @@ export interface ApiScormPackageInfo {
   uploaded_at: string | null;
   uploaded_by_id: string | null;
   files_count: number;
+  comments_count: number;
 }
 
 export interface ApiScormFileListResponse {
   files: string[];
+}
+
+export interface ApiScormCommentAuthor {
+  id: string;
+  full_name: string;
+}
+
+export interface ApiScormComment {
+  id: string;
+  sub_lesson_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author: ApiScormCommentAuthor;
+}
+
+export interface ApiScormCommentListResponse {
+  total: number;
+  items: ApiScormComment[];
 }
 
 // ─── Lesson ──────────────────────────────────────────────────────────────────

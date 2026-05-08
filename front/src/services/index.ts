@@ -26,6 +26,8 @@ import type {
   ApiDocumentComment,
   ApiDocumentCommentListResponse,
   ApiScormFileListResponse,
+  ApiScormComment,
+  ApiScormCommentListResponse,
   ApiScormPackageInfo,
   ApiRole,
   LessonStatus,
@@ -268,6 +270,16 @@ export const scormService = {
 
   async listFiles(sublessonId: string): Promise<ApiScormFileListResponse> {
     const res = await client.get<ApiScormFileListResponse>(`/scorm/preview/${sublessonId}/files`);
+    return res.data;
+  },
+
+  async listComments(sublessonId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormCommentListResponse> {
+    const res = await client.get<ApiScormCommentListResponse>(`/scorm/sub-lessons/${sublessonId}/comments`, { params });
+    return res.data;
+  },
+
+  async addComment(sublessonId: string, content: string): Promise<ApiScormComment> {
+    const res = await client.post<ApiScormComment>(`/scorm/sub-lessons/${sublessonId}/comments`, { content });
     return res.data;
   },
 

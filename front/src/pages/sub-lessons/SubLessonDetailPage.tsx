@@ -111,9 +111,7 @@ export default function SubLessonDetailPage() {
             <SubLessonScormTab
               subLessonId={subLesson.id}
               canUpload={canUploadScorm}
-              canSubmit={canSubmitScorm}
               onUploaded={reload}
-              onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
             />
           )}
           {activeTab === 'history' && <SubLessonHistoryTab />}

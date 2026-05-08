@@ -8,15 +8,24 @@ from xml.etree.ElementTree import ParseError
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, LCMSException, NotFoundError
 from app.core.storage import storage_service
 from app.modules.courses.model import SubLesson
 from app.modules.scorm.manifest import parse_imsmanifest
-from app.modules.scorm.schema import ScormPackageInfo, ScormFileListResponse
+from app.modules.scorm.model import ScormComment
+from app.modules.scorm.schema import (
+    ScormCommentAuthorInfo,
+    ScormCommentCreate,
+    ScormCommentListResponse,
+    ScormCommentResponse,
+    ScormFileListResponse,
+    ScormPackageInfo,
+)
 from app.shared.enums import SubLessonStatus
 
 
@@ -153,7 +162,11 @@ class ScormService:
             raise ForbiddenError("Invalid SCORM file path")
         return normalized
 
-    def get_package_info_from_sublesson(self, sublesson: SubLesson) -> ScormPackageInfo:
+    def get_package_info_from_sublesson(
+        self,
+        sublesson: SubLesson,
+        comments_count: int = 0,
+    ) -> ScormPackageInfo:
         self._require_scorm(sublesson)
         with self._read_zip(sublesson.scorm_stored_name or "") as zf:
             names = sorted(name for name in zf.namelist() if not name.endswith("/"))
@@ -186,11 +199,22 @@ class ScormService:
             uploaded_at=sublesson.scorm_uploaded_at,
             uploaded_by_id=sublesson.scorm_uploaded_by_id,
             files_count=len(names),
+            comments_count=comments_count,
         )
 
     async def get_package_info(self, db: AsyncSession, sublesson_id: uuid.UUID) -> ScormPackageInfo:
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        return self.get_package_info_from_sublesson(sublesson)
+        result = await db.execute(
+            select(SubLesson)
+            .options(selectinload(SubLesson.scorm_comments))
+            .where(SubLesson.id == sublesson_id)
+        )
+        sublesson = result.scalar_one_or_none()
+        if not sublesson:
+            raise NotFoundError("SubLesson", str(sublesson_id))
+        return self.get_package_info_from_sublesson(
+            sublesson,
+            comments_count=len(sublesson.scorm_comments or []),
+        )
 
     async def get_file_list(self, db: AsyncSession, sublesson_id: uuid.UUID) -> ScormFileListResponse:
         sublesson = await self._get_sublesson_orm(db, sublesson_id)
@@ -221,6 +245,77 @@ class ScormService:
             raw_content = self._inject_runtime(raw_content, normalized_path, asset_base_url)
             content_type = "text/html; charset=utf-8"
         return raw_content, content_type
+
+    def _to_comment_response(self, comment: ScormComment) -> ScormCommentResponse:
+        return ScormCommentResponse(
+            id=comment.id,
+            sub_lesson_id=comment.sub_lesson_id,
+            author_id=comment.author_id,
+            content=comment.content,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            author=ScormCommentAuthorInfo(
+                id=comment.author.id,
+                full_name=comment.author.full_name,
+            ) if hasattr(comment, "author") and comment.author else ScormCommentAuthorInfo(
+                id=comment.author_id,
+                full_name="",
+            ),
+        )
+
+    async def list_comments(
+        self,
+        db: AsyncSession,
+        sublesson_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> ScormCommentListResponse:
+        sublesson = await self._get_sublesson_orm(db, sublesson_id)
+        self._require_scorm(sublesson)
+
+        query = (
+            select(ScormComment)
+            .options(selectinload(ScormComment.author))
+            .where(ScormComment.sub_lesson_id == sublesson_id)
+            .where(ScormComment.deleted_at.is_(None))
+            .order_by(ScormComment.created_at.asc())
+        )
+
+        count_q = select(func.count()).select_from(query.subquery())
+        total = (await db.execute(count_q)).scalar() or 0
+
+        result = await db.execute(query.offset(skip).limit(limit))
+        comments = list(result.scalars().all())
+        return ScormCommentListResponse(
+            total=total,
+            items=[self._to_comment_response(comment) for comment in comments],
+        )
+
+    async def add_comment(
+        self,
+        db: AsyncSession,
+        sublesson_id: uuid.UUID,
+        author_id: uuid.UUID,
+        data: ScormCommentCreate,
+    ) -> ScormCommentResponse:
+        sublesson = await self._get_sublesson_orm(db, sublesson_id)
+        self._require_scorm(sublesson)
+
+        comment = ScormComment(
+            sub_lesson_id=sublesson_id,
+            author_id=author_id,
+            content=data.content,
+        )
+        db.add(comment)
+        await db.commit()
+
+        result = await db.execute(
+            select(ScormComment)
+            .options(selectinload(ScormComment.author))
+            .where(ScormComment.id == comment.id)
+        )
+        comment = result.scalar_one()
+        return self._to_comment_response(comment)
 
     def _content_type(self, file_path: str) -> str:
         ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
