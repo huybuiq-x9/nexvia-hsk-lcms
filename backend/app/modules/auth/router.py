@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser
+from app.core.deps import get_db
 from app.modules.auth import service, schema as auth_schema
 
 router = APIRouter()
@@ -56,15 +56,6 @@ async def logout(
     if data and data.refresh_token:
         await service.logout(db, data.refresh_token)
     return {"message": "Logged out successfully"}
-
-
-@router.post("/logout-all")
-async def logout_all(
-    current_user: CurrentUser,
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    await service.revoke_all_user_tokens(db, current_user.id)
-    return {"message": "Logged out from all devices"}
 
 
 @router.post("/forgot-password", response_model=auth_schema.ForgotPasswordResponse)
