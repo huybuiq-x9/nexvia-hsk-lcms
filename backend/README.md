@@ -28,7 +28,7 @@ python -m app.db.seed
 
 Default admin credentials:
 
-- Email: `admin@nexvia.vn`
+- Email: `admin@nexedu.vn`
 - Password: `Admin123@`
 
 ## API Documentation

@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "nexvia-lcms-noreply@gmail.com"
-    SMTP_FROM_NAME: str = "NEXVIA LCMS"
+    SMTP_FROM_EMAIL: str = "nexedu-lcms-noreply@gmail.com"
+    SMTP_FROM_NAME: str = "NEXEDU LCMS"
     SMTP_USE_TLS: bool = True
     FRONTEND_URL: str = "http://localhost:5173"
 

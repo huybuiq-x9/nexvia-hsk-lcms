@@ -9,21 +9,21 @@ from app.db.session import AsyncSessionLocal
 from app.shared.enums import UserRole, CourseStatus, LessonStatus, SubLessonStatus
 
 
-ADMIN_EMAIL = "admin@nexvia.vn"
+ADMIN_EMAIL = "admin@nexedu.vn"
 ADMIN_PASSWORD = "Admin123@"
-ADMIN_FULL_NAME = "Nexvia Admin"
+ADMIN_FULL_NAME = "Nexedu Admin"
 
 DEMO_USERS = [
-    {"email": "admin@nexvia.vn",      "password": "Admin123@",    "full_name": "Nexvia Admin",     "role": UserRole.ADMIN},
-    {"email": "teacher01@nexvia.vn", "password": "Teacher123@", "full_name": "Bùi Đình Nam",      "role": UserRole.TEACHER},
-    {"email": "teacher02@nexvia.vn", "password": "Teacher123@", "full_name": "Ngô Thị Phương",   "role": UserRole.TEACHER},
-    {"email": "teacher03@nexvia.vn", "password": "Teacher123@", "full_name": "Trịnh Gia Khánh",   "role": UserRole.TEACHER},
-    {"email": "expert01@nexvia.vn",  "password": "Expert123@",  "full_name": "Lý Minh Tuấn",      "role": UserRole.EXPERT},
-    {"email": "expert02@nexvia.vn",  "password": "Expert123@",  "full_name": "Phan Thị Mai Anh", "role": UserRole.EXPERT},
-    {"email": "expert03@nexvia.vn",  "password": "Expert123@",  "full_name": "Đỗ Đức Minh",        "role": UserRole.EXPERT},
-    {"email": "converter01@nexvia.vn","password": "Converter123@","full_name": "Võ Thị Kim Oanh",  "role": UserRole.CONVERTER},
-    {"email": "converter02@nexvia.vn","password": "Converter123@","full_name": "Đinh Quang Vũ",     "role": UserRole.CONVERTER},
-    {"email": "converter03@nexvia.vn","password": "Converter123@","full_name": "Hoàng Văn Minh",    "role": UserRole.CONVERTER},
+    {"email": "admin@nexedu.vn",      "password": "Admin123@",    "full_name": "Nexedu Admin",     "role": UserRole.ADMIN},
+    {"email": "teacher01@nexedu.vn", "password": "Teacher123@", "full_name": "Bùi Đình Nam",      "role": UserRole.TEACHER},
+    {"email": "teacher02@nexedu.vn", "password": "Teacher123@", "full_name": "Ngô Thị Phương",   "role": UserRole.TEACHER},
+    {"email": "teacher03@nexedu.vn", "password": "Teacher123@", "full_name": "Trịnh Gia Khánh",   "role": UserRole.TEACHER},
+    {"email": "expert01@nexedu.vn",  "password": "Expert123@",  "full_name": "Lý Minh Tuấn",      "role": UserRole.EXPERT},
+    {"email": "expert02@nexedu.vn",  "password": "Expert123@",  "full_name": "Phan Thị Mai Anh", "role": UserRole.EXPERT},
+    {"email": "expert03@nexedu.vn",  "password": "Expert123@",  "full_name": "Đỗ Đức Minh",        "role": UserRole.EXPERT},
+    {"email": "converter01@nexedu.vn","password": "Converter123@","full_name": "Võ Thị Kim Oanh",  "role": UserRole.CONVERTER},
+    {"email": "converter02@nexedu.vn","password": "Converter123@","full_name": "Đinh Quang Vũ",     "role": UserRole.CONVERTER},
+    {"email": "converter03@nexedu.vn","password": "Converter123@","full_name": "Hoàng Văn Minh",    "role": UserRole.CONVERTER},
 ]
 
 # ─── Seed data constants (defined before COURSES) ───────────────────────────────
@@ -91,8 +91,8 @@ def _is_sublesson_approved(status: SubLessonStatus) -> bool:
     return idx >= _SUB_LESSON_ORDER.index(SubLessonStatus.APPROVED)
 
 
-TEACHER_ROTATION = ["teacher01@nexvia.vn", "teacher02@nexvia.vn", "teacher03@nexvia.vn"]
-CONVERTER_ROTATION = ["converter01@nexvia.vn", "converter02@nexvia.vn", "converter03@nexvia.vn"]
+TEACHER_ROTATION = ["teacher01@nexedu.vn", "teacher02@nexedu.vn", "teacher03@nexedu.vn"]
+CONVERTER_ROTATION = ["converter01@nexedu.vn", "converter02@nexedu.vn", "converter03@nexedu.vn"]
 
 
 def _make_lesson(hsk: int, idx: int, topic: str) -> dict:
@@ -123,7 +123,7 @@ COURSES = [
             "Bao gồm 500+ từ vựng cơ bản và các mẫu câu giao tiếp thông dụng."
         ),
         "status": CourseStatus.DRAFT,
-        "expert_email": "expert01@nexvia.vn",
+        "expert_email": "expert01@nexedu.vn",
         "lessons": [
             _make_lesson(1, i, t)
             for i, t in enumerate(LESSON_TOPICS[1])
@@ -136,7 +136,7 @@ COURSES = [
             "và các cấu trúc ngữ pháp phức tạp hơn."
         ),
         "status": CourseStatus.IN_PROGRESS,
-        "expert_email": "expert02@nexvia.vn",
+        "expert_email": "expert02@nexedu.vn",
         "lessons": [
             _make_lesson(2, i, t)
             for i, t in enumerate(LESSON_TOPICS[2])
@@ -149,7 +149,7 @@ COURSES = [
             "và khả năng giao tiếp lưu loát trong các tình huống hàng ngày."
         ),
         "status": CourseStatus.PUBLISHED,
-        "expert_email": "expert03@nexvia.vn",
+        "expert_email": "expert03@nexedu.vn",
         "lessons": [
             _make_lesson(3, i, t)
             for i, t in enumerate(LESSON_TOPICS[3])
@@ -337,7 +337,7 @@ async def _seed_course(
     now = datetime.now(timezone.utc)
     expert_id = email_to_id[course_data["expert_email"]]
     created_by_result = await db.execute(
-        text("SELECT id FROM users WHERE email = 'admin@nexvia.vn' LIMIT 1")
+        text("SELECT id FROM users WHERE email = 'admin@nexedu.vn' LIMIT 1")
     )
     created_by_id = created_by_result.scalar_one_or_none() or uuid.uuid4()
 
@@ -454,7 +454,7 @@ async def seed_courses(email_to_id: dict[str, uuid.UUID]) -> None:
 
 async def main() -> None:
     print("=" * 60)
-    print("  NEXVIA LCMS — Database Seeder")
+    print("  NEXEDU LCMS — Database Seeder")
     print("=" * 60)
     print()
 

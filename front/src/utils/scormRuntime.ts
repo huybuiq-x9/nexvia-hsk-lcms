@@ -41,7 +41,7 @@ export function createScormPreviewRuntime(
 
   const onMessage = (event: MessageEvent<RawScormRuntimeMessage>) => {
     const message = event.data;
-    if (!message || message.source !== 'nexvia-scorm-preview' || !message.method) {
+    if (!message || message.source !== 'nexedu-scorm-preview' || !message.method) {
       return;
     }
 

@@ -478,7 +478,7 @@ class ScormService:
   function emit(method, args, result){
     try {
       window.parent.postMessage({
-        source: "nexvia-scorm-preview",
+        source: "nexedu-scorm-preview",
         method: method,
         arguments: args || [],
         result: result,

@@ -1,9 +1,9 @@
 {
   "app": {
     "loading": "Loading...",
-    "brand": "NEXVIA LCMS",
-    "brandShort": "NEXVIA",
-    "footer": "NEXVIA LCMS — Learning Content Management System"
+    "brand": "NEXEDU LCMS",
+    "brandShort": "NEXEDU",
+    "footer": "NEXEDU LCMS — Learning Content Management System"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -55,7 +55,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome back to NEXVIA LCMS.",
+    "welcome": "Welcome back to NEXEDU LCMS.",
     "courses": "Courses",
     "active": "Active",
     "questions": "Question Bank",

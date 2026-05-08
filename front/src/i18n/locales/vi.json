@@ -1,9 +1,9 @@
 {
   "app": {
     "loading": "Đang tải...",
-    "brand": "NEXVIA LCMS",
-    "brandShort": "NEXVIA",
-    "footer": "NEXVIA LCMS — Hệ thống Quản lý Nội dung Học tập"
+    "brand": "NEXEDU LCMS",
+    "brandShort": "NEXEDU",
+    "footer": "NEXEDU LCMS — Hệ thống Quản lý Nội dung Học tập"
   },
   "nav": {
     "dashboard": "Tổng quan",
@@ -55,7 +55,7 @@
   },
   "dashboard": {
     "title": "Tổng quan",
-    "welcome": "Chào mừng bạn quay trở lại NEXVIA LCMS.",
+    "welcome": "Chào mừng bạn quay trở lại NEXEDU LCMS.",
     "courses": "Khóa học",
     "active": "Đang hoạt động",
     "questions": "Ngân hàng câu hỏi",
