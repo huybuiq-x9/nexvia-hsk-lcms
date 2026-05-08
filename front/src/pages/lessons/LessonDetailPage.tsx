@@ -432,20 +432,27 @@ export default function LessonDetailPage() {
 
   const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
   const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
+  const parentCoursePath = `/courses/${courseId || lesson.course_id}`;
 
   return (
     <div className="space-y-5">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm text-slate-500">
         <button
-          onClick={() => navigate(`/courses/${courseId}`)}
+          onClick={() => navigate(parentCoursePath)}
           className="hover:text-slate-700 transition-colors flex items-center gap-1"
         >
           <ChevronLeft size={14} />
           Quay lại
         </button>
         <ChevronRight size={14} />
-        <span className="truncate max-w-[200px]">{courseTitle}</span>
+        <Link
+          to={parentCoursePath}
+          className="truncate max-w-[200px] hover:text-blue-600 transition-colors"
+          title={courseTitle}
+        >
+          {courseTitle}
+        </Link>
         <ChevronRight size={14} />
         <span className="text-slate-800 font-medium truncate max-w-[200px]">{lesson.title}</span>
       </div>

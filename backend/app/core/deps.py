@@ -9,7 +9,7 @@ from app.core.security import decode_access_token
 from app.core.config import settings
 from app.modules.users.model import User
 from app.modules.courses.model import SubLesson, Lesson
-from app.shared.enums import UserRole
+from app.shared.enums import SubLessonStatus, UserRole
 
 bearer = HTTPBearer()
 
@@ -96,6 +96,105 @@ async def get_current_user(
 
 def _active_role_values(user: User) -> set[str]:
     return {r.role for r in user.roles if r.revoked_at is None}
+
+
+def _is_admin(roles: set[str]) -> bool:
+    return UserRole.ADMIN.value in roles
+
+
+def _is_assigned_teacher(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    return (
+        UserRole.TEACHER.value in roles
+        and sublesson.lesson.assigned_teacher_id == user.id
+    )
+
+
+def _is_assigned_converter(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    return (
+        UserRole.CONVERTER.value in roles
+        and sublesson.lesson.assigned_converter_id == user.id
+    )
+
+
+def _is_assigned_expert(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    return (
+        UserRole.EXPERT.value in roles
+        and sublesson.lesson.course.assigned_expert_id == user.id
+    )
+
+
+async def _load_sublesson_for_access(
+    sublesson_id: uuid.UUID,
+    db: AsyncSession,
+) -> SubLesson:
+    result = await db.execute(
+        select(SubLesson)
+        .options(selectinload(SubLesson.lesson).selectinload(Lesson.course))
+        .where(SubLesson.id == sublesson_id)
+    )
+    sublesson = result.scalar_one_or_none()
+    if not sublesson:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SubLesson not found")
+    return sublesson
+
+
+def _can_view_documents(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    if _is_assigned_teacher(sublesson, user, roles):
+        return sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS)
+    if _is_assigned_expert(sublesson, user, roles):
+        return sublesson.status == SubLessonStatus.REVIEWING
+    if _is_assigned_converter(sublesson, user, roles):
+        return sublesson.status == SubLessonStatus.CONVERTING
+    return False
+
+
+def _can_upload_documents(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    return (
+        _is_assigned_teacher(sublesson, user, roles)
+        and sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS)
+    )
+
+
+def _can_comment_documents(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    if _is_assigned_teacher(sublesson, user, roles):
+        return sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS)
+    if _is_assigned_expert(sublesson, user, roles):
+        return sublesson.status == SubLessonStatus.REVIEWING
+    return False
+
+
+def _can_view_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    if _is_assigned_converter(sublesson, user, roles):
+        return sublesson.status == SubLessonStatus.CONVERTING
+    if _is_assigned_expert(sublesson, user, roles):
+        return sublesson.status == SubLessonStatus.SCORM_REVIEWING
+    return False
+
+
+def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    return (
+        _is_assigned_converter(sublesson, user, roles)
+        and sublesson.status == SubLessonStatus.CONVERTING
+    )
+
+
+def _can_comment_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    return (
+        _is_assigned_expert(sublesson, user, roles)
+        and sublesson.status == SubLessonStatus.SCORM_REVIEWING
+    )
 
 
 def role_required(*roles: UserRole):
@@ -230,9 +329,172 @@ async def teacher_assigned_to_document(
     )
 
 
+async def document_view_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_view_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to view documents for this Sub-Lesson",
+    )
+
+
+async def document_upload_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_upload_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned teacher can upload documents before content review",
+    )
+
+
+async def _load_document_sublesson_for_access(
+    document_id: uuid.UUID,
+    db: AsyncSession,
+):
+    from app.modules.documents.model import Document
+
+    result = await db.execute(
+        select(Document)
+        .options(selectinload(Document.sub_lesson).selectinload(SubLesson.lesson).selectinload(Lesson.course))
+        .where(Document.id == document_id)
+    )
+    document = result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    return document.sub_lesson
+
+
+async def document_view_access_to_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_document_sublesson_for_access(document_id, db)
+    if _can_view_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to access this document",
+    )
+
+
+async def document_comment_access_to_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_document_sublesson_for_access(document_id, db)
+    if _can_comment_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to comment on this document",
+    )
+
+
+async def document_delete_access_to_document(
+    document_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_document_sublesson_for_access(document_id, db)
+    if _can_upload_documents(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned teacher can delete documents before content review",
+    )
+
+
+async def scorm_view_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to access SCORM for this Sub-Lesson",
+    )
+
+
+async def scorm_upload_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_upload_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can upload SCORM while converting",
+    )
+
+
+async def scorm_comment_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_comment_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to comment on SCORM for this Sub-Lesson",
+    )
+
+
+async def teacher_submit_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    return await document_upload_access_to_sublesson(sublesson_id, current_user, db)
+
+
+async def converter_submit_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    return await scorm_upload_access_to_sublesson(sublesson_id, current_user, db)
+
+
 TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
 ExpertAssignedToSubLesson = Annotated[User, Depends(expert_assigned_to_sublesson)]
 TeacherAssignedToDocument = Annotated[User, Depends(teacher_assigned_to_document)]
+DocumentViewAccessToSubLesson = Annotated[User, Depends(document_view_access_to_sublesson)]
+DocumentUploadAccessToSubLesson = Annotated[User, Depends(document_upload_access_to_sublesson)]
+DocumentViewAccessToDocument = Annotated[User, Depends(document_view_access_to_document)]
+DocumentCommentAccessToDocument = Annotated[User, Depends(document_comment_access_to_document)]
+DocumentDeleteAccessToDocument = Annotated[User, Depends(document_delete_access_to_document)]
+ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
+ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
+ScormCommentAccessToSubLesson = Annotated[User, Depends(scorm_comment_access_to_sublesson)]
+TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
+ConverterSubmitAccessToSubLesson = Annotated[User, Depends(converter_submit_access_to_sublesson)]
 
 
 async def teacher_assigned_to_lesson(

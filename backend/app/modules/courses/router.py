@@ -2,7 +2,16 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, CurrentUser, AdminOnly, TeacherAssignedToLesson, TeacherAssignedToSubLesson, ExpertAssignedToSubLesson
+from app.core.deps import (
+    AdminOnly,
+    ConverterSubmitAccessToSubLesson,
+    CurrentUser,
+    ExpertAssignedToSubLesson,
+    TeacherAssignedToLesson,
+    TeacherAssignedToSubLesson,
+    TeacherSubmitAccessToSubLesson,
+    get_db,
+)
 from app.modules.courses import service, schema as course_schema
 from app.shared.enums import LessonStatus, SubLessonStatus
 
@@ -221,7 +230,7 @@ async def delete_sublesson_batch(
 async def submit_sublesson(
     sublesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: TeacherAssignedToSubLesson,
+    current_user: TeacherSubmitAccessToSubLesson,
 ):
     return await service.submit_sublesson(db, sublesson_id)
 
@@ -246,7 +255,7 @@ async def review_sublesson(
 async def submit_scorm_sublesson(
     sublesson_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ConverterSubmitAccessToSubLesson,
 ):
     """Converter gửi SCORM đã upload để Expert review lần 2."""
     return await service.submit_scorm_sublesson(db, sublesson_id)

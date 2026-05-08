@@ -9,15 +9,24 @@ import { scormService } from '../../../services';
 import { createScormPreviewRuntime, type ScormRuntimeSnapshot } from '../../../utils/scormRuntime';
 import type { ApiScormComment, ApiScormPackageInfo } from '../../../types/api';
 
+const getApiErrorMessage = (err: unknown, fallback: string) =>
+  (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback;
+
 interface SubLessonScormTabProps {
   subLessonId: string;
   canUpload?: boolean;
+  canPreview?: boolean;
+  canViewComments?: boolean;
+  canAddComment?: boolean;
   onUploaded?: () => void;
 }
 
 export function SubLessonScormTab({
   subLessonId,
   canUpload = false,
+  canPreview = true,
+  canViewComments = true,
+  canAddComment = true,
   onUploaded,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
@@ -64,6 +73,7 @@ export function SubLessonScormTab({
     : null;
 
   const handleFiles = async (files: File[]) => {
+    if (!canUpload) return;
     const file = files[0];
     if (!file) return;
     setUploading(true);
@@ -77,16 +87,14 @@ export function SubLessonScormTab({
       onUploaded?.();
       toast.success(t('scorm.uploadSuccess'));
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        ?? t('scorm.uploadError');
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
     } finally {
       setUploading(false);
     }
   };
 
   const toggleComments = async () => {
+    if (!canViewComments) return;
     const nextOpen = !commentsOpen;
     setCommentsOpen(nextOpen);
     if (!nextOpen) return;
@@ -97,8 +105,8 @@ export function SubLessonScormTab({
         const res = await scormService.listComments(subLessonId);
         setComments(res.items);
         setCommentsLoaded(true);
-      } catch {
-        toast.error(t('courses.modal.errorGeneric'));
+      } catch (err: unknown) {
+        toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
       } finally {
         setCommentsLoading(false);
       }
@@ -108,6 +116,7 @@ export function SubLessonScormTab({
   };
 
   const sendComment = async () => {
+    if (!canAddComment) return;
     const content = commentText.trim();
     if (!content) return;
 
@@ -120,8 +129,8 @@ export function SubLessonScormTab({
         ...prev,
         comments_count: (prev.comments_count ?? 0) + 1,
       } : prev);
-    } catch {
-      toast.error(t('courses.modal.errorGeneric'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     } finally {
       setSendingComment(false);
     }
@@ -173,19 +182,21 @@ export function SubLessonScormTab({
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleComments}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors relative"
-                  title={t('documents.comments')}
-                >
-                  <MessageSquare size={14} />
-                  {(info.comments_count ?? 0) > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                      {info.comments_count}
-                    </span>
-                  )}
-                </button>
-                {launchUrl && (
+                {canViewComments && (
+                  <button
+                    onClick={toggleComments}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors relative"
+                    title={t('documents.comments')}
+                  >
+                    <MessageSquare size={14} />
+                    {(info.comments_count ?? 0) > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                        {info.comments_count}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {canPreview && launchUrl && (
                   <button
                     onClick={() => setShowPreview(true)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
@@ -197,7 +208,7 @@ export function SubLessonScormTab({
               </div>
             </div>
 
-            {commentsOpen && (
+            {canViewComments && commentsOpen && (
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <div className="space-y-3 mb-3">
                   {commentsLoading ? (
@@ -232,39 +243,41 @@ export function SubLessonScormTab({
                   )}
                 </div>
 
-                <div className="flex items-end gap-2">
-                  <textarea
-                    ref={commentInputRef}
-                    value={commentText}
-                    onChange={event => setCommentText(event.target.value)}
-                    placeholder={t('documents.commentPlaceholder')}
-                    className="input resize-none flex-1 text-xs py-2"
-                    rows={2}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault();
-                        sendComment();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={sendComment}
-                    disabled={sendingComment || !commentText.trim()}
-                    className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
-                    title={t('documents.sendComment')}
-                  >
-                    {sendingComment ? (
-                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send size={13} />
-                    )}
-                  </button>
-                </div>
+                {canAddComment && (
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      ref={commentInputRef}
+                      value={commentText}
+                      onChange={event => setCommentText(event.target.value)}
+                      placeholder={t('documents.commentPlaceholder')}
+                      className="input resize-none flex-1 text-xs py-2"
+                      rows={2}
+                      onKeyDown={event => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault();
+                          sendComment();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={sendComment}
+                      disabled={sendingComment || !commentText.trim()}
+                      className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
+                      title={t('documents.sendComment')}
+                    >
+                      {sendingComment ? (
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Send size={13} />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {showPreview && (
+          {canPreview && showPreview && (
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-800">

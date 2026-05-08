@@ -1,11 +1,12 @@
 import { FileText, HelpCircle, Package, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-type Tab = 'documents' | 'questions' | 'scorm' | 'history';
+export type Tab = 'documents' | 'questions' | 'scorm' | 'history';
 
 interface SubLessonTabsProps {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
+  visibleTabs?: Tab[];
 }
 
 const TABS: { key: Tab; labelKey: string; icon: React.ReactNode }[] = [
@@ -15,12 +16,13 @@ const TABS: { key: Tab; labelKey: string; icon: React.ReactNode }[] = [
   { key: 'history',   labelKey: 'history',   icon: <History size={16} /> },
 ];
 
-export function SubLessonTabs({ activeTab, onTabChange }: SubLessonTabsProps) {
+export function SubLessonTabs({ activeTab, onTabChange, visibleTabs }: SubLessonTabsProps) {
   const { t } = useTranslation();
+  const tabs = visibleTabs ? TABS.filter(tab => visibleTabs.includes(tab.key)) : TABS;
 
   return (
     <div className="flex border-b border-slate-200 overflow-x-auto">
-      {TABS.map(tab => (
+      {tabs.map(tab => (
         <button
           key={tab.key}
           onClick={() => onTabChange(tab.key)}

@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import (
-    TeacherAssignedToSubLesson,
-    check_sublesson_access,
+    ScormCommentAccessToSubLesson,
+    ScormUploadAccessToSubLesson,
+    ScormViewAccessToSubLesson,
+    scorm_view_access_to_sublesson,
     get_db,
 )
 from app.core.security import decode_access_token
@@ -49,7 +51,7 @@ async def _user_from_access_token(
 )
 async def upload_scorm_package(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormUploadAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
     file: UploadFile = File(...),
 ) -> ScormPackageInfo:
@@ -59,7 +61,7 @@ async def upload_scorm_package(
 @router.get("/preview/{sublesson_id}", response_model=ScormPackageInfo)
 async def get_scorm_preview(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormViewAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScormPackageInfo:
     return await scorm_service.get_package_info(db, sublesson_id)
@@ -68,7 +70,7 @@ async def get_scorm_preview(
 @router.get("/preview/{sublesson_id}/files", response_model=ScormFileListResponse)
 async def list_scorm_files(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormViewAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScormFileListResponse:
     return await scorm_service.get_file_list(db, sublesson_id)
@@ -80,7 +82,7 @@ async def list_scorm_files(
 )
 async def list_scorm_comments(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormViewAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -96,7 +98,7 @@ async def list_scorm_comments(
 async def add_scorm_comment(
     sublesson_id: uuid.UUID,
     data: scorm_schema.ScormCommentCreate,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormCommentAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> scorm_schema.ScormCommentResponse:
     return await scorm_service.add_comment(db, sublesson_id, current_user.id, data)
@@ -106,7 +108,7 @@ async def add_scorm_comment(
 async def get_scorm_file(
     sublesson_id: uuid.UUID,
     request: Request,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: ScormViewAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
     path: str = Query(..., description="File path within the SCORM package"),
 ) -> Response:
@@ -134,7 +136,7 @@ async def get_scorm_asset(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     current_user = await _user_from_access_token(access_token, db)
-    await check_sublesson_access(sublesson_id, current_user, db)
+    await scorm_view_access_to_sublesson(sublesson_id, current_user, db)
 
     root_url = str(request.base_url).rstrip("/")
     asset_base_url = f"{root_url}/api/v1/scorm/preview/{sublesson_id}/asset/{access_token}"

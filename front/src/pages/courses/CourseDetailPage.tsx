@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, ChevronLeft, Users, User, Pencil, FileText }
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
+import { CollapsibleDrawer } from '../../components/ui/CollapsibleDrawer';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { UserAvatar } from '../../components/ui/UserAvatar';
 import { formatDateShort } from '../../utils/formatters';
@@ -20,6 +21,7 @@ export default function CourseDetailPage() {
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
   const [openLessons, setOpenLessons] = useState<Set<string>>(new Set());
   const [lessonsData, setLessonsData] = useState<Record<string, ApiLessonWithSubLessons>>({});
 
@@ -77,6 +79,70 @@ export default function CourseDetailPage() {
 
   return (
     <div className="space-y-5">
+      <CollapsibleDrawer
+        isOpen={isInfoDrawerOpen}
+        onToggle={() => setIsInfoDrawerOpen(open => !open)}
+        openLabel="Open course information"
+        closeLabel="Close course information"
+      >
+        <div className="p-5 space-y-5">
+          <div>
+            <StatusBadge status={course.status} type="course" />
+            <h1 className="text-xl font-bold text-slate-900 mt-2 break-words">{course.title}</h1>
+            {course.description && (
+              <p className="text-sm text-slate-500 mt-1 break-words">{course.description}</p>
+            )}
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.lessons')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">{course.lessons.length}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.subLessons')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">{totalSubLessons}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.columnCreatedAt')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">{formatDateShort(course.created_at)}</div>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+              <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                <Users size={12} />
+                {t('courses.modal.expert')}
+              </div>
+              {expert ? (
+                <div className="flex items-center gap-2">
+                  <UserAvatar name={expert.full_name} size="md" />
+                  <span className="text-sm text-slate-700">{expert.full_name}</span>
+                </div>
+              ) : (
+                <span className="text-sm text-slate-400 italic">—</span>
+              )}
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                <Users size={12} />
+                {t('courses.modal.teacher')}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {teacherIds.length === 0 ? <span className="text-sm text-slate-400 italic">—</span> : teacherIds.map(id => id && userCache[id] && (
+                  <div key={id} className="flex items-center gap-1.5">
+                    <UserAvatar name={userCache[id].full_name} size="sm" />
+                    <span className="text-sm text-slate-700">{userCache[id].full_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CollapsibleDrawer>
+
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/courses')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
           <ChevronLeft size={18} />
@@ -86,47 +152,12 @@ export default function CourseDetailPage() {
             <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{course.title}</h1>
             <StatusBadge status={course.status} type="course" />
           </div>
-          {course.description && <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{course.description}</p>}
         </div>
         {isAdmin && selectedRole === API_ROLE.ADMIN && (
           <button onClick={() => navigate(`/courses/edit/${course.id}`)} className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0">
             <Pencil size={14} />{t('courses.edit')}
           </button>
         )}
-      </div>
-
-      <div className="card p-5 space-y-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.lessons')}</div>
-            <div className="text-sm font-medium text-slate-800">{course.lessons.length}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.subLessons')}</div>
-            <div className="text-sm font-medium text-slate-800">{totalSubLessons}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.columnCreatedAt')}</div>
-            <div className="text-sm font-medium text-slate-800">{formatDateShort(course.created_at)}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
-          <div>
-            <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1"><Users size={12} />{t('courses.modal.expert')}</div>
-            <div className="flex items-center gap-2">
-              {expert && <><UserAvatar name={expert.full_name} size="md" /><span className="text-sm text-slate-700">{expert.full_name}</span></>}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 mb-1.5 flex items-center gap-1"><Users size={12} />{t('courses.modal.teacher')}</div>
-            <div className="flex flex-wrap gap-2">
-              {teacherIds.length === 0 ? <span className="text-sm text-slate-400 italic">—</span> : teacherIds.map(id => id && userCache[id] && (
-                <div key={id} className="flex items-center gap-1.5"><UserAvatar name={userCache[id].full_name} size="sm" /><span className="text-sm text-slate-700">{userCache[id].full_name}</span></div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="card overflow-hidden">

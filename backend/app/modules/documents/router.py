@@ -2,12 +2,18 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db, TeacherAssignedToSubLesson, TeacherAssignedToDocument
+from app.core.deps import (
+    DocumentCommentAccessToDocument,
+    DocumentDeleteAccessToDocument,
+    DocumentUploadAccessToSubLesson,
+    DocumentViewAccessToDocument,
+    DocumentViewAccessToSubLesson,
+    get_db,
+)
 from app.modules.documents import service
 from app.modules.documents.schema import (
     DocumentListResponse,
     DocumentUploadResponse,
-    DocumentWithUploaderResponse,
 )
 
 router = APIRouter()
@@ -19,7 +25,7 @@ router = APIRouter()
 )
 async def list_documents(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: DocumentViewAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -34,7 +40,7 @@ async def list_documents(
 )
 async def upload_documents(
     sublesson_id: uuid.UUID,
-    current_user: TeacherAssignedToSubLesson,
+    current_user: DocumentUploadAccessToSubLesson,
     db: Annotated[AsyncSession, Depends(get_db)],
     files: list[UploadFile] = File(...),
 ) -> DocumentUploadResponse:
@@ -49,6 +55,7 @@ async def upload_documents(
 @router.get("/{document_id}/download")
 async def get_download_url(
     document_id: uuid.UUID,
+    current_user: DocumentViewAccessToDocument,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     url = await service.get_download_url(db, document_id)
@@ -58,7 +65,7 @@ async def get_download_url(
 @router.delete("/{document_id}", status_code=204)
 async def delete_document(
     document_id: uuid.UUID,
-    current_user: TeacherAssignedToDocument,
+    current_user: DocumentDeleteAccessToDocument,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     await service.delete_document(db, document_id)
@@ -67,7 +74,7 @@ async def delete_document(
 @router.get("/{document_id}/comments", response_model=service.DocumentCommentListResponse)
 async def list_document_comments(
     document_id: uuid.UUID,
-    current_user: TeacherAssignedToDocument,
+    current_user: DocumentCommentAccessToDocument,
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -83,7 +90,7 @@ async def list_document_comments(
 async def add_document_comment(
     document_id: uuid.UUID,
     data: service.DocumentCommentCreate,
-    current_user: TeacherAssignedToDocument,
+    current_user: DocumentCommentAccessToDocument,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> service.DocumentCommentResponse:
     return await service.add_comment(db, document_id, current_user.id, data)

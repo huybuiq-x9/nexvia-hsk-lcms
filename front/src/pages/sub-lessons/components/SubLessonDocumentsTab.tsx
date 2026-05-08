@@ -13,14 +13,30 @@ import { documentService } from '../../../services';
 import { SUB_LESSON_STATUS } from '../../../types/api';
 import type { ApiDocumentWithUploader, ApiDocumentComment } from '../../../types/api';
 
+const getApiErrorMessage = (err: unknown, fallback: string) =>
+  (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback;
+
 interface SubLessonDocumentsTabProps {
   subLessonId: string;
   subLessonStatus: string;
   onRefresh: () => void;
   canUpload?: boolean;
+  canPreview?: boolean;
+  canDownload?: boolean;
+  canComment?: boolean;
+  canDelete?: boolean;
 }
 
-export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh, canUpload = true }: SubLessonDocumentsTabProps) {
+export function SubLessonDocumentsTab({
+  subLessonId,
+  subLessonStatus,
+  onRefresh,
+  canUpload = true,
+  canPreview = true,
+  canDownload = true,
+  canComment = true,
+  canDelete = false,
+}: SubLessonDocumentsTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const {
@@ -52,38 +68,41 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
   );
 
   const handleFiles = async (files: File[]) => {
+    if (!canUpload || isLocked) return;
     try {
       await uploadDocuments(files);
       toast.success(t('documents.uploadSuccess'));
-    } catch {
-      toast.error(t('documents.uploadError'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('documents.uploadError')));
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !canDelete || isLocked) return;
     setDeleting(true);
     try {
       await deleteDocument(deleteId);
       toast.success(t('documents.deleteSuccess'));
       setDeleteId(null);
-    } catch {
-      toast.error(t('courses.modal.errorGeneric'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     } finally {
       setDeleting(false);
     }
   };
 
   const handleDownload = async (doc: ApiDocumentWithUploader) => {
+    if (!canDownload) return;
     try {
       const url = await getDownloadUrl(doc.id);
       window.open(url, '_blank');
-    } catch {
-      toast.error(t('courses.modal.errorGeneric'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     }
   };
 
   const handlePreview = async (doc: ApiDocumentWithUploader) => {
+    if (!canPreview) return;
     setPreviewLoading(true);
     setPreviewUrl(null);
     setPreviewDoc(null);
@@ -91,14 +110,15 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
       const url = await getDownloadUrl(doc.id);
       setPreviewUrl(url);
       setPreviewDoc(doc);
-    } catch {
-      toast.error(t('courses.modal.errorGeneric'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     } finally {
       setPreviewLoading(false);
     }
   };
 
   const toggleComments = async (doc: ApiDocumentWithUploader) => {
+    if (!canComment) return;
     const docId = doc.id;
     const isExpanding = expandedDocId !== docId;
 
@@ -109,8 +129,8 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
         try {
           const res = await documentService.listComments(docId);
           setCommentsMap(prev => ({ ...prev, [docId]: res.items }));
-        } catch {
-          toast.error(t('courses.modal.errorGeneric'));
+        } catch (err: unknown) {
+          toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
         } finally {
           setLoadingComments(prev => ({ ...prev, [docId]: false }));
         }
@@ -124,6 +144,7 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
   };
 
   const sendComment = async (docId: string) => {
+    if (!canComment) return;
     const text = commentText[docId]?.trim();
     if (!text) return;
     setSendingComment(prev => ({ ...prev, [docId]: true }));
@@ -134,8 +155,8 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
         [docId]: [...(prev[docId] || []), comment],
       }));
       setCommentText(prev => ({ ...prev, [docId]: '' }));
-    } catch {
-      toast.error(t('courses.modal.errorGeneric'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     } finally {
       setSendingComment(prev => ({ ...prev, [docId]: false }));
     }
@@ -160,7 +181,7 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
         />
       )}
 
-      {isLocked && (
+      {canUpload && isLocked && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700">
           <span className="shrink-0">🔒</span>
           <span>{t('documents.lockedAfterSubmit')}</span>
@@ -210,7 +231,7 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {doc.file_extension === 'pdf' && (
+                    {canPreview && doc.file_extension === 'pdf' && (
                       <button
                         onClick={() => handlePreview(doc)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
@@ -219,31 +240,35 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
                         <Eye size={15} />
                       </button>
                     )}
-                    <button
-                      onClick={() => toggleComments(doc)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative"
-                      title={t('documents.comments')}
-                      style={{
-                        backgroundColor: isExpanded ? 'rgb(239 246 255)' : undefined,
-                        color: isExpanded ? 'rgb(37 99 235)' : undefined,
-                        opacity: isExpanded ? 1 : undefined,
-                      }}
-                    >
-                      <MessageSquare size={15} />
-                      {(doc.comments_count ?? 0) > 0 && !isExpanded && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                          {doc.comments_count}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
-                      title={t('documents.download')}
-                    >
-                      <Download size={15} />
-                    </button>
-                    {canUpload && !isLocked && (
+                    {canComment && (
+                      <button
+                        onClick={() => toggleComments(doc)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative"
+                        title={t('documents.comments')}
+                        style={{
+                          backgroundColor: isExpanded ? 'rgb(239 246 255)' : undefined,
+                          color: isExpanded ? 'rgb(37 99 235)' : undefined,
+                          opacity: isExpanded ? 1 : undefined,
+                        }}
+                      >
+                        <MessageSquare size={15} />
+                        {(doc.comments_count ?? 0) > 0 && !isExpanded && (
+                          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                            {doc.comments_count}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                    {canDownload && (
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
+                        title={t('documents.download')}
+                      >
+                        <Download size={15} />
+                      </button>
+                    )}
+                    {canDelete && !isLocked && (
                       <button
                         onClick={() => setDeleteId(doc.id)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
@@ -256,7 +281,7 @@ export function SubLessonDocumentsTab({ subLessonId, subLessonStatus, onRefresh,
                 </div>
 
                 {/* Inline comments panel */}
-                {isExpanded && (
+                {canComment && isExpanded && (
                   <div className="pl-4 pr-1 pb-4 ml-4 border-l-2 border-blue-200">
                     {/* Comments list */}
                     <div className="space-y-2 mb-3">
