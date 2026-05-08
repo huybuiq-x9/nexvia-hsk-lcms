@@ -6,3 +6,4 @@ export { ConfirmModal } from './ConfirmModal';
 export { FileIcon } from './FileIcon';
 export { FileDropzone } from './FileDropzone';
 export { FilePreviewModal } from './FilePreviewModal';
+export { CollapsibleDrawer } from './CollapsibleDrawer';

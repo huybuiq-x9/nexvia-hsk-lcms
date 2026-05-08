@@ -18,6 +18,7 @@ import {
 import { courseService, userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { CollapsibleDrawer } from '../../components/ui/CollapsibleDrawer';
 import type {
   ApiLessonWithSubLessons,
   ApiSubLessonResponse,
@@ -366,6 +367,7 @@ export default function LessonDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isEditingSubLessons, setIsEditingSubLessons] = useState(false);
+  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
   const [userCache, setUserCache] = useState<Record<string, ApiUserWithRoles>>({});
 
   const loadUser = useCallback((id: string) => {
@@ -448,61 +450,71 @@ export default function LessonDetailPage() {
         <span className="text-slate-800 font-medium truncate max-w-[200px]">{lesson.title}</span>
       </div>
 
-      {/* Header */}
-      <div className="card p-5">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
-                {lesson.status}
-              </span>
-              <h1 className="text-xl font-bold text-slate-900 mt-2">{lesson.title}</h1>
-              {lesson.description && (
-                <p className="text-sm text-slate-500 mt-1">{lesson.description}</p>
-              )}
-            </div>
-            {canManageSubLessons && (
-              <button
-                onClick={() => setIsEditingSubLessons(true)}
-                className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
-              >
-                <Pencil size={14} />
-                {t('courses.edit')}
-              </button>
+      <CollapsibleDrawer
+        isOpen={isInfoDrawerOpen}
+        onToggle={() => setIsInfoDrawerOpen(open => !open)}
+        openLabel="Open lesson information"
+        closeLabel="Close lesson information"
+      >
+        <div className="p-5 space-y-5">
+          <div>
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
+              {lesson.status}
+            </span>
+            <h1 className="text-xl font-bold text-slate-900 mt-2 break-words">{lesson.title}</h1>
+            {lesson.description && (
+              <p className="text-sm text-slate-500 mt-1 break-words">{lesson.description}</p>
             )}
           </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.lessonDetail.subLessonCount')}</div>
-            <div className="text-sm font-medium text-slate-800">{lesson.sub_lessons.length}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.lessonDetail.updatedAt')}</div>
-            <div className="text-sm font-medium text-slate-800">
-              {new Date(lesson.updated_at).toLocaleDateString()}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.lessonDetail.subLessonCount')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">{lesson.sub_lessons.length}</div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.lessonDetail.updatedAt')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">
+                {new Date(lesson.updated_at).toLocaleDateString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">{t('courses.lessonDetail.createdAt')}</div>
+              <div className="text-sm font-medium text-slate-800 mt-0.5">
+                {new Date(lesson.created_at).toLocaleDateString()}
+              </div>
             </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-400">{t('courses.lessonDetail.createdAt')}</div>
-            <div className="text-sm font-medium text-slate-800">
-              {new Date(lesson.created_at).toLocaleDateString()}
-            </div>
-          </div>
-        </div>
 
-        {/* Assignees */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Users size={14} className="text-slate-400" />
-            <span className="text-xs text-slate-400">{t('courses.lessonDetail.teacher')}</span>
-            <UserBadge user={teacher} />
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <User size={14} className="text-slate-400" />
-            <span className="text-xs text-slate-400">{t('courses.lessonDetail.converter')}</span>
-            <UserBadge user={converter} />
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <Users size={14} />
+                <span>{t('courses.lessonDetail.teacher')}</span>
+              </div>
+              <UserBadge user={teacher} />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <User size={14} />
+                <span>{t('courses.lessonDetail.converter')}</span>
+              </div>
+              <UserBadge user={converter} />
+            </div>
           </div>
         </div>
+      </CollapsibleDrawer>
+
+      <div className="flex justify-end">
+        {canManageSubLessons && (
+          <button
+            onClick={() => setIsEditingSubLessons(true)}
+            className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
+          >
+            <Pencil size={14} />
+            {t('courses.edit')}
+          </button>
+        )}
       </div>
 
       {/* Sub-lessons */}

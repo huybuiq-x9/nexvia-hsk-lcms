@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSubLesson } from './hooks/useSubLesson';
 import { SubLessonBreadcrumb } from './components/SubLessonBreadcrumb';
-import { SubLessonHeader } from './components/SubLessonHeader';
+import { SubLessonHeader, SubLessonInfoDrawer } from './components/SubLessonHeader';
 import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper';
 import { SubLessonTabs } from './components/SubLessonTabs';
 import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
@@ -26,6 +26,7 @@ export default function SubLessonDetailPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
+  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
 
   const isTeacher = selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
   const isConverter = selectedRole === API_ROLE.CONVERTER;
@@ -78,8 +79,6 @@ export default function SubLessonDetailPage() {
       />
 
       <SubLessonHeader
-        subLesson={subLesson}
-        lessonTitle={lessonInfo?.title}
         canSubmitForReview={canSubmitForReview}
         canReview={canReview}
         canSubmitScorm={canSubmitScorm}
@@ -90,6 +89,13 @@ export default function SubLessonDetailPage() {
         onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
         onApproveScorm={() => setModal({ type: 'approve_scorm', show: true })}
         onRejectScorm={() => setModal({ type: 'reject_scorm', show: true })}
+      />
+
+      <SubLessonInfoDrawer
+        subLesson={subLesson}
+        lessonTitle={lessonInfo?.title}
+        isOpen={isInfoDrawerOpen}
+        onToggle={() => setIsInfoDrawerOpen(open => !open)}
       />
 
       <SubLessonWorkflowStepper currentStatus={subLesson.status} />
