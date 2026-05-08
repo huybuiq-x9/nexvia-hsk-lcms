@@ -28,6 +28,7 @@ export default function SubLessonDetailPage() {
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
 
   const isTeacher = selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+  const isConverter = selectedRole === API_ROLE.CONVERTER;
 
   const isEditable = subLesson ? (
     subLesson.status === SUB_LESSON_STATUS.DRAFT ||
@@ -41,7 +42,10 @@ export default function SubLessonDetailPage() {
   const canReview = subLesson?.status === SUB_LESSON_STATUS.REVIEWING && (isAdmin || isExpert);
 
   // Converter / Admin submit SCORM for review
-  const canSubmitScorm = subLesson?.status === SUB_LESSON_STATUS.CONVERTING && (isAdmin || isTeacher);
+  const canUploadScorm = subLesson?.status === SUB_LESSON_STATUS.CONVERTING && (isAdmin || isConverter);
+  const canSubmitScorm = subLesson?.status === SUB_LESSON_STATUS.CONVERTING
+    && Boolean(subLesson.scorm_filename)
+    && (isAdmin || isConverter);
 
   // Expert / Admin review SCORM
   const canReviewScorm = subLesson?.status === SUB_LESSON_STATUS.SCORM_REVIEWING && (isAdmin || isExpert);
@@ -103,7 +107,15 @@ export default function SubLessonDetailPage() {
             />
           )}
           {activeTab === 'questions' && <SubLessonQuestionsTab />}
-          {activeTab === 'scorm' && <SubLessonScormTab />}
+          {activeTab === 'scorm' && (
+            <SubLessonScormTab
+              subLessonId={subLesson.id}
+              canUpload={canUploadScorm}
+              canSubmit={canSubmitScorm}
+              onUploaded={reload}
+              onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
+            />
+          )}
           {activeTab === 'history' && <SubLessonHistoryTab />}
         </div>
       </div>

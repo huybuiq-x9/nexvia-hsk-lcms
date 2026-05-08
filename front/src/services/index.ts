@@ -1,4 +1,4 @@
-import client from './apiClient';
+import client, { API_BASE_URL } from './apiClient';
 import type {
   ApiAuthResponse,
   ApiTokenResponse,
@@ -25,6 +25,8 @@ import type {
   ApiDocumentUploadResponse,
   ApiDocumentComment,
   ApiDocumentCommentListResponse,
+  ApiScormFileListResponse,
+  ApiScormPackageInfo,
   ApiRole,
   LessonStatus,
   SubLessonStatus,
@@ -239,6 +241,39 @@ export const courseService = {
   async submitScormSubLesson(sublessonId: string): Promise<ApiSubLessonResponse> {
     const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/submit-scorm`);
     return res.data;
+  },
+};
+
+// ─── SCORM ───────────────────────────────────────────────────────────────────
+
+const encodeScormPath = (path: string): string =>
+  path.split('/').map(part => encodeURIComponent(part)).join('/');
+
+export const scormService = {
+  async getPackageInfo(sublessonId: string): Promise<ApiScormPackageInfo> {
+    const res = await client.get<ApiScormPackageInfo>(`/scorm/preview/${sublessonId}`);
+    return res.data;
+  },
+
+  async uploadPackage(sublessonId: string, file: File): Promise<ApiScormPackageInfo> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiScormPackageInfo>(
+      `/scorm/sub-lessons/${sublessonId}/package`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async listFiles(sublessonId: string): Promise<ApiScormFileListResponse> {
+    const res = await client.get<ApiScormFileListResponse>(`/scorm/preview/${sublessonId}/files`);
+    return res.data;
+  },
+
+  buildLaunchUrl(sublessonId: string, launchPath: string): string {
+    const token = localStorage.getItem('access_token') ?? '';
+    return `${API_BASE_URL}/scorm/preview/${sublessonId}/asset/${encodeURIComponent(token)}/${encodeScormPath(launchPath)}`;
   },
 };
 

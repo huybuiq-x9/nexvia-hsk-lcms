@@ -50,6 +50,10 @@ def _to_sublesson_response(sl: SubLesson) -> course_schema.SubLessonResponse:
         order_index=sl.order_index,
         submitted_at=sl.submitted_at,
         approved_at=sl.approved_at,
+        scorm_filename=sl.scorm_filename,
+        scorm_file_size=sl.scorm_file_size,
+        scorm_uploaded_at=sl.scorm_uploaded_at,
+        scorm_uploaded_by_id=sl.scorm_uploaded_by_id,
         created_at=sl.created_at,
         updated_at=sl.updated_at,
     )
@@ -510,8 +514,7 @@ async def review_sublesson(
             sl.status = SubLessonStatus.APPROVED
             sl.approved_at = datetime.now(timezone.utc)
         elif action == "reject":
-            # Ở lại SCORM_REVIEWING — Converter sẽ upload lại
-            pass
+            sl.status = SubLessonStatus.CONVERTING
         else:
             from app.core.exceptions import InvalidStatusTransitionError
             raise InvalidStatusTransitionError(
@@ -541,6 +544,9 @@ async def submit_scorm_sublesson(
             f"Cannot submit SCORM: current status is '{sl.status.value}', "
             "only CONVERTING can submit SCORM for review."
         )
+    if not sl.scorm_stored_name:
+        from app.core.exceptions import InvalidStatusTransitionError
+        raise InvalidStatusTransitionError("Cannot submit SCORM: no SCORM package has been uploaded.")
     sl.status = SubLessonStatus.SCORM_REVIEWING
     await db.commit()
     await db.refresh(sl)
@@ -713,6 +719,10 @@ async def list_sub_lessons(
             order_index=sl.order_index,
             submitted_at=sl.submitted_at,
             approved_at=sl.approved_at,
+            scorm_filename=sl.scorm_filename,
+            scorm_file_size=sl.scorm_file_size,
+            scorm_uploaded_at=sl.scorm_uploaded_at,
+            scorm_uploaded_by_id=sl.scorm_uploaded_by_id,
             created_at=sl.created_at,
             updated_at=sl.updated_at,
             lesson_title=lesson.title if lesson else None,

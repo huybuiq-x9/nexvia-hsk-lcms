@@ -74,6 +74,10 @@ export interface ApiSubLessonResponse {
   order_index: number;
   submitted_at: string | null;
   approved_at: string | null;
+  scorm_filename: string | null;
+  scorm_file_size: number | null;
+  scorm_uploaded_at: string | null;
+  scorm_uploaded_by_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +97,10 @@ export interface ApiSubLessonListItem {
   order_index: number;
   submitted_at: string | null;
   approved_at: string | null;
+  scorm_filename: string | null;
+  scorm_file_size: number | null;
+  scorm_uploaded_at: string | null;
+  scorm_uploaded_by_id: string | null;
   created_at: string;
   updated_at: string;
   lesson_title: string | null;
@@ -113,6 +121,27 @@ export interface ApiSubLessonUpdate {
 
 export interface ApiSubLessonBatchDelete {
   ids: string[];
+}
+
+// ─── SCORM ───────────────────────────────────────────────────────────────────
+
+export interface ApiScormPackageInfo {
+  sub_lesson_id: string;
+  title: string;
+  schema: string;
+  schema_version: string;
+  sco_launch: string;
+  launch_url: string | null;
+  filename: string;
+  stored_name: string;
+  file_size: number | null;
+  uploaded_at: string | null;
+  uploaded_by_id: string | null;
+  files_count: number;
+}
+
+export interface ApiScormFileListResponse {
+  files: string[];
 }
 
 // ─── Lesson ──────────────────────────────────────────────────────────────────

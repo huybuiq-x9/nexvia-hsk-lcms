@@ -94,6 +94,34 @@ class StorageService:
         public_url = f"{settings.S3_PUBLIC_URL}/{key}"
         return key, public_url
 
+    def upload_scorm_package(
+        self,
+        file_content: bytes,
+        original_filename: str,
+        sub_lesson_id: str,
+    ) -> tuple[str, str]:
+        """Upload a SCORM zip to S3/MinIO and return (stored_name, public_url)."""
+        self._ensure_bucket_exists()
+
+        safe_name = _sanitize_filename(original_filename)
+        key = f"Scorm/{sub_lesson_id}/{safe_name}"
+
+        try:
+            self.client.put_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=key,
+                Body=file_content,
+                ContentType="application/zip",
+            )
+        except ClientError as e:
+            raise LCMSException(
+                message=f"Failed to upload SCORM package: {e}",
+                status_code=500,
+            )
+
+        public_url = f"{settings.S3_PUBLIC_URL}/{key}"
+        return key, public_url
+
     def delete_file(self, stored_name: str) -> None:
         """Delete a file from S3/MinIO by its stored name (full key)."""
         try:

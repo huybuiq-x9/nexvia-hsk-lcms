@@ -316,6 +316,18 @@
     "noComments": "No comments yet.",
     "lockedAfterSubmit": "This sub-lesson has been submitted for review. Document uploads are locked until the expert reviews it."
   },
+  "scorm": {
+    "uploadSuccess": "SCORM package uploaded.",
+    "uploadError": "Failed to upload SCORM.",
+    "preview": "SCORM Preview",
+    "noPackageHint": "No SCORM package is available for preview.",
+    "noPackageHintUpload": "Upload a SCORM 2004 .zip package to preview it.",
+    "noLaunchFile": "No launch file was found in the SCORM package.",
+    "filesCount": "{{count}} files",
+    "runtimeRunning": "Runtime running",
+    "runtimeIdle": "Runtime idle",
+    "runtimeEvents": "{{count}} events"
+  },
   "roles": {
     "admin": "Administrator",
     "teacher": "Teacher",

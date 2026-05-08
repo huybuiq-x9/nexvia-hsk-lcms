@@ -1,0 +1,125 @@
+import uuid
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.deps import (
+    TeacherAssignedToSubLesson,
+    check_sublesson_access,
+    get_db,
+)
+from app.core.security import decode_access_token
+from app.modules.scorm.schema import ScormFileListResponse, ScormPackageInfo
+from app.modules.scorm.service import scorm_service
+from app.modules.users.model import User
+
+router = APIRouter()
+
+
+async def _user_from_access_token(
+    token: str,
+    db: AsyncSession,
+) -> User:
+    try:
+        payload = decode_access_token(token)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    result = await db.execute(
+        select(User).options(selectinload(User.roles)).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user or user.deleted_at is not None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is inactive")
+    return user
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/package",
+    response_model=ScormPackageInfo,
+    status_code=201,
+)
+async def upload_scorm_package(
+    sublesson_id: uuid.UUID,
+    current_user: TeacherAssignedToSubLesson,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: UploadFile = File(...),
+) -> ScormPackageInfo:
+    return await scorm_service.upload_package(db, sublesson_id, current_user.id, file)
+
+
+@router.get("/preview/{sublesson_id}", response_model=ScormPackageInfo)
+async def get_scorm_preview(
+    sublesson_id: uuid.UUID,
+    current_user: TeacherAssignedToSubLesson,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScormPackageInfo:
+    return await scorm_service.get_package_info(db, sublesson_id)
+
+
+@router.get("/preview/{sublesson_id}/files", response_model=ScormFileListResponse)
+async def list_scorm_files(
+    sublesson_id: uuid.UUID,
+    current_user: TeacherAssignedToSubLesson,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScormFileListResponse:
+    return await scorm_service.get_file_list(db, sublesson_id)
+
+
+@router.get("/preview/{sublesson_id}/file")
+async def get_scorm_file(
+    sublesson_id: uuid.UUID,
+    request: Request,
+    current_user: TeacherAssignedToSubLesson,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    path: str = Query(..., description="File path within the SCORM package"),
+) -> Response:
+    root_url = str(request.base_url).rstrip("/")
+    asset_base_url = f"{root_url}/api/v1/scorm/preview/{sublesson_id}/file"
+    content, content_type = await scorm_service.get_file_content(
+        db,
+        sublesson_id,
+        path,
+        asset_base_url,
+    )
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
+
+
+@router.get("/preview/{sublesson_id}/asset/{access_token}/{file_path:path}")
+async def get_scorm_asset(
+    sublesson_id: uuid.UUID,
+    access_token: str,
+    file_path: str,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    current_user = await _user_from_access_token(access_token, db)
+    await check_sublesson_access(sublesson_id, current_user, db)
+
+    root_url = str(request.base_url).rstrip("/")
+    asset_base_url = f"{root_url}/api/v1/scorm/preview/{sublesson_id}/asset/{access_token}"
+    content, content_type = await scorm_service.get_file_content(
+        db,
+        sublesson_id,
+        file_path,
+        asset_base_url,
+    )
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store",
+        },
+    )

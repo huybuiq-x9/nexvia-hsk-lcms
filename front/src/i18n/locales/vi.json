@@ -315,6 +315,18 @@
     "noComments": "Chưa có bình luận nào.",
     "lockedAfterSubmit": "Bài học con đã được gửi phê duyệt. Không thể tải tài liệu cho đến khi chuyên gia duyệt."
   },
+  "scorm": {
+    "uploadSuccess": "Đã tải lên gói SCORM.",
+    "uploadError": "Tải lên SCORM thất bại.",
+    "preview": "Xem trước SCORM",
+    "noPackageHint": "Chưa có gói SCORM để xem trước.",
+    "noPackageHintUpload": "Tải lên gói SCORM 2004 dạng .zip để xem trước.",
+    "noLaunchFile": "Không tìm thấy file khởi chạy trong gói SCORM.",
+    "filesCount": "{{count}} file",
+    "runtimeRunning": "Runtime đang chạy",
+    "runtimeIdle": "Runtime chờ",
+    "runtimeEvents": "{{count}} sự kiện"
+  },
   "roles": {
     "admin": "Quản trị viên",
     "teacher": "Giáo viên",
