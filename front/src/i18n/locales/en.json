@@ -322,6 +322,8 @@
   "scorm": {
     "uploadSuccess": "SCORM package uploaded.",
     "uploadError": "Failed to upload SCORM.",
+    "reupload": "Re-upload SCORM",
+    "reuploadSuccess": "SCORM package re-uploaded.",
     "preview": "SCORM Preview",
     "noPackageHint": "No SCORM package is available for preview.",
     "noPackageHintUpload": "Upload a SCORM 2004 .zip package to preview it.",

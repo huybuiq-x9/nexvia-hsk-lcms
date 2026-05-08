@@ -321,6 +321,8 @@
   "scorm": {
     "uploadSuccess": "Đã tải lên gói SCORM.",
     "uploadError": "Tải lên SCORM thất bại.",
+    "reupload": "Upload lại SCORM",
+    "reuploadSuccess": "Đã upload lại gói SCORM.",
     "preview": "Xem trước SCORM",
     "noPackageHint": "Chưa có gói SCORM để xem trước.",
     "noPackageHintUpload": "Tải lên gói SCORM 2004 dạng .zip để xem trước.",

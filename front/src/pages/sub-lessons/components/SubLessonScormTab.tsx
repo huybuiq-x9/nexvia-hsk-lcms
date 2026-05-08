@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, FileArchive, MessageSquare, Play, Send } from 'lucide-react';
+import { Eye, FileArchive, MessageSquare, Play, Send, Upload } from 'lucide-react';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { useToast } from '../../../contexts/ToastContext';
@@ -47,6 +47,7 @@ export function SubLessonScormTab({
     events: [],
   });
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const reuploadInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -72,10 +73,7 @@ export function SubLessonScormTab({
     ? scormService.buildLaunchUrl(subLessonId, info.sco_launch)
     : null;
 
-  const handleFiles = async (files: File[]) => {
-    if (!canUpload) return;
-    const file = files[0];
-    if (!file) return;
+  const uploadScormFile = async (file: File, successMessage: string) => {
     setUploading(true);
     try {
       const uploaded = await scormService.uploadPackage(subLessonId, file);
@@ -85,12 +83,27 @@ export function SubLessonScormTab({
       setComments([]);
       setCommentsLoaded(false);
       onUploaded?.();
-      toast.success(t('scorm.uploadSuccess'));
+      toast.success(successMessage);
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleFiles = async (files: File[]) => {
+    if (!canUpload) return;
+    const file = files[0];
+    if (!file) return;
+    await uploadScormFile(file, t('scorm.uploadSuccess'));
+  };
+
+  const handleReupload = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!canUpload) return;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await uploadScormFile(file, t('scorm.reuploadSuccess'));
   };
 
   const toggleComments = async () => {
@@ -146,7 +159,7 @@ export function SubLessonScormTab({
 
   return (
     <div className="space-y-4">
-      {canUpload && (
+      {canUpload && !info && (
         <FileDropzone
           accept={['zip']}
           maxSize={500 * 1024 * 1024}
@@ -205,6 +218,29 @@ export function SubLessonScormTab({
                   >
                     <Eye size={14} />
                   </button>
+                )}
+                {canUpload && (
+                  <>
+                    <input
+                      ref={reuploadInputRef}
+                      type="file"
+                      accept=".zip"
+                      className="hidden"
+                      onChange={handleReupload}
+                    />
+                    <button
+                      onClick={() => reuploadInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                      title={t('scorm.reupload')}
+                    >
+                      {uploading ? (
+                        <span className="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Upload size={14} />
+                      )}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
