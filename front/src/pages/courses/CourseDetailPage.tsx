@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronRight, ChevronLeft, Users, User, UserCheck, Pencil, FileText, Plus, X, AlertCircle, BookOpen, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, User, UserCheck, Pencil, FileText, Plus, X, AlertCircle, BookOpen, GripVertical } from 'lucide-react';
 import { courseService, userService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { useUserCache } from '../../hooks/useUserCache';
 import { CollapsibleDrawer } from '../../components/ui/CollapsibleDrawer';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -325,6 +326,7 @@ export default function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const { isAdmin, selectedRole } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
+  const { setBreadcrumbs } = useBreadcrumbs();
 
   const [course, setCourse] = useState<ApiCourseWithLessons | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -399,6 +401,16 @@ export default function CourseDetailPage() {
 
     return () => { cancelled = true; };
   }, [isAdmin, selectedRole]);
+
+  useEffect(() => {
+    if (course) {
+      setBreadcrumbs([
+        { label: t('nav.courses'), href: '/courses' },
+        { label: course.title },
+      ]);
+    }
+    return () => setBreadcrumbs([]);
+  }, [course, setBreadcrumbs, t]);
 
   if (isLoading) {
     return <div className="flex justify-center py-20"><div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
@@ -484,9 +496,6 @@ export default function CourseDetailPage() {
       </CollapsibleDrawer>
 
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/courses')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
-          <ChevronLeft size={18} />
-        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{course.title}</h1>

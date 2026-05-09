@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { useUserCache } from '../../hooks/useUserCache';
 import { useSubLesson } from './hooks/useSubLesson';
-import { SubLessonBreadcrumb } from './components/SubLessonBreadcrumb';
 import { SubLessonHeader, SubLessonInfoDrawer } from './components/SubLessonHeader';
 import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper';
 import { SubLessonTabs, type Tab } from './components/SubLessonTabs';
@@ -23,6 +23,7 @@ export default function SubLessonDetailPage() {
   const { isAdmin, isExpert, selectedRole } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
   const { subLesson, reviewLogs, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
+  const { setBreadcrumbs } = useBreadcrumbs();
 
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
@@ -91,6 +92,18 @@ export default function SubLessonDetailPage() {
     if (lessonInfo?.assigned_converter_id) loadUser(lessonInfo.assigned_converter_id);
   }, [courseInfo?.assigned_expert_id, lessonInfo?.assigned_teacher_id, lessonInfo?.assigned_converter_id, loadUser]);
 
+  useEffect(() => {
+    if (subLesson && courseInfo && lessonInfo) {
+      setBreadcrumbs([
+        { label: t('subLessons.breadcrumb'), href: '/courses' },
+        { label: courseInfo.title, href: `/courses/${courseInfo.id}` },
+        { label: lessonInfo.title, href: `/lessons/${lessonInfo.id}` },
+        { label: subLesson.title },
+      ]);
+    }
+    return () => setBreadcrumbs([]);
+  }, [subLesson, courseInfo, lessonInfo, setBreadcrumbs, t]);
+
   const currentTab = visibleTabs.includes(activeTab) ? activeTab : (visibleTabs[0] ?? 'questions');
 
   if (isLoading) {
@@ -114,12 +127,6 @@ export default function SubLessonDetailPage() {
 
   return (
     <div className="space-y-5">
-      <SubLessonBreadcrumb
-        courseInfo={courseInfo}
-        lessonInfo={lessonInfo}
-        subLessonTitle={subLesson.title}
-      />
-
       <SubLessonHeader
         canSubmitForReview={canSubmitForReview}
         canReview={canReview}

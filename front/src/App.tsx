@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { BreadcrumbProvider } from './contexts/BreadcrumbContext';
 import DashboardLayout from './components/layouts/DashboardLayout';
 
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from './pages/auth';
@@ -29,28 +30,30 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <Routes>
-            <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
-            <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
-            <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
-            <Route path="/home" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <BreadcrumbProvider>
+            <Routes>
+              <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+              <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+              <Route path="/home" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
 
-            <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
-            <Route path="/courses/create" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
-            <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
+              <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
+              <Route path="/courses/create" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
+              <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
 
-            <Route path="/lessons" element={<ProtectedRoute><LessonsPage /></ProtectedRoute>} />
-            <Route path="/lessons/:lessonId" element={<ProtectedRoute><LessonDetailPage /></ProtectedRoute>} />
+              <Route path="/lessons" element={<ProtectedRoute><LessonsPage /></ProtectedRoute>} />
+              <Route path="/lessons/:lessonId" element={<ProtectedRoute><LessonDetailPage /></ProtectedRoute>} />
 
-            <Route path="/sub-lessons" element={<ProtectedRoute><SubLessonsPage /></ProtectedRoute>} />
-            <Route path="/sub-lessons/:subLessonId" element={<ProtectedRoute><SubLessonDetailPage /></ProtectedRoute>} />
+              <Route path="/sub-lessons" element={<ProtectedRoute><SubLessonsPage /></ProtectedRoute>} />
+              <Route path="/sub-lessons/:subLessonId" element={<ProtectedRoute><SubLessonDetailPage /></ProtectedRoute>} />
 
-            <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/question-bank" element={<ProtectedRoute><QuestionBankPage /></ProtectedRoute>} />
+              <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+              <Route path="/question-bank" element={<ProtectedRoute><QuestionBankPage /></ProtectedRoute>} />
 
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </BreadcrumbProvider>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

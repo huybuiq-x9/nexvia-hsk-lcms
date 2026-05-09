@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ChevronRight,
-  ChevronLeft,
   Plus,
   FileText,
   Users,
@@ -18,6 +17,7 @@ import {
 import { courseService, userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { CollapsibleDrawer } from '../../components/ui/CollapsibleDrawer';
 import type {
   ApiLessonWithSubLessons,
@@ -358,6 +358,7 @@ export default function LessonDetailPage() {
   const navigate = useNavigate();
   const { lessonId } = useParams<{ lessonId: string }>();
   const { isAdmin, selectedRole } = useAuth();
+  const { setBreadcrumbs } = useBreadcrumbs();
   const canManageSubLessons =
     isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
 
@@ -414,6 +415,17 @@ export default function LessonDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson?.course_id, lesson?.assigned_teacher_id, lesson?.assigned_converter_id]);
 
+  useEffect(() => {
+    if (lesson && courseTitle) {
+      setBreadcrumbs([
+        { label: t('nav.courses'), href: '/courses' },
+        { label: courseTitle, href: `/courses/${courseId || lesson.course_id}` },
+        { label: lesson.title },
+      ]);
+    }
+    return () => setBreadcrumbs([]);
+  }, [lesson, courseTitle, courseId, setBreadcrumbs, t]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -434,31 +446,9 @@ export default function LessonDetailPage() {
   const expert = assignedExpertId ? userCache[assignedExpertId] : null;
   const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
   const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
-  const parentCoursePath = `/courses/${courseId || lesson.course_id}`;
 
   return (
     <div className="space-y-5">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm text-slate-500">
-        <button
-          onClick={() => navigate(parentCoursePath)}
-          className="hover:text-slate-700 transition-colors flex items-center gap-1"
-        >
-          <ChevronLeft size={14} />
-          Quay lại
-        </button>
-        <ChevronRight size={14} />
-        <Link
-          to={parentCoursePath}
-          className="truncate max-w-[200px] hover:text-blue-600 transition-colors"
-          title={courseTitle}
-        >
-          {courseTitle}
-        </Link>
-        <ChevronRight size={14} />
-        <span className="text-slate-800 font-medium truncate max-w-[200px]">{lesson.title}</span>
-      </div>
-
       <CollapsibleDrawer
         isOpen={isInfoDrawerOpen}
         onToggle={() => setIsInfoDrawerOpen(open => !open)}

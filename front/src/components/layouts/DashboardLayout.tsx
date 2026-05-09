@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
-  Shield,
   Layers,
   KeyRound,
   X,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { API_ROLE } from '../../types/api';
 import { userService } from '../../services';
 import { LanguageSwitcher } from '../LanguageSwitcher';
@@ -369,7 +369,8 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
 
 function Header() {
   const { t } = useTranslation();
-  const { user, logout, selectedRole } = useAuth();
+  const { user, logout } = useAuth();
+  const { breadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -383,16 +384,33 @@ function Header() {
 
   return (
     <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <Shield size={14} className="text-slate-400" />
-          <span className="text-xs text-slate-400">
-            {selectedRole ? t(`roles.${selectedRole}`) : t('header.user')}
-          </span>
-        </div>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {breadcrumbs.length > 0 && (
+          <nav className="flex items-center gap-1.5 text-sm text-slate-500 overflow-hidden">
+            {breadcrumbs.map((item, idx) => (
+              <span key={idx} className="flex items-center gap-1.5 shrink-0">
+                {idx > 0 && <ChevronRight size={14} className="text-slate-300" />}
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    onClick={(e) => { e.preventDefault(); navigate(item.href!); }}
+                    className="hover:text-slate-700 transition-colors truncate max-w-[180px]"
+                    title={item.label}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <span className="text-slate-700 font-medium truncate max-w-[180px]" title={item.label}>
+                    {item.label}
+                  </span>
+                )}
+              </span>
+            ))}
+          </nav>
+        )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <LanguageSwitcher />
 
         <div className="relative">

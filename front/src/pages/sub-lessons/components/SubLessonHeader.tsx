@@ -42,9 +42,9 @@ export function SubLessonHeader({
         {canSubmitForReview && (
           <button
             onClick={onSubmit}
-            className="btn btn-primary flex items-center gap-1.5 text-sm"
+            className="btn btn-primary flex items-center gap-1 text-xs py-1.5 px-2.5"
           >
-            <Send size={14} />
+            <Send size={12} />
             {t('subLessons.actions.submitForReview')}
           </button>
         )}
@@ -52,16 +52,16 @@ export function SubLessonHeader({
           <>
             <button
               onClick={onReject}
-              className="btn flex items-center gap-1.5 text-sm border border-red-200 text-red-600 hover:bg-red-50"
+              className="btn flex items-center gap-1 text-xs border border-red-200 text-red-600 hover:bg-red-50 py-1.5 px-2.5"
             >
-              <XCircle size={14} />
+              <XCircle size={12} />
               {t('subLessons.actions.reject')}
             </button>
             <button
               onClick={onApprove}
-              className="btn flex items-center gap-1.5 text-sm bg-green-600 hover:bg-green-700 text-white border-0"
+              className="btn flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white border-0 py-1.5 px-2.5"
             >
-              <CheckCircle size={14} />
+              <CheckCircle size={12} />
               {t('subLessons.actions.approve')}
             </button>
           </>
@@ -69,9 +69,9 @@ export function SubLessonHeader({
         {canSubmitScorm && (
           <button
             onClick={onSubmitScorm}
-            className="btn btn-primary flex items-center gap-1.5 text-sm"
+            className="btn btn-primary flex items-center gap-1 text-xs py-1.5 px-2.5"
           >
-            <Send size={14} />
+            <Send size={12} />
             {t('subLessons.actions.submitScorm')}
           </button>
         )}
@@ -79,16 +79,16 @@ export function SubLessonHeader({
           <>
             <button
               onClick={onRejectScorm}
-              className="btn flex items-center gap-1.5 text-sm border border-red-200 text-red-600 hover:bg-red-50"
+              className="btn flex items-center gap-1 text-xs border border-red-200 text-red-600 hover:bg-red-50 py-1.5 px-2.5"
             >
-              <XCircle size={14} />
+              <XCircle size={12} />
               {t('subLessons.actions.rejectScorm')}
             </button>
             <button
               onClick={onApproveScorm}
-              className="btn flex items-center gap-1.5 text-sm bg-green-600 hover:bg-green-700 text-white border-0"
+              className="btn flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white border-0 py-1.5 px-2.5"
             >
-              <CheckCircle size={14} />
+              <CheckCircle size={12} />
               {t('subLessons.actions.approveScorm')}
             </button>
           </>
