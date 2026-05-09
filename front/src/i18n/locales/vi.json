@@ -379,7 +379,8 @@
       "draft": "Bản nháp",
       "in_progress": "Đang tiến hành",
       "approved": "Đã duyệt"
-    }
+    },
+    "delete": "Xóa"
   },
   "subLessons": {
     "title": "Tiết học",
@@ -449,6 +450,14 @@
       "submitScorm": "Gửi SCORM",
       "approveScorm": "Duyệt SCORM",
       "rejectScorm": "Từ chối SCORM"
+    },
+    "delete": "Xóa",
+    "deleteModal": {
+      "title": "Xác nhận xóa tiết học",
+      "confirm": "Bạn có chắc muốn xóa tiết học \"{{name}}\"?",
+      "cancel": "Hủy",
+      "confirmDelete": "Xóa",
+      "success": "Đã xóa tiết học."
     }
   }
 }

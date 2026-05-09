@@ -380,7 +380,8 @@
       "draft": "Draft",
       "in_progress": "In Progress",
       "approved": "Approved"
-    }
+    },
+    "delete": "Delete"
   },
   "subLessons": {
     "title": "Sub-Lessons",
@@ -450,6 +451,14 @@
       "submitScorm": "Submit SCORM",
       "approveScorm": "Approve SCORM",
       "rejectScorm": "Reject SCORM"
+    },
+    "delete": "Delete",
+    "deleteModal": {
+      "title": "Confirm Sub-Lesson Deletion",
+      "confirm": "Are you sure you want to delete the sub-lesson \"{{name}}\"?",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "success": "Sub-lesson deleted."
     }
   }
 }

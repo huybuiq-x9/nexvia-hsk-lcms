@@ -2,16 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { FileText, ChevronRight, BookOpen, Layers, User, UserCheck, Users } from 'lucide-react';
+import { FileText, ChevronRight, BookOpen, Layers, User, UserCheck, Users, Trash2 } from 'lucide-react';
 import { courseService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { UserAvatar } from '../../components/ui/UserAvatar';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useUserCache } from '../../hooks/useUserCache';
 import FilterBar from '../../components/FilterBar';
 import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem, ApiUserWithRoles } from '../../types/api';
 import type { SubLessonStatus } from '../../types/api';
-import { SUB_LESSON_STATUSES } from '../../types/api';
+import { SUB_LESSON_STATUSES, API_ROLE } from '../../types/api';
 
 const PER_PAGE = 20;
 
@@ -45,6 +47,7 @@ const ManagerRow = ({
 
 export default function SubLessonsPage() {
   const { t } = useTranslation();
+  const { isAdmin, selectedRole } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
@@ -57,7 +60,24 @@ export default function SubLessonsPage() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedLessonId, setSelectedLessonId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const isFirst = useRef(true);
+
+  const handleDeleteSubLesson = async () => {
+    if (!deleteConfirm) return;
+    setDeletingId(deleteConfirm.id);
+    try {
+      await courseService.deleteSubLesson(deleteConfirm.id);
+      setSubLessons(prev => prev.filter(sl => sl.id !== deleteConfirm.id));
+      setTotal(prev => prev - 1);
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Failed to delete sub-lesson:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     courseService.getCoursesForFilter().then(res => setCourses(res)).catch(() => {});
@@ -163,8 +183,22 @@ export default function SubLessonsPage() {
             <Link
               key={sl.id}
               to={`/sub-lessons/${sl.id}`}
-              className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group"
+              className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group relative"
             >
+              {isAdmin && selectedRole === API_ROLE.ADMIN && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirm({ id: sl.id, title: sl.title }); }}
+                  disabled={deletingId === sl.id}
+                  className="absolute top-3 right-3 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                  title={t('subLessons.delete')}
+                >
+                  {deletingId === sl.id ? (
+                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                </button>
+              )}
               <div
                 className="w-1.5 rounded-full shrink-0"
                 style={{ backgroundColor: 'var(--color-primary, #3B82F6)', minHeight: '50px' }}
@@ -213,6 +247,20 @@ export default function SubLessonsPage() {
           ))
         )}
       </div>
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title={t('subLessons.deleteModal.title')}
+          message={t('subLessons.deleteModal.confirm', { name: deleteConfirm.title })}
+          confirmLabel={t('subLessons.deleteModal.confirmDelete')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={handleDeleteSubLesson}
+          onCancel={() => setDeleteConfirm(null)}
+          variant="danger"
+          loading={deletingId !== null}
+          icon={<Trash2 size={20} className="text-red-500" />}
+        />
+      )}
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 flex-wrap">

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, BookOpen } from 'lucide-react';
+import { Search, Plus, BookOpen, Trash2 } from 'lucide-react';
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
 import { CourseCard } from './components/CourseCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import type { ApiCourseWithLessons } from '../../types/api';
 import { API_ROLE } from '../../types/api';
 
@@ -23,7 +24,24 @@ export default function CoursesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const isFirst = useRef(true);
+
+  const handleDeleteCourse = async () => {
+    if (!deleteConfirm) return;
+    setDeletingId(deleteConfirm.id);
+    try {
+      await courseService.deleteCourse(deleteConfirm.id);
+      setCourses(prev => prev.filter(c => c.id !== deleteConfirm.id));
+      setTotal(prev => prev - 1);
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
@@ -89,7 +107,13 @@ export default function CoursesPage() {
           </div>
         ) : (
           courses.map(course => (
-            <CourseCard key={course.id} course={course} expert={userCache[course.assigned_expert_id]} />
+            <CourseCard
+              key={course.id}
+              course={course}
+              expert={userCache[course.assigned_expert_id]}
+              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? (id) => setDeleteConfirm({ id, title: course.title }) : undefined}
+              isDeleting={deletingId === course.id}
+            />
           ))
         )}
       </div>
@@ -111,6 +135,20 @@ export default function CoursesPage() {
           }
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn btn-secondary px-3 py-1.5 text-sm disabled:opacity-40">→</button>
         </div>
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title={t('courses.deleteModal.title')}
+          message={t('courses.deleteModal.confirm', { name: deleteConfirm.title })}
+          confirmLabel={t('courses.deleteModal.confirmDelete')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={handleDeleteCourse}
+          onCancel={() => setDeleteConfirm(null)}
+          variant="danger"
+          loading={deletingId !== null}
+          icon={<Trash2 size={20} className="text-red-500" />}
+        />
       )}
     </div>
   );

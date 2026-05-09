@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ChevronRight, Users, Trash2 } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
 import type { ApiCourseWithLessons, ApiUserWithRoles } from '../../../types/api';
@@ -7,14 +8,40 @@ import type { ApiCourseWithLessons, ApiUserWithRoles } from '../../../types/api'
 interface CourseCardProps {
   course: ApiCourseWithLessons;
   expert?: ApiUserWithRoles;
+  onDelete?: (id: string) => void;
+  isDeleting?: boolean;
 }
 
-export function CourseCard({ course, expert }: CourseCardProps) {
+export function CourseCard({ course, expert, onDelete, isDeleting }: CourseCardProps) {
+  const { t } = useTranslation();
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onDelete && !isDeleting) {
+      onDelete(course.id);
+    }
+  };
+
   return (
     <Link
       to={`/courses/${course.id}`}
-      className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group"
+      className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group relative"
     >
+      {onDelete && (
+        <button
+          onClick={handleDeleteClick}
+          disabled={isDeleting}
+          className="absolute top-3 right-3 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={t('courses.delete')}
+        >
+          {isDeleting ? (
+            <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Trash2 size={16} />
+          )}
+        </button>
+      )}
       <div
         className="w-1.5 rounded-full shrink-0"
         style={{ backgroundColor: 'var(--color-primary, #3B82F6)', minHeight: '60px' }}
@@ -31,10 +58,8 @@ export function CourseCard({ course, expert }: CourseCardProps) {
           <p className="text-sm text-slate-500 mt-1 line-clamp-1">{course.description}</p>
         )}
         <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-            <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-              <span>{course.lessons.length} bài học</span>
-              <span>{course.lessons.reduce((acc, l) => acc + (l.sub_lessons_count ?? 0), 0)} bài học con</span>
-            </div>
+          <span>{course.lessons.length} {t('courses.lessons')}</span>
+          <span>{course.lessons.reduce((acc, l) => acc + (l.sub_lessons_count ?? 0), 0)} {t('courses.subLessons')}</span>
         </div>
       </div>
 

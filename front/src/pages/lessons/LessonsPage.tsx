@@ -2,18 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen } from 'lucide-react';
 import { courseService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
 import { LessonCard } from './components/LessonCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import FilterBar from '../../components/FilterBar';
 import type { ApiLessonListItem, ApiCourseWithLessons } from '../../types/api';
 import type { LessonStatus } from '../../types/api';
-import { LESSON_STATUSES } from '../../types/api';
+import { LESSON_STATUSES, API_ROLE } from '../../types/api';
 
 const PER_PAGE = 20;
 
 export default function LessonsPage() {
   const { t } = useTranslation();
+  const { isAdmin, selectedRole } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
@@ -25,6 +27,12 @@ export default function LessonsPage() {
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const isFirst = useRef(true);
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    await courseService.deleteLesson(lessonId);
+    setLessons(prev => prev.filter(l => l.id !== lessonId));
+    setTotal(prev => prev - 1);
+  };
 
   useEffect(() => {
     courseService.getCoursesForFilter().then(res => setCourses(res)).catch(() => {});
@@ -116,6 +124,7 @@ export default function LessonsPage() {
               expert={lesson.assigned_expert_id ? userCache[lesson.assigned_expert_id] : undefined}
               teacher={lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : undefined}
               converter={lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : undefined}
+              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? handleDeleteLesson : undefined}
             />
           ))
         )}
