@@ -10,7 +10,6 @@ import {
   User,
   UserCheck,
   Pencil,
-  AlertCircle,
   X,
   GripVertical,
   ChevronDown,
@@ -203,25 +202,6 @@ const SubLessonsEditor = ({
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
           {t('courses.editSubLessons')}
         </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCancel}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            {t('courses.cancel')}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-          >
-            {isSaving
-              ? <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : null
-            }
-            {t('courses.saveChanges')}
-          </button>
-        </div>
       </div>
 
       {/* Sub-lesson list */}
@@ -348,6 +328,25 @@ const SubLessonsEditor = ({
         <Plus size={14} />
         {t('courses.addSubLessonBtn')}
       </button>
+
+      <div className="flex gap-3 pt-3 border-t border-slate-100">
+        <button
+          onClick={onCancel}
+          className="btn btn-secondary flex-1 justify-center"
+        >
+          {t('courses.cancel')}
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn btn-primary flex-1 justify-center disabled:opacity-50"
+        >
+          {isSaving
+            ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            : t('courses.saveChanges')
+          }
+        </button>
+      </div>
     </div>
   );
 };
@@ -367,7 +366,6 @@ export default function LessonDetailPage() {
   const [courseId, setCourseId] = useState<string>('');
   const [assignedExpertId, setAssignedExpertId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isEditingSubLessons, setIsEditingSubLessons] = useState(false);
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
   const [userCache, setUserCache] = useState<Record<string, ApiUserWithRoles>>({});
@@ -544,15 +542,6 @@ export default function LessonDetailPage() {
               {lesson.sub_lessons.length} {t('courses.lessons')}
             </p>
           </div>
-          {canManageSubLessons && !isEditingSubLessons && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn btn-primary flex items-center gap-1.5 text-sm"
-            >
-              <Plus size={14} />
-              {t('courses.modal.addSubLesson')}
-            </button>
-          )}
         </div>
 
         <div className="p-5">
@@ -570,15 +559,6 @@ export default function LessonDetailPage() {
             <div className="py-8 text-center text-sm text-slate-400 italic space-y-3">
               <FileText size={36} className="mx-auto opacity-40" />
               <p>{t('courses.noSubLessons')}</p>
-              {canManageSubLessons && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn btn-secondary flex items-center gap-1.5 mx-auto text-sm"
-                >
-                  <Plus size={14} />
-                  Tạo bài học con đầu tiên
-                </button>
-              )}
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -608,137 +588,6 @@ export default function LessonDetailPage() {
           )}
         </div>
       </div>
-
-      {/* Create modal */}
-      {showCreateModal && (
-        <CreateSubLessonModal
-          lessonId={lesson.id}
-          lessonTitle={lesson.title}
-          onClose={() => setShowCreateModal(false)}
-          onCreated={(newSl) => {
-            setShowCreateModal(false);
-            setLesson(prev => prev ? {
-              ...prev,
-              sub_lessons: [...prev.sub_lessons, newSl],
-            } : prev);
-          }}
-        />
-      )}
     </div>
   );
 }
-
-// ─── Create SubLesson Modal ────────────────────────────────────────────────────
-
-const CreateSubLessonModal = ({
-  lessonId,
-  lessonTitle,
-  onClose,
-  onCreated,
-}: {
-  lessonId: string;
-  lessonTitle: string;
-  onClose: () => void;
-  onCreated: (newSubLesson: ApiSubLessonResponse) => void;
-}) => {
-  const { t } = useTranslation();
-  const { success, error: toastError } = useToast();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      setFormError(t('courses.modal.validationLessonName'));
-      return;
-    }
-    setFormError('');
-    setIsSaving(true);
-    try {
-      const sl = await courseService.createSubLesson(lessonId, {
-        title: title.trim(),
-        description: description.trim() || null,
-        order_index: 0,
-      });
-      success(t('courses.modal.createSubLessonSuccess'));
-      onCreated(sl);
-      onClose();
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || t('courses.modal.errorGeneric');
-      toastError(t('courses.modal.errorGeneric'), msg);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">{lessonTitle}</h2>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {formError && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
-              <AlertCircle size={15} className="text-red-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{formError}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="label">
-              {t('courses.modal.subLessonName')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={t('courses.modal.subLessonNamePlaceholder')}
-              className="input"
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="label">{t('courses.modal.description')}</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder={t('courses.modal.descriptionPlaceholder')}
-              className="input resize-none"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary flex-1 justify-center">
-              {t('courses.modal.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="btn btn-primary flex-1 justify-center disabled:opacity-50"
-            >
-              {isSaving
-                ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : t('courses.modal.submitCreate')
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};

@@ -1,28 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, X, AlertCircle, BookOpen, User, Users, GripVertical } from 'lucide-react';
 import { courseService, userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
-import { API_ROLE, type ApiCourseCreate, type ApiCourseUpdate, type ApiUserWithRoles } from '../../types/api';
-
-interface SubLessonDraft {
-  _key: string;
-  _isDeleted?: boolean;
-  title: string;
-  description: string;
-  order_index: number;
-}
+import { API_ROLE, type ApiCourseCreate, type ApiUserWithRoles } from '../../types/api';
 
 interface LessonDraft {
   _key: string;
-  _isDeleted?: boolean;
   title: string;
   description: string;
   order_index: number;
   teacher_id: string;
   converter_id: string;
-  sub_lessons: SubLessonDraft[];
 }
 
 function makeKey() { return Math.random().toString(36).slice(2, 10); }
@@ -30,20 +20,16 @@ function makeKey() { return Math.random().toString(36).slice(2, 10); }
 export default function CourseFormPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { courseId } = useParams<{ courseId?: string }>();
-  const isEditing = Boolean(courseId);
-  const { success, error: toastError } = useToast();
+  const { success } = useToast();
 
   const [experts, setExperts] = useState<ApiUserWithRoles[]>([]);
   const [teachers, setTeachers] = useState<ApiUserWithRoles[]>([]);
   const [converters, setConverters] = useState<ApiUserWithRoles[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [isLoadingCourse, setIsLoadingCourse] = useState(isEditing);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
   const [form, setForm] = useState({ title: '', description: '', expert_id: '', lessons: [] as LessonDraft[] });
-  const [deletedLessonIds, setDeletedLessonIds] = useState<string[]>([]);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropZoneIdx, setDropZoneIdx] = useState<number | null>(null);
 
@@ -57,40 +43,9 @@ export default function CourseFormPage() {
     }).catch(() => {}).finally(() => setIsLoadingUsers(false));
   }, []);
 
-  useEffect(() => {
-    if (!courseId) return;
-    (async () => {
-      setIsLoadingCourse(true);
-      try {
-        const course = await courseService.getCourse(courseId);
-        const lessonsWithSubLessons = await Promise.all(
-          course.lessons.map(async l => {
-            try {
-              const fullLesson = await courseService.getLesson(l.id);
-              return {
-                _key: l.id, title: l.title, description: l.description ?? '', order_index: l.order_index,
-                teacher_id: l.assigned_teacher_id ?? '', converter_id: l.assigned_converter_id ?? '',
-                sub_lessons: fullLesson.sub_lessons.map(sl => ({ _key: sl.id, title: sl.title, description: sl.description ?? '', order_index: sl.order_index })),
-              };
-            } catch { return { _key: l.id, title: l.title, description: l.description ?? '', order_index: l.order_index, teacher_id: l.assigned_teacher_id ?? '', converter_id: l.assigned_converter_id ?? '', sub_lessons: [] as SubLessonDraft[] }; }
-          })
-        );
-        setForm({ title: course.title, description: typeof course.description === 'string' ? course.description : '', expert_id: course.assigned_expert_id, lessons: lessonsWithSubLessons });
-      } catch { toastError(t('courses.modal.errorGeneric')); navigate('/courses'); }
-      finally { setIsLoadingCourse(false); }
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
-
-  const addLesson = () => setForm(f => ({ ...f, lessons: [...f.lessons, { _key: makeKey(), title: '', description: '', order_index: f.lessons.length, teacher_id: '', converter_id: '', sub_lessons: [] }] }));
+  const addLesson = () => setForm(f => ({ ...f, lessons: [...f.lessons, { _key: makeKey(), title: '', description: '', order_index: f.lessons.length, teacher_id: '', converter_id: '' }] }));
   const updateLesson = (idx: number, patch: Partial<LessonDraft>) => setForm(f => ({ ...f, lessons: f.lessons.map((l, i) => i === idx ? { ...l, ...patch } : l) }));
-  const removeLesson = (idx: number) => {
-    const lesson = form.lessons[idx];
-    if (lesson._key.length === 36 && lesson._key.includes('-')) {
-      setForm(f => ({ ...f, lessons: f.lessons.map((l, i) => i === idx ? { ...l, _isDeleted: true } : l) }));
-      setDeletedLessonIds(prev => [...prev, lesson._key]);
-    } else { setForm(f => ({ ...f, lessons: f.lessons.filter((_, i) => i !== idx) })); }
-  };
+  const removeLesson = (idx: number) => setForm(f => ({ ...f, lessons: f.lessons.filter((_, i) => i !== idx) }));
 
   const handleDragStart = (e: React.DragEvent, idx: number) => { setDragIdx(idx); e.dataTransfer.effectAllowed = 'move'; };
   const handleDragOver = (e: React.DragEvent, idx: number) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; setDropZoneIdx(idx); };
@@ -111,35 +66,8 @@ export default function CourseFormPage() {
     for (const lesson of form.lessons) { if (!lesson.title.trim()) { setFormError(t('courses.modal.validationLessonName')); return; } }
     setFormError(''); setIsSaving(true);
     try {
-      if (isEditing && courseId) {
-        const visible = form.lessons.filter(l => l._isDeleted !== true);
-        const existingLessons = visible.filter(l => l._key.length === 36 && l._key.includes('-'));
-        const newLessons = visible.filter(l => !(l._key.length === 36 && l._key.includes('-')));
-        await courseService.updateCourse(courseId, {
-          title: form.title.trim(), description: form.description.trim() || null, assigned_expert_id: form.expert_id,
-          lessons: [
-            ...existingLessons.filter(l => l.title.trim()).map((l, idx) => ({ id: l._key, title: l.title.trim(), description: l.description.trim() || null, order_index: idx, teacher_id: l.teacher_id || null, converter_id: l.converter_id || null })),
-            ...newLessons.filter(l => l.title.trim()).map((l, idx) => ({ title: l.title.trim(), description: l.description.trim() || null, order_index: existingLessons.filter(x => x.title.trim()).length + idx, teacher_id: l.teacher_id || null, converter_id: l.converter_id || null })),
-          ], delete_lesson_ids: deletedLessonIds,
-        } as ApiCourseUpdate);
-        const keptExistingLessonIds = existingLessons.filter(l => l.title.trim()).map(l => l._key);
-        await Promise.all(keptExistingLessonIds.map(async lessonId => {
-          const lesson = form.lessons.find(l => l._key === lessonId)!;
-          const visibleSl = lesson.sub_lessons.filter(sl => !sl._isDeleted);
-          const existingSl = visibleSl.filter(sl => sl._key.length === 36 && sl._key.includes('-'));
-          const newSl = visibleSl.filter(sl => !(sl._key.length === 36 && sl._key.includes('-')));
-          const deletedSlIds = lesson.sub_lessons.filter(sl => sl._isDeleted && sl._key.length === 36 && sl._key.includes('-')).map(sl => sl._key);
-          await Promise.all([
-            ...existingSl.map((sl, idx) => courseService.updateSubLesson(sl._key, { title: sl.title.trim(), description: sl.description.trim() || null, order_index: idx })),
-            ...newSl.map((sl, idx) => courseService.createSubLesson(lessonId, { title: sl.title.trim(), description: sl.description.trim() || null, order_index: existingSl.length + idx })),
-          ]);
-          if (deletedSlIds.length > 0) await courseService.deleteSubLessonBatch(lessonId, deletedSlIds);
-        }));
-        success(t('courses.modal.updateSuccess'));
-      } else {
-        await courseService.createCourse({ title: form.title.trim(), description: form.description.trim() || null, assigned_expert_id: form.expert_id, lessons: form.lessons.filter(l => l.title.trim()).map((l, idx) => ({ title: l.title.trim(), description: l.description.trim() || null, order_index: idx, teacher_id: l.teacher_id || null, converter_id: l.converter_id || null })) } as ApiCourseCreate);
-        success(t('courses.modal.createSuccess'));
-      }
+      await courseService.createCourse({ title: form.title.trim(), description: form.description.trim() || null, assigned_expert_id: form.expert_id, lessons: form.lessons.filter(l => l.title.trim()).map((l, idx) => ({ title: l.title.trim(), description: l.description.trim() || null, order_index: idx, teacher_id: l.teacher_id || null, converter_id: l.converter_id || null })) } as ApiCourseCreate);
+      success(t('courses.modal.createSuccess'));
       navigate('/courses');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t('courses.modal.errorGeneric');
@@ -147,16 +75,16 @@ export default function CourseFormPage() {
     } finally { setIsSaving(false); }
   };
 
-  const visibleLessons = form.lessons.filter(l => !l._isDeleted).sort((a, b) => a.order_index - b.order_index);
-  const isLoading = isLoadingUsers || isLoadingCourse;
+  const visibleLessons = [...form.lessons].sort((a, b) => a.order_index - b.order_index);
+  const isLoading = isLoadingUsers;
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/courses')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><ChevronLeft size={18} /></button>
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{isEditing ? t('courses.modal.titleEdit') : t('courses.modal.titleCreate')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{isEditing ? form.title || t('courses.modal.titleEdit') : t('courses.create.subtitle')}</p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('courses.modal.titleCreate')}</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('courses.create.subtitle')}</p>
         </div>
       </div>
 
@@ -241,7 +169,7 @@ export default function CourseFormPage() {
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={() => navigate('/courses')} className="btn btn-secondary flex-1 justify-center">{t('courses.modal.cancel')}</button>
           <button type="submit" disabled={isSaving || isLoading} className="btn btn-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-            {isSaving ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : isEditing ? t('courses.modal.submitUpdate') : t('courses.modal.submitCreate')}
+            {isSaving ? <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t('courses.modal.submitCreate')}
           </button>
         </div>
       </form>

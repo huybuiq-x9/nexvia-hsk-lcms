@@ -37,7 +37,6 @@ export default function App() {
 
             <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
             <Route path="/courses/create" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
-            <Route path="/courses/edit/:courseId" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
             <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
 
             <Route path="/lessons" element={<ProtectedRoute><LessonsPage /></ProtectedRoute>} />
