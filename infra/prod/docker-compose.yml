@@ -39,7 +39,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - S3_ENDPOINT_URL=http://minio:9000
-      - S3_PUBLIC_URL=/minio
+      - S3_PUBLIC_URL=/minio/${S3_BUCKET_NAME:-lcms}
     depends_on:
       postgres:
         condition: service_healthy

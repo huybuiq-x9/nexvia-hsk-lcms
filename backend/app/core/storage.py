@@ -46,18 +46,18 @@ class StorageService:
                 self.client.create_bucket(Bucket=settings.S3_BUCKET_NAME)
                 self.client.put_bucket_policy(
                     Bucket=settings.S3_BUCKET_NAME,
-                    Policy="""{
+                    Policy=f"""{{
                         "Version": "2012-10-17",
                         "Statement": [
-                            {
+                            {{
                                 "Sid": "PublicReadGetObject",
                                 "Effect": "Allow",
                                 "Principal": "*",
                                 "Action": "s3:GetObject",
-                                "Resource": "arn:aws:s3:::lcms/*"
-                            }
+                                "Resource": "arn:aws:s3:::{settings.S3_BUCKET_NAME}/*"
+                            }}
                         ]
-                    }""",
+                    }}""",
                 )
             else:
                 raise LCMSException(
