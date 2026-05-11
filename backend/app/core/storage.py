@@ -23,14 +23,21 @@ class StorageService:
         if self._client is None:
             self._client = boto3.client(
                 "s3",
-                endpoint_url=settings.S3_ENDPOINT_URL,
+                endpoint_url=settings.S3_ENDPOINT_URL or None,
                 aws_access_key_id=settings.S3_ACCESS_KEY,
                 aws_secret_access_key=settings.S3_SECRET_KEY,
-                region_name="us-east-1",
+                region_name=settings.S3_REGION,
             )
         return self._client
 
+    @property
+    def _is_aws_s3(self) -> bool:
+        """True when not using a custom endpoint (MinIO/local stack)."""
+        return not bool(settings.S3_ENDPOINT_URL)
+
     def _ensure_bucket_exists(self) -> None:
+        if self._is_aws_s3:
+            return
         try:
             self.client.head_bucket(Bucket=settings.S3_BUCKET_NAME)
         except ClientError as e:
@@ -136,19 +143,14 @@ class StorageService:
             )
 
     def get_presigned_download_url(self, stored_name: str, expires_in: int = 3600) -> str:
-        """Generate a presigned URL for downloading a file (stored_name = full key)."""
-        try:
-            url = self.client.generate_presigned_url(
-                "get_object",
-                Params={
-                    "Bucket": settings.S3_BUCKET_NAME,
-                    "Key": stored_name,
-                },
-                ExpiresIn=expires_in,
-            )
-            return url
-        except ClientError:
-            return f"{settings.S3_PUBLIC_URL}/{stored_name}"
+        """
+        Return a public download URL for the file.
+        For MinIO (local dev): constructs a direct public URL since the bucket
+        policy allows anonymous GetObject. Presigned URLs would have their
+        signature broken when the endpoint (minio:9000) differs from the public
+        hostname (localhost:9000) that browsers use.
+        """
+        return f"{settings.S3_PUBLIC_URL}/{stored_name}"
 
     @staticmethod
     def guess_mime_type(filename: str) -> str:

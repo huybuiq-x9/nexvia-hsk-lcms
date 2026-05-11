@@ -72,7 +72,7 @@ fi
 
 # Docker compose files
 BASE_FILE="$PROJECT_ROOT/infra/common/docker-compose.base.yml"
-ENV_FILE_COMPOSE="$PROJECT_ROOT/infra/$ENV/docker-compose.$ENV.yml"
+ENV_FILE_COMPOSE="$PROJECT_ROOT/infra/$ENV/docker-compose.yml"
 
 echo ""
 log_info "Stopping $ENV environment..."

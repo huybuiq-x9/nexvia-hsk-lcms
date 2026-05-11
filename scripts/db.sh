@@ -87,7 +87,7 @@ fi
 ENV_FILE="$PROJECT_ROOT/infra/$ENV/.env"
 ENV_EXAMPLE="$PROJECT_ROOT/infra/$ENV/.env.example"
 BASE_FILE="$PROJECT_ROOT/infra/common/docker-compose.base.yml"
-ENV_FILE_COMPOSE="$PROJECT_ROOT/infra/$ENV/docker-compose.$ENV.yml"
+ENV_FILE_COMPOSE="$PROJECT_ROOT/infra/$ENV/docker-compose.yml"
 
 if [[ ! -f "$ENV_FILE" ]]; then
     if [[ -f "$ENV_EXAMPLE" ]]; then

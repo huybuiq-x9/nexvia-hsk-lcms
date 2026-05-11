@@ -12,16 +12,16 @@ infra/
 │   ├── Dockerfile.frontend         # Build frontend React Vite (prod/staging/test)
 │   └── Dockerfile.frontend.dev     # Build frontend dev (Vite HMR)
 ├── dev/
-│   ├── docker-compose.dev.yml
+│   ├── docker-compose.yml
 │   └── .env.example
 ├── test/
 │   ├── docker-compose.test.yml
 │   └── .env.example
 ├── staging/
-│   ├── docker-compose.staging.yml
+│   ├── docker-compose.yml
 │   └── .env.example
 └── prod/
-    ├── docker-compose.prod.yml
+    ├── docker-compose.yml
     └── .env.example
 ```
 
@@ -35,7 +35,7 @@ cp infra/dev/.env.example infra/dev/.env
 docker compose \
   --project-directory infra/dev \
   -f infra/common/docker-compose.base.yml \
-  -f infra/dev/docker-compose.dev.yml \
+  -f infra/dev/docker-compose.yml \
   up -d --build
 ```
 
@@ -71,7 +71,7 @@ cp infra/staging/.env.example infra/staging/.env
 docker compose \
   --project-directory infra/staging \
   -f infra/common/docker-compose.base.yml \
-  -f infra/staging/docker-compose.staging.yml \
+  -f infra/staging/docker-compose.yml \
   up -d --build
 ```
 
@@ -84,7 +84,7 @@ cp infra/prod/.env.example infra/prod/.env
 docker compose \
   --project-directory infra/prod \
   -f infra/common/docker-compose.base.yml \
-  -f infra/prod/docker-compose.prod.yml \
+  -f infra/prod/docker-compose.yml \
   up -d --build
 ```
 
@@ -111,13 +111,13 @@ docker compose \
 
 ```bash
 # Xem logs
-docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.dev.yml logs -f
+docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.yml logs -f
 
 # Stop services
-docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.dev.yml down
+docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.yml down
 
 # Rebuild
-docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.dev.yml up -d --build
+docker compose --project-directory infra/dev -f infra/common/docker-compose.base.yml -f infra/dev/docker-compose.yml up -d --build
 
 # Run migrations
 ./scripts/db.sh -e test migrate

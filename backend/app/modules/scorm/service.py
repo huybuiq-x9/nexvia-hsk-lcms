@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from io import BytesIO
 from xml.etree.ElementTree import ParseError
 
-import boto3
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
 from sqlalchemy import func, select
@@ -34,20 +33,9 @@ MAX_SCORM_SIZE = 500 * 1024 * 1024
 
 
 class ScormService:
-    def __init__(self):
-        self._client = None
-
     @property
     def client(self):
-        if self._client is None:
-            self._client = boto3.client(
-                "s3",
-                endpoint_url=settings.S3_ENDPOINT_URL,
-                aws_access_key_id=settings.S3_ACCESS_KEY,
-                aws_secret_access_key=settings.S3_SECRET_KEY,
-                region_name="us-east-1",
-            )
-        return self._client
+        return storage_service.client
 
     async def _get_sublesson_orm(self, db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
         result = await db.execute(select(SubLesson).where(SubLesson.id == sublesson_id))

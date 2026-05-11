@@ -270,7 +270,7 @@ Nhờ vậy luồng dev tránh lỗi CORS do browser gọi trực tiếp `localh
 docker compose \
   --project-directory infra/dev \
   -f infra/common/docker-compose.base.yml \
-  -f infra/dev/docker-compose.dev.yml \
+  -f infra/dev/docker-compose.yml \
   up -d --build
 ```
 
@@ -296,7 +296,7 @@ Nếu backend không nhận env mới sau khi sửa compose:
 docker compose \
   --project-directory infra/dev \
   -f infra/common/docker-compose.base.yml \
-  -f infra/dev/docker-compose.dev.yml \
+  -f infra/dev/docker-compose.yml \
   up -d --force-recreate backend
 ```
 
@@ -306,7 +306,7 @@ Nếu frontend vẫn gọi `localhost:8000`, recreate frontend:
 docker compose \
   --project-directory infra/dev \
   -f infra/common/docker-compose.base.yml \
-  -f infra/dev/docker-compose.dev.yml \
+  -f infra/dev/docker-compose.yml \
   up -d --force-recreate frontend
 ```
 

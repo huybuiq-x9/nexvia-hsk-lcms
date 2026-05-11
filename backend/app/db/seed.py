@@ -69,14 +69,9 @@ LESSON_TOPICS: dict[int, list[str]] = {
 
 SUB_LESSON_STATUSES = [
     SubLessonStatus.DRAFT,
-    SubLessonStatus.IN_PROGRESS,
-    SubLessonStatus.REVIEWING,
-    SubLessonStatus.CONVERTING,
-    SubLessonStatus.SCORM_REVIEWING,
-    SubLessonStatus.APPROVED,
 ]
 
-LESSON_STATUSES = [LessonStatus.DRAFT, LessonStatus.IN_PROGRESS, LessonStatus.APPROVED]
+LESSON_STATUSES = [LessonStatus.DRAFT]
 
 _SUB_LESSON_ORDER = list(SubLessonStatus)
 
@@ -135,7 +130,7 @@ COURSES = [
             "Khóa học HSK cấp độ 2, mở rộng vốn từ vựng lên 800+ từ "
             "và các cấu trúc ngữ pháp phức tạp hơn."
         ),
-        "status": CourseStatus.IN_PROGRESS,
+        "status": CourseStatus.DRAFT,
         "expert_email": "expert02@nexedu.vn",
         "lessons": [
             _make_lesson(2, i, t)
@@ -148,7 +143,7 @@ COURSES = [
             "Khóa học HSK cấp độ 3, hoàn thành 1200+ từ vựng "
             "và khả năng giao tiếp lưu loát trong các tình huống hàng ngày."
         ),
-        "status": CourseStatus.PUBLISHED,
+        "status": CourseStatus.DRAFT,
         "expert_email": "expert03@nexedu.vn",
         "lessons": [
             _make_lesson(3, i, t)
