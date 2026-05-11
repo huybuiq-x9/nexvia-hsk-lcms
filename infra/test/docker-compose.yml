@@ -69,6 +69,7 @@ services:
   # ─── MinIO Console (exposed for test) ───────────────────────
   minio:
     ports:
+      - "9000:9000"
       - "9001:9001"
 
   # ─── Expose PostgreSQL port for test ────────────────────────
