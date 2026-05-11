@@ -3,6 +3,7 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 from io import BytesIO
+from urllib.parse import unquote, urlsplit
 from xml.etree.ElementTree import ParseError
 
 from botocore.exceptions import ClientError
@@ -101,12 +102,11 @@ class ScormService:
                     info = parse_imsmanifest(manifest_text)
                 except ParseError:
                     raise LCMSException("Invalid imsmanifest.xml", status_code=400)
-                if not info.get("sco_launch"):
-                    html_candidates = [
-                        name for name in names
-                        if name.lower().endswith((".html", ".htm"))
-                    ]
-                    info["sco_launch"] = html_candidates[0] if html_candidates else ""
+                info["sco_launch"] = self._resolve_launch_path(
+                    info.get("sco_launch") or "",
+                    manifest_name,
+                    names,
+                )
 
                 version = (info.get("schema_version") or "").lower()
                 if "2004" not in version and "1.3" not in version:
@@ -223,10 +223,60 @@ class ScormService:
             raise NotFoundError("SCORM package", str(sublesson.id))
 
     def _normalize_path(self, file_path: str) -> str:
-        normalized = posixpath.normpath(file_path).lstrip("/")
+        path = unquote(urlsplit(file_path).path).replace("\\", "/")
+        normalized = posixpath.normpath(path).lstrip("/")
         if normalized == "." or normalized.startswith("../"):
             raise ForbiddenError("Invalid SCORM file path")
         return normalized
+
+    def _resolve_launch_path(self, launch_path: str, manifest_name: str, names: list[str]) -> str:
+        if launch_path:
+            normalized_launch = self._normalize_path(launch_path)
+            resolved_launch = self._resolve_zip_member(normalized_launch, names, manifest_name)
+            if resolved_launch:
+                return resolved_launch
+
+        manifest_dir = posixpath.dirname(manifest_name)
+        html_candidates = [
+            name for name in names
+            if name.lower().endswith((".html", ".htm"))
+        ]
+        if manifest_dir:
+            manifest_dir_prefix = f"{manifest_dir}/"
+            scoped_candidates = [
+                name for name in html_candidates
+                if name.startswith(manifest_dir_prefix)
+            ]
+            if scoped_candidates:
+                return scoped_candidates[0]
+        return html_candidates[0] if html_candidates else ""
+
+    def _resolve_zip_member(
+        self,
+        normalized_path: str,
+        names: list[str] | set[str],
+        manifest_name: str | None = None,
+    ) -> str | None:
+        names_set = set(names)
+        if normalized_path in names_set:
+            return normalized_path
+
+        if not manifest_name:
+            manifest_name = next(
+                (name for name in names_set if name.lower().endswith("imsmanifest.xml")),
+                None,
+            )
+        if not manifest_name:
+            return None
+
+        manifest_dir = posixpath.dirname(manifest_name)
+        if not manifest_dir:
+            return None
+
+        candidate = posixpath.normpath(posixpath.join(manifest_dir, normalized_path))
+        if candidate.startswith("../"):
+            return None
+        return candidate if candidate in names_set else None
 
     def get_package_info_from_sublesson(
         self,
@@ -248,9 +298,10 @@ class ScormService:
                 except ParseError:
                     raise LCMSException("Invalid imsmanifest.xml", status_code=400)
 
-            launch = info.get("sco_launch") or next(
-                (name for name in names if name.lower().endswith((".html", ".htm"))),
-                "",
+            launch = self._resolve_launch_path(
+                info.get("sco_launch") or "",
+                manifest_name,
+                names,
             )
 
         return ScormPackageInfo(
@@ -343,14 +394,15 @@ class ScormService:
         normalized_path = self._normalize_path(file_path)
 
         with self._read_zip(stored_name) as zf:
-            names = set(zf.namelist())
-            if normalized_path not in names:
+            names = set(name for name in zf.namelist() if not name.endswith("/"))
+            resolved_path = self._resolve_zip_member(normalized_path, names)
+            if not resolved_path:
                 raise NotFoundError("SCORM file", normalized_path)
-            raw_content = zf.read(normalized_path)
+            raw_content = zf.read(resolved_path)
 
-        content_type = self._content_type(normalized_path)
-        if normalized_path.lower().endswith((".html", ".htm")):
-            raw_content = self._inject_runtime(raw_content, normalized_path, asset_base_url)
+        content_type = self._content_type(resolved_path)
+        if resolved_path.lower().endswith((".html", ".htm")):
+            raw_content = self._inject_runtime(raw_content, resolved_path, asset_base_url)
             content_type = "text/html; charset=utf-8"
         return raw_content, content_type
 
@@ -461,7 +513,7 @@ class ScormService:
     def _inject_runtime(self, raw_content: bytes, file_path: str, asset_base_url: str) -> bytes:
         html = raw_content.decode("utf-8", errors="ignore")
         base_dir = posixpath.dirname(file_path)
-        base_href = asset_base_url
+        base_href = f"{asset_base_url.rstrip('/')}/"
         if base_dir:
             base_href = f"{asset_base_url.rstrip('/')}/{base_dir}/"
 

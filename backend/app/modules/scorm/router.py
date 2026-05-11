@@ -112,8 +112,7 @@ async def get_scorm_file(
     db: Annotated[AsyncSession, Depends(get_db)],
     path: str = Query(..., description="File path within the SCORM package"),
 ) -> Response:
-    root_url = str(request.base_url).rstrip("/")
-    asset_base_url = f"{root_url}/api/v1/scorm/preview/{sublesson_id}/file"
+    asset_base_url = f"/api/v1/scorm/preview/{sublesson_id}/file"
     content, content_type = await scorm_service.get_file_content(
         db,
         sublesson_id,
@@ -138,8 +137,7 @@ async def get_scorm_asset(
     current_user = await _user_from_access_token(access_token, db)
     await scorm_view_access_to_sublesson(sublesson_id, current_user, db)
 
-    root_url = str(request.base_url).rstrip("/")
-    asset_base_url = f"{root_url}/api/v1/scorm/preview/{sublesson_id}/asset/{access_token}"
+    asset_base_url = f"/api/v1/scorm/preview/{sublesson_id}/asset/{access_token}"
     content, content_type = await scorm_service.get_file_content(
         db,
         sublesson_id,
