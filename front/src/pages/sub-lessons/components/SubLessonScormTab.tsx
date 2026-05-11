@@ -32,9 +32,9 @@ export function SubLessonScormTab({
   const { t } = useTranslation();
   const toast = useToast();
   const [info, setInfo] = useState<ApiScormPackageInfo | null>(null);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<ApiScormComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
@@ -50,21 +50,6 @@ export function SubLessonScormTab({
   const reuploadInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    scormService.getPackageInfo(subLessonId)
-      .then(data => {
-        if (mounted) setInfo(data);
-      })
-      .catch(() => {
-        if (mounted) setInfo(null);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => { mounted = false; };
-  }, [subLessonId]);
-
-  useEffect(() => {
     const runtime = createScormPreviewRuntime(setRuntimeSnapshot);
     return () => runtime.dispose();
   }, []);
@@ -72,6 +57,29 @@ export function SubLessonScormTab({
   const launchUrl = info?.sco_launch
     ? scormService.buildLaunchUrl(subLessonId, info.sco_launch)
     : null;
+
+  const openPreview = async () => {
+    if (!canPreview) return;
+    if (info) {
+      setShowPreview(true);
+      return;
+    }
+    setPreviewLoading(true);
+    try {
+      const data = await scormService.getPackageInfo(subLessonId);
+      setInfo(data);
+      setShowPreview(true);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        toast.error(t('courses.noScorm'));
+      } else {
+        toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
+      }
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const uploadScormFile = async (file: File, successMessage: string) => {
     setUploading(true);
@@ -149,14 +157,6 @@ export function SubLessonScormTab({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {canUpload && !info && (
@@ -210,13 +210,20 @@ export function SubLessonScormTab({
                     )}
                   </button>
                 )}
-                {canPreview && launchUrl && (
+                {canPreview && (
                   <button
-                    onClick={() => setShowPreview(true)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
+                    onClick={openPreview}
+                    disabled={previewLoading}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
                     title={t('documents.preview')}
                   >
-                    <Eye size={14} />
+                    {previewLoading ? (
+                      <span className="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    ) : launchUrl ? (
+                      <Eye size={14} />
+                    ) : (
+                      <Eye size={14} className="opacity-30" />
+                    )}
                   </button>
                 )}
                 {canUpload && (
