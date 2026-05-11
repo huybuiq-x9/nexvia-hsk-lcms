@@ -15,7 +15,7 @@ infra/
 │   ├── docker-compose.yml
 │   └── .env.example
 ├── test/
-│   ├── docker-compose.test.yml
+│   ├── docker-compose.yml
 │   └── .env.example
 ├── staging/
 │   ├── docker-compose.yml
@@ -54,7 +54,7 @@ cp infra/test/.env.example infra/test/.env
 docker compose \
   --project-directory infra/test \
   -f infra/common/docker-compose.base.yml \
-  -f infra/test/docker-compose.test.yml \
+  -f infra/test/docker-compose.yml \
   up -d --build
 ```
 
