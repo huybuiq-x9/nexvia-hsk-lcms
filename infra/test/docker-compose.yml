@@ -19,6 +19,8 @@ services:
         condition: service_healthy
       frontend:
         condition: service_healthy
+      minio:
+        condition: service_healthy
 
   # ─── Backend API ────────────────────────────────────────────
   backend:
@@ -36,6 +38,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - S3_ENDPOINT_URL=http://minio:9000
+      - S3_PUBLIC_URL=/minio
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,11 +69,27 @@ services:
       timeout: 5s
       retries: 3
 
-  # ─── MinIO Console (exposed for test) ───────────────────────
+  # ─── MinIO (accessed via nginx proxy at /minio/) ────────────
   minio:
     ports:
-      - "9000:9000"
       - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: lcms_redis_test
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ─── Expose PostgreSQL port for test ────────────────────────
   postgres:
