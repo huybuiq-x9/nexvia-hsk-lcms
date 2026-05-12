@@ -2,7 +2,7 @@ from datetime import datetime
 import uuid
 from typing import Annotated
 from pydantic import BaseModel, Field, ConfigDict
-from app.shared.enums import CourseStatus, LessonStatus, SubLessonStatus
+from app.shared.enums import CourseStatus, LessonStatus, ReviewAction, SubLessonStatus
 
 
 class SubLessonBase(BaseModel):
@@ -170,7 +170,7 @@ class SubLessonListItem(BaseModel):
 
 
 class SubLessonReviewRequest(BaseModel):
-    action: Annotated[str, Field(pattern="^(approve|reject)$")]
+    action: ReviewAction
 
 
 class SubLessonListResponse(BaseModel):

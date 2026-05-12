@@ -12,58 +12,73 @@ from app.core.deps import (
     TeacherSubmitAccessToSubLesson,
     get_db,
 )
-from app.modules.courses import service, schema as course_schema
+from app.modules.courses import schema as course_schema
+from app.modules.courses.service import CourseService, LessonService, SubLessonService
 from app.shared.enums import LessonStatus, SubLessonStatus
 
 router = APIRouter()
 
 
+def get_course_service(db: Annotated[AsyncSession, Depends(get_db)]) -> CourseService:
+    return CourseService(db)
+
+
+def get_lesson_service(db: Annotated[AsyncSession, Depends(get_db)]) -> LessonService:
+    return LessonService(db)
+
+
+def get_sublesson_service(db: Annotated[AsyncSession, Depends(get_db)]) -> SubLessonService:
+    return SubLessonService(db)
+
+
+# ─── Course Routes ───────────────────────────────────────────────────────────────
+
 @router.get("/", response_model=course_schema.CourseListResponse)
 async def list_courses(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CourseService, Depends(get_course_service)],
     current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
 ):
-    return await service.list_courses(db, current_user, skip, limit, search)
+    return await service.list(current_user, skip, limit, search)
 
 
 @router.get("/{course_id}", response_model=course_schema.CourseWithLessonsResponse)
 async def get_course(
     course_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CourseService, Depends(get_course_service)],
     current_user: CurrentUser,
 ):
-    return await service.get_course(db, current_user, course_id)
+    return await service.get(current_user, course_id)
 
 
 @router.post("/", response_model=course_schema.CourseWithLessonsResponse, status_code=201)
 async def create_course(
     data: course_schema.CourseCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CourseService, Depends(get_course_service)],
     current_user: AdminOnly,
 ):
-    return await service.create_course(db, data, current_user.id)
+    return await service.create(data, current_user.id)
 
 
 @router.patch("/{course_id}", response_model=course_schema.CourseResponse)
 async def update_course(
     course_id: uuid.UUID,
     data: course_schema.CourseUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CourseService, Depends(get_course_service)],
     current_user: AdminOnly,
 ):
-    return await service.update_course(db, course_id, data)
+    return await service.update(course_id, data)
 
 
 @router.delete("/{course_id}", status_code=204)
 async def delete_course(
     course_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CourseService, Depends(get_course_service)],
     current_user: AdminOnly,
 ):
-    await service.delete_course(db, course_id)
+    await service.delete(course_id)
 
 
 # ─── Standalone Lessons List ───────────────────────────────────────────────────
@@ -73,7 +88,7 @@ async def delete_course(
     response_model=course_schema.LessonListResponse,
 )
 async def list_lessons(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -81,10 +96,10 @@ async def list_lessons(
     course_id: uuid.UUID | None = None,
     status: LessonStatus | None = None,
 ):
-    return await service.list_lessons(db, current_user, skip, limit, search, course_id, status)
+    return await service.list(current_user, skip, limit, search, course_id, status)
 
 
-# ─── Lesson routes (nested under course) ──────────────────────────────────────
+# ─── Lesson Routes (nested under course) ──────────────────────────────────────
 
 @router.get(
     "/lessons/{lesson_id}",
@@ -92,10 +107,10 @@ async def list_lessons(
 )
 async def get_lesson(
     lesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: CurrentUser,
 ):
-    return await service.get_lesson(db, lesson_id)
+    return await service.get(lesson_id)
 
 
 @router.post(
@@ -106,39 +121,39 @@ async def get_lesson(
 async def create_lesson(
     course_id: uuid.UUID,
     data: course_schema.LessonCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: AdminOnly,
 ):
-    return await service.create_lesson(db, course_id, data)
+    return await service.create(course_id, data)
 
 
 @router.patch("/lessons/{lesson_id}", response_model=course_schema.LessonResponse)
 async def update_lesson(
     lesson_id: uuid.UUID,
     data: course_schema.LessonUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: TeacherAssignedToLesson,
 ):
-    return await service.update_lesson(db, lesson_id, data)
+    return await service.update(lesson_id, data)
 
 
 @router.patch("/lessons/{lesson_id}/assign", response_model=course_schema.LessonResponse)
 async def assign_lesson(
     lesson_id: uuid.UUID,
     data: course_schema.LessonAssignRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: AdminOnly,
 ):
-    return await service.assign_lesson(db, lesson_id, data)
+    return await service.assign(lesson_id, data)
 
 
 @router.delete("/lessons/{lesson_id}", status_code=204)
 async def delete_lesson(
     lesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[LessonService, Depends(get_lesson_service)],
     current_user: TeacherAssignedToLesson,
 ):
-    await service.delete_lesson(db, lesson_id)
+    await service.delete(lesson_id)
 
 
 # ─── Standalone SubLessons List ───────────────────────────────────────────────
@@ -148,7 +163,7 @@ async def delete_lesson(
     response_model=course_schema.SubLessonListResponse,
 )
 async def list_sub_lessons(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -157,10 +172,10 @@ async def list_sub_lessons(
     lesson_id: uuid.UUID | None = None,
     status: SubLessonStatus | None = None,
 ):
-    return await service.list_sub_lessons(db, current_user, skip, limit, search, course_id, lesson_id, status)
+    return await service.list(current_user, skip, limit, search, course_id, lesson_id, status)
 
 
-# ─── SubLesson routes ─────────────────────────────────────────────────────────
+# ─── SubLesson Routes ─────────────────────────────────────────────────────────
 
 @router.get(
     "/sub-lessons/{sublesson_id}",
@@ -168,10 +183,10 @@ async def list_sub_lessons(
 )
 async def get_sublesson(
     sublesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: CurrentUser,
 ):
-    return await service.get_sublesson(db, sublesson_id)
+    return await service.get(sublesson_id)
 
 
 @router.get(
@@ -180,10 +195,10 @@ async def get_sublesson(
 )
 async def list_sublesson_review_logs(
     sublesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToSubLesson,
 ):
-    return await service.list_sublesson_review_logs(db, sublesson_id)
+    return await service.list_review_logs(sublesson_id)
 
 
 @router.post(
@@ -194,10 +209,10 @@ async def list_sublesson_review_logs(
 async def create_sublesson(
     lesson_id: uuid.UUID,
     data: course_schema.SubLessonCreate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToLesson,
 ):
-    return await service.create_sublesson(db, lesson_id, data)
+    return await service.create(lesson_id, data)
 
 
 @router.patch(
@@ -206,19 +221,19 @@ async def create_sublesson(
 async def update_sublesson(
     sublesson_id: uuid.UUID,
     data: course_schema.SubLessonUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToSubLesson,
 ):
-    return await service.update_sublesson(db, sublesson_id, data)
+    return await service.update(sublesson_id, data)
 
 
 @router.delete("/sub-lessons/{sublesson_id}", status_code=204)
 async def delete_sublesson(
     sublesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToSubLesson,
 ):
-    await service.delete_sublesson(db, sublesson_id)
+    await service.delete(sublesson_id)
 
 
 @router.post(
@@ -228,11 +243,10 @@ async def delete_sublesson(
 async def delete_sublesson_batch(
     lesson_id: uuid.UUID,
     ids: list[uuid.UUID],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToLesson,
 ):
-    for sublesson_id in ids:
-        await service.delete_sublesson(db, sublesson_id)
+    await service.delete_batch(lesson_id, ids)
 
 
 @router.post(
@@ -241,10 +255,10 @@ async def delete_sublesson_batch(
 )
 async def submit_sublesson(
     sublesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherSubmitAccessToSubLesson,
 ):
-    return await service.submit_sublesson(db, sublesson_id, current_user.id)
+    return await service.submit(sublesson_id, current_user.id)
 
 
 @router.post(
@@ -254,10 +268,10 @@ async def submit_sublesson(
 async def review_sublesson(
     sublesson_id: uuid.UUID,
     data: course_schema.SubLessonReviewRequest,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: ExpertAssignedToSubLesson,
 ):
-    return await service.review_sublesson(db, sublesson_id, data.action, current_user.id)
+    return await service.review(sublesson_id, data.action, current_user.id)
 
 
 @router.post(
@@ -266,8 +280,8 @@ async def review_sublesson(
 )
 async def submit_scorm_sublesson(
     sublesson_id: uuid.UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: ConverterSubmitAccessToSubLesson,
 ):
     """Converter gửi SCORM đã upload để Expert review lần 2."""
-    return await service.submit_scorm_sublesson(db, sublesson_id, current_user.id)
+    return await service.submit_scorm(sublesson_id, current_user.id)
