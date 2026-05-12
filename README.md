@@ -2,7 +2,7 @@
 
 Learning Content Management System gồm:
 
-- Backend: FastAPI, Alembic, PostgreSQL, Redis, MinIO
+- Backend: FastAPI, Alembic, PostgreSQL, Redis, AWS S3
 - Frontend: React, TypeScript, Vite
 - Infra: Docker Compose theo từng môi trường
 
@@ -78,7 +78,6 @@ Sau đó mở:
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000/api/v1`
 - Swagger: `http://localhost:8000/docs`
-- MinIO Console: `http://localhost:9001`
 
 Tài khoản seed mặc định:
 
@@ -203,7 +202,7 @@ Dừng và xoá volumes/data:
 ./scripts/stop.sh -e dev --remove-volumes
 ```
 
-Lệnh `--remove-volumes` sẽ xoá dữ liệu PostgreSQL/MinIO/Redis của môi trường đó.
+Lệnh `--remove-volumes` sẽ xoá dữ liệu PostgreSQL/Redis của môi trường đó.
 
 ## Deploy Test/Staging/Production
 
@@ -217,10 +216,10 @@ Sửa các giá trị thật trong `.env`, đặc biệt:
 
 ```text
 POSTGRES_PASSWORD
-MINIO_ROOT_PASSWORD
 SECRET_KEY
 DOMAIN
 SMTP_*
+AWS_S3_*
 ```
 
 Deploy:

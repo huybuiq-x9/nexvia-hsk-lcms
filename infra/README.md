@@ -5,7 +5,7 @@
 ```
 infra/
 ├── common/
-│   ├── docker-compose.base.yml     # Services chung: postgres, redis, minio
+│   ├── docker-compose.base.yml     # Shared services: postgres, redis, s3
 │   ├── nginx.conf                  # Nginx reverse proxy config
 │   ├── Dockerfile.backend          # Build backend FastAPI (prod/staging/test)
 │   ├── Dockerfile.backend.dev     # Build backend dev (volume mount, no code copy)
@@ -44,7 +44,6 @@ docker compose \
 - FastAPI docs: `http://localhost:8000/docs`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
-- MinIO Console: `localhost:9001`
 
 ### Test (trên Google Cloud VM)
 
@@ -61,7 +60,6 @@ docker compose \
 - App: `http://VM_IP/`
 - Backend API: `http://VM_IP/api/v1`
 - FastAPI docs: `http://VM_IP/docs`
-- MinIO Console: `http://VM_IP:9001`
 
 ### Staging
 
@@ -96,7 +94,6 @@ docker compose \
 | Frontend | Vite HMR :5173 | Nginx build | Nginx build | Nginx build |
 | DB expose port | ✅ 5432 | ✅ 5432 | ❌ | ❌ |
 | Redis expose port | ✅ 6379 | ❌ | ❌ | ❌ |
-| Minio console | ✅ 9001 | ✅ 9001 | ❌ | ❌ |
 | FastAPI /docs | ✅ | ✅ | ✅ | ❌ |
 | Nginx | ❌ | ✅ | ✅ | ✅ |
 | HTTPS/SSL | ❌ | ❌ | ❌ | ✅ |

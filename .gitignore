@@ -48,7 +48,6 @@ pnpm-debug.log*
 
 # Local service data
 postgres_data/
-minio_data/
 
 # Zone identifier files from Windows downloads
 *:Zone.Identifier

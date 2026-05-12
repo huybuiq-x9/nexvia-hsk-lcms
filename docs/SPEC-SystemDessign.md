@@ -229,12 +229,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str  # postgresql+asyncpg://user:pass@host/dbname
 
-    # S3 / MinIO
-    S3_ENDPOINT_URL: str
+    # S3
+    S3_REGION: str
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET_NAME: str
-    S3_PUBLIC_URL: str
 
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:5173"]

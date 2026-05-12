@@ -39,4 +39,3 @@ pnpm-debug.log*
 
 # Local service data
 postgres_data/
-minio_data/

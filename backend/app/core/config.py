@@ -11,14 +11,11 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lcms"
 
-    # ─── S3 / MinIO ─────────────────────────────────────────────────────────────────
-    # Leave S3_ENDPOINT_URL empty to use AWS S3. Set to MinIO URL for local dev.
-    S3_ENDPOINT_URL: str = "http://localhost:9000"
+    # ─── AWS S3 ─────────────────────────────────────────────────────────────
     S3_REGION: str = "us-east-1"
-    S3_ACCESS_KEY: str = "minioadmin"
-    S3_SECRET_KEY: str = "minioadmin"
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
     S3_BUCKET_NAME: str = "lcms"
-    S3_PUBLIC_URL: str = "http://localhost:9000/lcms"
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173"]
 

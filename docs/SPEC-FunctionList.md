@@ -127,7 +127,7 @@ Course (Khóa học HSK)
 - **Có thể upload nhiều tài liệu** cho mỗi Sub-Lesson (ví dụ: bài giảng + bài tập + từ vựng)
 - Hỗ trợ định dạng: `.pptx`, `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls`, `.ppt`
 - Mỗi tài liệu có metadata: tên file, loại file, kích thước, người upload, ngày upload
-- Tài liệu được lưu trên file storage (S3 / MinIO)
+- Tài liệu được lưu trên file storage (S3)
 
 **3.3.3 Tạo ngân hàng câu hỏi (Question Bank)**
 

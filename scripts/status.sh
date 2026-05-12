@@ -91,7 +91,7 @@ echo ""
 
 # Volumes info
 echo -e "${YELLOW}Volumes:${NC}"
-for vol in postgres_data minio_data redis_data; do
+for vol in postgres_data redis_data; do
     full_vol="${VOLUME_PREFIX}${vol}"
     if docker volume ls -q | grep -q "^${full_vol}$"; then
         size=$(docker volume inspect "$full_vol" --format '{{.UsageData.Size}}' 2>/dev/null || echo "unknown")

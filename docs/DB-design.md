@@ -321,7 +321,7 @@ CREATE TABLE sub_lessons (
 | `sub_lesson_id` | `UUID` | FK → sub_lessons.id, NN | |
 | `uploaded_by` | `UUID` | FK → users.id, NN | Teacher upload |
 | `file_name` | `VARCHAR(500)` | NN | Tên file gốc. VD: `bai-giang-gia-dinh.pptx` |
-| `file_url` | `TEXT` | NN | S3 / MinIO URL |
+| `file_url` | `TEXT` | NN | S3 URL |
 | `file_type` | `VARCHAR(10)` | NN | `pptx` \| `pdf` \| `docx` \| `doc` \| `xlsx` \| `xls` \| `ppt` |
 | `file_size` | `BIGINT` | NN | Bytes |
 | `order_index` | `INTEGER` | NN | Thứ tự file trong sub-lesson |

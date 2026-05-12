@@ -27,15 +27,14 @@ usage() {
     echo ""
     echo "Options:"
     echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
-    echo "  -t, --target <target> Volume cần xóa: all, postgres, minio, redis (default: all)"
+    echo "  -t, --target <target> Volume cần xóa: all, postgres, redis (default: all)"
     echo "  --force               Bỏ qua bước xác nhận yes/no"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
     echo "  $0 -e dev -t all             # xóa tất cả (có confirm)"
-    echo "  $0 -e test -t postgres       # chỉ xóa DB"
-    echo "  $0 -e test -t minio          # chỉ xóa file storage"
-    echo "  $0 -e test -t redis          # chỉ xóa cache"
+echo "  $0 -e test -t postgres       # chỉ xóa DB"
+echo "  $0 -e test -t redis          # chỉ xóa cache"
     echo "  $0 -e dev -t all --force     # xóa tất cả, không hỏi"
 }
 
@@ -83,15 +82,14 @@ if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
 fi
 
 # Validate target
-if [[ ! "$TARGET" =~ ^(all|postgres|minio|redis)$ ]]; then
-    log_error "Invalid target: $TARGET (must be: all, postgres, minio, redis)"
+if [[ ! "$TARGET" =~ ^(all|postgres|redis)$ ]]; then
+    log_error "Invalid target: $TARGET (must be: all, postgres, redis)"
     exit 1
 fi
 
 # Volume names based on environment
 VOLUME_PREFIX="lcms_${ENV}_"
 POSTGRES_VOLUME="${VOLUME_PREFIX}postgres_data"
-MINIO_VOLUME="${VOLUME_PREFIX}minio_data"
 REDIS_VOLUME="${VOLUME_PREFIX}redis_data"
 
 echo ""
@@ -125,16 +123,11 @@ case "$TARGET" in
     all)
         log_warn "Removing ALL volumes..."
         remove_volume "$POSTGRES_VOLUME"
-        remove_volume "$MINIO_VOLUME"
         remove_volume "$REDIS_VOLUME"
         ;;
     postgres)
         log_warn "Removing PostgreSQL volume..."
         remove_volume "$POSTGRES_VOLUME"
-        ;;
-    minio)
-        log_warn "Removing MinIO volume..."
-        remove_volume "$MINIO_VOLUME"
         ;;
     redis)
         log_warn "Removing Redis volume..."
