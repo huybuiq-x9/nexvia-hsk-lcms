@@ -31,6 +31,24 @@ Default admin credentials:
 - Email: `admin@nexedu.vn`
 - Password: `Admin123@`
 
+## Docker DB Scripts
+
+Run migrations or seed data through Docker Compose with the target environment:
+
+```bash
+# Migrate database
+../scripts/db.sh -e dev migrate
+
+# Seed demo data
+../scripts/db.sh -e dev seed
+
+# Migrate, then seed
+../scripts/db.sh -e dev all
+
+# Use a specific Alembic revision
+../scripts/db.sh -e staging migrate -r head
+```
+
 ## API Documentation
 
 - Swagger UI: http://localhost:8000/docs

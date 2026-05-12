@@ -1,0 +1,83 @@
+# ============================================================
+# Docker Compose - Staging Environment
+# Production-like but with debug enabled
+# ============================================================
+
+services:
+  # ─── Nginx Reverse Proxy ─────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: lcms_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../common/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ─── Backend API ────────────────────────────────────────────
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.backend
+    container_name: lcms_backend_staging
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lcms}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_PUBLIC_URL=/minio/${S3_BUCKET_NAME:-lcms}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
+    container_name: lcms_frontend_staging
+    restart: unless-stopped
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── MinIO (accessed via nginx proxy at /minio/) ────────────
+  minio:
+    ports:
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── Redis

@@ -1,0 +1,59 @@
+# ============================================================
+# Docker Compose - Development Environment
+# Hot reload enabled for both backend and frontend
+# ============================================================
+
+services:
+  # ─── Backend API ────────────────────────────────────────────
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.backend.dev
+    container_name: lcms_backend_dev
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lcms}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_REGION=us-east-1
+    volumes:
+      - ../../backend:/app
+    ports:
+      - "8000:8000"
+
+  # ─── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.frontend.dev
+    container_name: lcms_frontend_dev
+    env_file:
+      - .env
+    environment:
+      - VITE_API_BASE_URL=/api/v1
+      - VITE_DEV_PROXY_TARGET=http://backend:8000
+    volumes:
+      - ../../front:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+
+  # ─── MinIO (API: 9000, Console: 9001) ─────────────────────
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  # ─── Expose PostgreSQL port for dev ─────────────────────────
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # ─── Expose Redis port for dev ──────────────────────────────
+  redis:
+    ports:
+      - "6379:6379"

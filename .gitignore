@@ -5,6 +5,10 @@
 !.env.example
 *.local
 
+# Infrastructure environment files (per environment)
+infra/**/.env
+infra/**/.env.local
+
 # Python virtual environments
 .venv/
 venv/
