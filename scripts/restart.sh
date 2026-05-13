@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-ENV=""
+ENV="dev"
 SERVICE=""
 RELOAD=false
 
@@ -20,15 +20,18 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env> [options]"
+    echo "Usage: $0 [-e <env>] [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  -s, --service <svc>   Tên service cụ thể (bỏ trống = restart tất cả)"
     echo "  -r, --reload          Recreate container để load .env mới"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
+    echo "  $0                         # restart tất cả (dev)"
     echo "  $0 -e dev                  # restart tất cả"
     echo "  $0 -e test -s backend      # chỉ restart backend"
     echo "  $0 -e staging -s nginx     # chỉ restart nginx"
@@ -67,12 +70,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV"
     exit 1

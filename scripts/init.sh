@@ -19,6 +19,7 @@ SCRIPTS=(
     "reset.sh"
     "logs.sh"
     "status.sh"
+    "db.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do
@@ -34,6 +35,10 @@ echo ""
 echo "==> Done! Scripts are ready to use."
 echo ""
 echo "Usage examples:"
-echo "  ./deploy.sh   -e dev"
-echo "  ./logs.sh     -e dev"
-echo "  ./status.sh   -e dev"
+echo "  ./deploy.sh      # dev by default"
+echo "  ./deploy.sh -e staging"
+echo "  ./logs.sh        # dev by default"
+echo "  ./status.sh      # dev by default"
+echo "  ./restart.sh -e test"
+echo "  ./db.sh migrate  # dev by default"
+echo "  ./db.sh seed -e staging"

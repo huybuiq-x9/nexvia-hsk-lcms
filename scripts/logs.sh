@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-ENV=""
+ENV="dev"
 SERVICE=""
 LINES=50
 FOLLOW=true
@@ -21,20 +21,22 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env> [options]"
+    echo "Usage: $0 [-e <env>] [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  -s, --service <svc>   Tên service (bỏ trống = tất cả)"
     echo "  -n, --lines <num>     Số dòng cuối hiển thị (default: 50)"
     echo "  --no-follow           Chỉ in ra rồi thoát, không theo dõi realtime"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
-    echo "  $0 -e dev                          # tất cả, realtime"
-    echo "  $0 -e test -s backend              # chỉ backend"
-    echo "  $0 -e staging -s nginx -n 100      # 100 dòng cuối nginx"
-    echo "  $0 -e prod -s backend --no-follow  # in ra rồi thoát"
+    echo "  $0                              # tất cả logs, realtime, dev"
+    echo "  $0 -e test -s backend           # chỉ backend"
+    echo "  $0 -e staging -s nginx -n 100   # 100 dòng cuối nginx"
+    echo "  $0 -e prod -s backend --no-follow # in ra rồi thoát"
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -72,12 +74,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV"
     exit 1

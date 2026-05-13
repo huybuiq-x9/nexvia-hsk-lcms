@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-ENV=""
+ENV="dev"
 REMOVE_VOLUMES=false
 
 # Color codes
@@ -19,16 +19,18 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env> [options]"
+    echo "Usage: $0 [-e <env>] [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  --remove-volumes      Xóa volumes khi dừng"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
-    echo "  $0 -e dev                     # dừng, giữ data"
-    echo "  $0 -e test --remove-volumes   # dừng và xóa data"
+    echo "  $0                            # dừng dev, giữ data"
+    echo "  $0 -e test --remove-volumes  # dừng và xóa data"
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -59,12 +61,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV"
     exit 1

@@ -8,7 +8,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-ENV=""
+ENV="dev"
 ACTION=""
 REVISION="head"
 MESSAGE=""
@@ -19,7 +19,9 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env> <action> [options]"
+    echo "Usage: $0 [-e <env>] <action> [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Actions:"
     echo "  revision             Create a new alembic migration (autogenerate)"
@@ -28,15 +30,14 @@ usage() {
     echo "  all                  Run migrate, then seed"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>      Environment: dev, test, staging, prod"
+    echo "  -e, --env <env>      Environment: dev, test, staging, prod (default: dev)"
     echo "  -r, --revision <rev> Alembic revision for migrate (default: head)"
     echo "  -m, --message <msg>  Migration message (required for revision action)"
     echo "  -h, --help           Show help"
     echo ""
     echo "Examples:"
-    echo "  $0 -e dev revision -m \"add users table\""
+    echo "  $0 revision -m \"add users table\"    # dev by default"
     echo "  $0 -e dev migrate"
-    echo "  $0 -e dev seed"
     echo "  $0 -e staging all"
     echo "  $0 -e prod migrate -r head"
 }
@@ -74,12 +75,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
 
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV (must be: dev, test, staging, prod)"

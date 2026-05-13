@@ -10,7 +10,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 # Default values
-ENV=""
+ENV="dev"
 NO_PULL=false
 BUILD_ONLY=false
 
@@ -21,16 +21,18 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 usage() {
-    echo "Usage: $0 -e <env> [options]"
+    echo "Usage: $0 [-e <env>] [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  --no-pull             Bỏ qua bước git pull"
     echo "  --build-only          Chỉ build lại images, không git pull"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
-    echo "  $0 -e dev"
+    echo "  $0                       # deploy dev"
     echo "  $0 -e test"
     echo "  $0 -e staging --no-pull"
     echo "  $0 -e prod --build-only"
@@ -68,12 +70,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV (must be: dev, test, staging, prod)"
     exit 1

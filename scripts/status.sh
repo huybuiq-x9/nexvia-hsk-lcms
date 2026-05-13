@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-ENV=""
+ENV="dev"
 
 # Color codes
 RED='\033[0;31m'
@@ -19,14 +19,16 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env>"
+    echo "Usage: $0 [-e <env>]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
-    echo "  $0 -e dev"
+    echo "  $0              # status dev"
     echo "  $0 -e test"
 }
 
@@ -53,12 +55,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV"
     exit 1

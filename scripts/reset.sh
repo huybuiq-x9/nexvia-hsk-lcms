@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Default values
-ENV=""
+ENV="dev"
 TARGET="all"
 FORCE=false
 
@@ -23,19 +23,21 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 -e <env> -t <target> [options]"
+    echo "Usage: $0 [-e <env>] -t <target> [options]"
+    echo ""
+    echo "  (No -e flag defaults to: dev)"
     echo ""
     echo "Options:"
-    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
+    echo "  -e, --env <env>       Môi trường: dev, test, staging, prod (default: dev)"
     echo "  -t, --target <target> Volume cần xóa: all, postgres, redis (default: all)"
     echo "  --force               Bỏ qua bước xác nhận yes/no"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
-    echo "  $0 -e dev -t all             # xóa tất cả (có confirm)"
-echo "  $0 -e test -t postgres       # chỉ xóa DB"
-echo "  $0 -e test -t redis          # chỉ xóa cache"
-    echo "  $0 -e dev -t all --force     # xóa tất cả, không hỏi"
+    echo "  $0 -t all                       # reset dev, có confirm"
+    echo "  $0 -e test -t postgres          # chỉ xóa DB"
+    echo "  $0 -e test -t redis             # chỉ xóa cache"
+    echo "  $0 -e dev -t all --force        # xóa tất cả, không hỏi"
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -70,12 +72,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate env
-if [[ -z "$ENV" ]]; then
-    log_error "Missing required option: -e <env>"
-    usage
-    exit 1
-fi
-
 if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
     log_error "Invalid environment: $ENV"
     exit 1
