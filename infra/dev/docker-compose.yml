@@ -53,7 +53,31 @@ services:
     ports:
       - "5432:5432"
 
-  # ─── Expose Redis port for dev ──────────────────────────────
+  # ─── Redis / Celery ────────────────────────────────────────────
   redis:
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  # ─── Celery Worker ─────────────────────────────────────────────
+  celery:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.backend.dev
+    container_name: lcms_celery_dev
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lcms}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ../../backend:/app
+    command: celery -A celery_app worker --loglevel=info --queues=default,scorm
+    depends_on:
+      - postgres
+      - redis

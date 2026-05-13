@@ -11,6 +11,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV=""
 ACTION=""
 REVISION="head"
+MESSAGE=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -21,6 +22,7 @@ usage() {
     echo "Usage: $0 -e <env> <action> [options]"
     echo ""
     echo "Actions:"
+    echo "  revision             Create a new alembic migration (autogenerate)"
     echo "  migrate              Run alembic upgrade"
     echo "  seed                 Seed demo data"
     echo "  all                  Run migrate, then seed"
@@ -28,9 +30,11 @@ usage() {
     echo "Options:"
     echo "  -e, --env <env>      Environment: dev, test, staging, prod"
     echo "  -r, --revision <rev> Alembic revision for migrate (default: head)"
+    echo "  -m, --message <msg>  Migration message (required for revision action)"
     echo "  -h, --help           Show help"
     echo ""
     echo "Examples:"
+    echo "  $0 -e dev revision -m \"add users table\""
     echo "  $0 -e dev migrate"
     echo "  $0 -e dev seed"
     echo "  $0 -e staging all"
@@ -51,11 +55,15 @@ while [[ $# -gt 0 ]]; do
             REVISION="$2"
             shift 2
             ;;
+        -m|--message)
+            MESSAGE="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             exit 0
             ;;
-        migrate|seed|all)
+        revision|migrate|seed|all)
             ACTION="$1"
             shift
             ;;
@@ -79,7 +87,13 @@ if [[ ! "$ENV" =~ ^(dev|test|staging|prod)$ ]]; then
 fi
 
 if [[ -z "$ACTION" ]]; then
-    log_error "Missing action: migrate, seed, or all"
+    log_error "Missing action: revision, migrate, seed, or all"
+    usage
+    exit 1
+fi
+
+if [[ "$ACTION" == "revision" && -z "$MESSAGE" ]]; then
+    log_error "Missing required option: -m <message> (required for revision action)"
     usage
     exit 1
 fi
@@ -152,6 +166,12 @@ run_backend() {
         backend "$@"
 }
 
+run_revision() {
+    log_info "Creating migration: $MESSAGE"
+    wait_for_postgres
+    run_backend alembic revision --autogenerate -m "$MESSAGE"
+}
+
 run_migrate() {
     log_info "Running migrations for $ENV to revision: $REVISION"
     wait_for_postgres
@@ -166,6 +186,9 @@ run_seed() {
 
 echo ""
 case "$ACTION" in
+    revision)
+        run_revision
+        ;;
     migrate)
         run_migrate
         ;;

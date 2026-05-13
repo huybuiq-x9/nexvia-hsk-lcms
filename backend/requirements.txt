@@ -16,3 +16,4 @@ psutil==5.9.8
 aiosmtplib==3.0.1
 celery[redis]==5.4.0
 redis==5.0.8
+psycopg2-binary==2.9.9
