@@ -11,6 +11,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Default values
 ENV=""
 SERVICE=""
+RELOAD=false
 
 # Color codes
 RED='\033[0;31m'
@@ -24,12 +25,15 @@ usage() {
     echo "Options:"
     echo "  -e, --env <env>       Môi trường: dev, test, staging, prod"
     echo "  -s, --service <svc>   Tên service cụ thể (bỏ trống = restart tất cả)"
+    echo "  -r, --reload          Recreate container để load .env mới"
     echo "  -h, --help            Hiển thị help"
     echo ""
     echo "Ví dụ:"
     echo "  $0 -e dev                  # restart tất cả"
     echo "  $0 -e test -s backend      # chỉ restart backend"
     echo "  $0 -e staging -s nginx     # chỉ restart nginx"
+    echo "  $0 -e prod -r              # recreate tất cả (reload env)"
+    echo "  $0 -e dev -s backend -r    # recreate backend (reload env)"
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -45,6 +49,10 @@ while [[ $# -gt 0 ]]; do
         -s|--service)
             SERVICE="$2"
             shift 2
+            ;;
+        -r|--reload)
+            RELOAD=true
+            shift
             ;;
         -h|--help)
             usage
@@ -87,7 +95,23 @@ else
 fi
 
 cd "$PROJECT_ROOT/infra/$ENV"
-if [[ -n "$SERVICE" ]]; then
+if [[ "$RELOAD" == true ]]; then
+    if [[ -n "$SERVICE" ]]; then
+        log_info "Force recreating service to load new .env..."
+        docker compose \
+            --project-directory "$PROJECT_ROOT/infra/$ENV" \
+            -f "$BASE_FILE" \
+            -f "$ENV_FILE_COMPOSE" \
+            up -d --force-recreate "$SERVICE"
+    else
+        log_info "Force recreating all services to load new .env..."
+        docker compose \
+            --project-directory "$PROJECT_ROOT/infra/$ENV" \
+            -f "$BASE_FILE" \
+            -f "$ENV_FILE_COMPOSE" \
+            up -d --force-recreate
+    fi
+elif [[ -n "$SERVICE" ]]; then
     docker compose \
         --project-directory "$PROJECT_ROOT/infra/$ENV" \
         -f "$BASE_FILE" \
