@@ -402,7 +402,7 @@ class ScormService:
 
         content_type = self._content_type(resolved_path)
         if resolved_path.lower().endswith((".html", ".htm")):
-            raw_content = self._inject_runtime(raw_content, resolved_path, asset_base_url)
+            raw_content = self._inject_preview_bootstrap(raw_content, resolved_path, asset_base_url)
             content_type = "text/html; charset=utf-8"
         return raw_content, content_type
 
@@ -510,7 +510,7 @@ class ScormService:
             "pdf": "application/pdf",
         }.get(ext, "application/octet-stream")
 
-    def _inject_runtime(self, raw_content: bytes, file_path: str, asset_base_url: str) -> bytes:
+    def _inject_preview_bootstrap(self, raw_content: bytes, file_path: str, asset_base_url: str) -> bytes:
         html = raw_content.decode("utf-8", errors="ignore")
         base_dir = posixpath.dirname(file_path)
         base_href = f"{asset_base_url.rstrip('/')}/"
@@ -518,41 +518,19 @@ class ScormService:
             base_href = f"{asset_base_url.rstrip('/')}/{base_dir}/"
 
         base_tag = f'<base href="{base_href}">'
-        runtime = """
+        bootstrap = """
 <script>
 (function(){
-  var data = {};
-  var lastError = "0";
-  var initialized = false;
-  function ok(){ lastError = "0"; return "true"; }
-  function fail(code){ lastError = code || "101"; return "false"; }
-  function emit(method, args, result){
-    try {
-      window.parent.postMessage({
-        source: "nexedu-scorm-preview",
-        method: method,
-        arguments: args || [],
-        result: result,
-        data: data
-      }, "*");
-    } catch(e) {}
-  }
-  var api = {
-    Initialize: function(){ initialized = true; var r = ok(); emit("Initialize", arguments, r); return r; },
-    Terminate: function(){ initialized = false; var r = ok(); emit("Terminate", arguments, r); return r; },
-    GetValue: function(key){ var r = data[key] || ""; emit("GetValue", arguments, r); return r; },
-    SetValue: function(key, value){ if(!initialized){ return fail("301"); } data[key] = String(value); var r = ok(); emit("SetValue", arguments, r); return r; },
-    Commit: function(){ var r = ok(); emit("Commit", arguments, r); return r; },
-    GetLastError: function(){ return lastError; },
-    GetErrorString: function(code){ return code === "0" ? "No error" : "SCORM preview runtime error"; },
-    GetDiagnostic: function(code){ return code || lastError; }
-  };
-  window.API_1484_11 = api;
-  window.API = api;
+  try {
+    if (window.parent && window.parent !== window) {
+      window.API_1484_11 = window.parent.API_1484_11 || window.API_1484_11;
+      window.API = window.parent.API || window.API;
+    }
+  } catch(e) {}
 })();
 </script>
 """
-        injection = base_tag + runtime
+        injection = base_tag + bootstrap
         lower = html.lower()
         head_index = lower.find("<head>")
         if head_index >= 0:
