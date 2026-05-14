@@ -260,7 +260,8 @@ async def _create_package_version(
     from app.modules.scorm.tasks import process_scorm_package_task
 
     try:
-        async_result = process_scorm_package_task.apply_async(
+        async_result = await run_in_threadpool(
+            process_scorm_package_task.apply_async,
             args=[str(package.id), staging_path],
             queue="scorm",
         )
