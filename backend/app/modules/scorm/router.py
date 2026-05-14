@@ -178,7 +178,7 @@ async def create_scorm_preview_session(
         value=token,
         max_age=payload.expires_in,
         httponly=True,
-        secure=settings.APP_ENV not in {"development", "local", "test"},
+        secure=settings.APP_ENV in {"staging", "production"},
         samesite="lax",
         path=_preview_cookie_path(request, package_id),
     )
