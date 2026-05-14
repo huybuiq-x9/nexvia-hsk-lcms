@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { FileText, BookOpen, Layers, User, UserCheck, Users, Trash2 } from 'lucide-react';
-import { courseService } from '../../services';
+import { courseService, userService } from '../../services';
+import RoleFilterDropdown from '../../components/RoleFilterDropdown';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -57,9 +58,15 @@ export default function SubLessonsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
+  const [experts, setExperts] = useState<ApiUserWithRoles[]>([]);
+  const [teachers, setTeachers] = useState<ApiUserWithRoles[]>([]);
+  const [converters, setConverters] = useState<ApiUserWithRoles[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedLessonId, setSelectedLessonId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>([]);
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
+  const [selectedConverterIds, setSelectedConverterIds] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const isFirst = useRef(true);
@@ -83,6 +90,19 @@ export default function SubLessonsPage() {
     courseService.getCoursesForFilter().then(res => setCourses(res)).catch(() => {});
   }, []);
 
+  const loadExperts = () => {
+    if (experts.length > 0) return;
+    userService.listUsers({ role: API_ROLE.EXPERT, limit: 100 }).then(res => setExperts(res.items)).catch(() => {});
+  };
+  const loadTeachers = () => {
+    if (teachers.length > 0) return;
+    userService.listUsers({ role: API_ROLE.TEACHER, limit: 100 }).then(res => setTeachers(res.items)).catch(() => {});
+  };
+  const loadConverters = () => {
+    if (converters.length > 0) return;
+    userService.listUsers({ role: API_ROLE.CONVERTER, limit: 100 }).then(res => setConverters(res.items)).catch(() => {});
+  };
+
   useEffect(() => {
     if (!selectedCourseId) return;
     courseService.listLessonsForFilter({ course_id: selectedCourseId })
@@ -92,7 +112,7 @@ export default function SubLessonsPage() {
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
     setPage(1);
-  }, [search, selectedCourseId, selectedLessonId, selectedStatus]);
+  }, [search, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     async function fetchSubLessons() {
@@ -104,6 +124,9 @@ export default function SubLessonsPage() {
           course_id: selectedCourseId || undefined,
           lesson_id: selectedLessonId || undefined,
           status: (selectedStatus as SubLessonStatus) || undefined,
+          expert_ids: selectedExpertIds.length > 0 ? selectedExpertIds : undefined,
+          teacher_ids: selectedTeacherIds.length > 0 ? selectedTeacherIds : undefined,
+          converter_ids: selectedConverterIds.length > 0 ? selectedConverterIds : undefined,
         });
         setSubLessons(res.items);
         setTotal(res.total);
@@ -111,7 +134,7 @@ export default function SubLessonsPage() {
       finally { setIsLoading(false); }
     }
     void fetchSubLessons();
-  }, [page, search, selectedCourseId, selectedLessonId, selectedStatus]);
+  }, [page, search, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     subLessons.forEach(sl => {
@@ -138,10 +161,12 @@ export default function SubLessonsPage() {
     ...SUB_LESSON_STATUSES.map(status => ({ value: status, label: t(`subLessons.status.${status}`) })),
   ];
 
-  const hasActiveFilters = selectedCourseId !== '' || selectedLessonId !== '' || selectedStatus !== '' || search !== '';
+  const hasActiveFilters = selectedCourseId !== '' || selectedLessonId !== '' || selectedStatus !== '' || search !== ''
+    || selectedExpertIds.length > 0 || selectedTeacherIds.length > 0 || selectedConverterIds.length > 0;
 
   const clearAllFilters = () => {
     setSearch(''); setSelectedCourseId(''); setSelectedLessonId(''); setSelectedStatus(''); setLessons([]);
+    setSelectedExpertIds([]); setSelectedTeacherIds([]); setSelectedConverterIds([]);
   };
 
   return (
@@ -167,6 +192,27 @@ export default function SubLessonsPage() {
           { key: 'lesson', label: t('subLessons.filter.lesson'), value: selectedLessonId, options: lessonOptions, onChange: setSelectedLessonId },
           { key: 'status', label: t('subLessons.filter.status'), value: selectedStatus, options: statusOptions, onChange: setSelectedStatus },
         ]}
+        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+          <RoleFilterDropdown
+            experts={experts}
+            teachers={teachers}
+            converters={converters}
+            selectedExpertIds={selectedExpertIds}
+            selectedTeacherIds={selectedTeacherIds}
+            selectedConverterIds={selectedConverterIds}
+            onExpertChange={setSelectedExpertIds}
+            onTeacherChange={setSelectedTeacherIds}
+            onConverterChange={setSelectedConverterIds}
+            onLoadExperts={loadExperts}
+            onLoadTeachers={loadTeachers}
+            onLoadConverters={loadConverters}
+            labels={{
+              expert: t('subLessons.filter.expert'),
+              teacher: t('subLessons.filter.teacher'),
+              converter: t('subLessons.filter.converter'),
+            }}
+          />
+        ) : undefined}
       />
 
       <div className="grid grid-cols-1 gap-4">

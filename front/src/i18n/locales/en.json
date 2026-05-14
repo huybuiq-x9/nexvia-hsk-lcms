@@ -171,7 +171,6 @@
     "uploadDesc": "Upload documents for Sub-Lesson.",
     "dropFile": "Drag and drop file or click to select",
     "confirm": "Confirm",
-    "cancel": "Cancel",
     "actionSuccess": "Action completed.",
     "noDocuments": "No documents yet",
     "noQuestions": "No questions in the bank yet",
@@ -399,7 +398,14 @@
       "allCourses": "All courses",
       "allStatuses": "All statuses",
       "course": "Course",
-      "status": "Status"
+      "status": "Status",
+      "allExperts": "All experts",
+      "allTeachers": "All teachers",
+      "allConverters": "All converters",
+      "expert": "Expert",
+      "teacher": "Teacher",
+      "converter": "Converter",
+      "filterByRole": "Filter by role"
     },
     "status": {
       "draft": "Draft",
@@ -419,7 +425,14 @@
       "allStatuses": "All statuses",
       "course": "Course",
       "lesson": "Lesson",
-      "status": "Status"
+      "status": "Status",
+      "allExperts": "All experts",
+      "allTeachers": "All teachers",
+      "allConverters": "All converters",
+      "expert": "Expert",
+      "teacher": "Teacher",
+      "converter": "Converter",
+      "filterByRole": "Filter by role"
     },
     "status": {
       "draft": "Draft",

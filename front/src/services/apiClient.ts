@@ -6,6 +6,18 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  paramsSerializer: (params) => {
+    const sp = new URLSearchParams();
+    for (const key in params) {
+      const val = params[key];
+      if (Array.isArray(val)) {
+        val.forEach(v => sp.append(key, v));
+      } else if (val !== undefined && val !== null) {
+        sp.append(key, val);
+      }
+    }
+    return sp.toString();
+  },
 });
 
 // Prevent concurrent refresh attempts — only one refresh runs at a time

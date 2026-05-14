@@ -496,6 +496,9 @@ class LessonService:
         search: str | None = None,
         course_id: uuid.UUID | None = None,
         status: LessonStatus | None = None,
+        expert_ids: list[uuid.UUID] | None = None,
+        teacher_ids: list[uuid.UUID] | None = None,
+        converter_ids: list[uuid.UUID] | None = None,
     ) -> course_schema.LessonListResponse:
         roles = _user_roles(current_user)
 
@@ -516,6 +519,15 @@ class LessonService:
 
         if status is not None:
             query = query.where(Lesson.status == status.value)
+
+        if expert_ids:
+            query = query.where(Lesson.course.has(Course.assigned_expert_id.in_(expert_ids)))
+
+        if teacher_ids:
+            query = query.where(Lesson.assigned_teacher_id.in_(teacher_ids))
+
+        if converter_ids:
+            query = query.where(Lesson.assigned_converter_id.in_(converter_ids))
 
         if _role_value(UserRole.ADMIN) not in roles:
             if _role_value(UserRole.EXPERT) in roles:
@@ -854,6 +866,9 @@ class SubLessonService:
         course_id: uuid.UUID | None = None,
         lesson_id: uuid.UUID | None = None,
         status: SubLessonStatus | None = None,
+        expert_ids: list[uuid.UUID] | None = None,
+        teacher_ids: list[uuid.UUID] | None = None,
+        converter_ids: list[uuid.UUID] | None = None,
     ) -> course_schema.SubLessonListResponse:
         roles = _user_roles(current_user)
 
@@ -876,6 +891,17 @@ class SubLessonService:
 
         if status is not None:
             query = query.where(SubLesson.status == status.value)
+
+        if expert_ids:
+            query = query.where(
+                SubLesson.lesson.has(Lesson.course.has(Course.assigned_expert_id.in_(expert_ids)))
+            )
+
+        if teacher_ids:
+            query = query.where(SubLesson.lesson.has(Lesson.assigned_teacher_id.in_(teacher_ids)))
+
+        if converter_ids:
+            query = query.where(SubLesson.lesson.has(Lesson.assigned_converter_id.in_(converter_ids)))
 
         if _role_value(UserRole.ADMIN) not in roles:
             if _role_value(UserRole.EXPERT) in roles:

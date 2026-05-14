@@ -96,8 +96,11 @@ async def list_lessons(
     search: str | None = None,
     course_id: uuid.UUID | None = None,
     status: LessonStatus | None = None,
+    expert_ids: list[uuid.UUID] = Query(default=[]),
+    teacher_ids: list[uuid.UUID] = Query(default=[]),
+    converter_ids: list[uuid.UUID] = Query(default=[]),
 ):
-    return await service.list(current_user, skip, limit, search, course_id, status)
+    return await service.list(current_user, skip, limit, search, course_id, status, expert_ids or None, teacher_ids or None, converter_ids or None)
 
 
 # ─── Lesson Routes (nested under course) ──────────────────────────────────────
@@ -172,8 +175,11 @@ async def list_sub_lessons(
     course_id: uuid.UUID | None = None,
     lesson_id: uuid.UUID | None = None,
     status: SubLessonStatus | None = None,
+    expert_ids: list[uuid.UUID] = Query(default=[]),
+    teacher_ids: list[uuid.UUID] = Query(default=[]),
+    converter_ids: list[uuid.UUID] = Query(default=[]),
 ):
-    return await service.list(current_user, skip, limit, search, course_id, lesson_id, status)
+    return await service.list(current_user, skip, limit, search, course_id, lesson_id, status, expert_ids or None, teacher_ids or None, converter_ids or None)
 
 
 # ─── SubLesson Routes ─────────────────────────────────────────────────────────

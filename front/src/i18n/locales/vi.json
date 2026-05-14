@@ -398,7 +398,14 @@
       "allCourses": "Tất cả khóa học",
       "allStatuses": "Tất cả trạng thái",
       "course": "Khóa học",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "allExperts": "Tất cả chuyên gia",
+      "allTeachers": "Tất cả giáo viên",
+      "allConverters": "Tất cả converter",
+      "expert": "Chuyên gia",
+      "teacher": "Giáo viên",
+      "converter": "Converter",
+      "filterByRole": "Lọc theo vai trò"
     },
     "status": {
       "draft": "Bản nháp",
@@ -418,7 +425,14 @@
       "allStatuses": "Tất cả trạng thái",
       "course": "Khóa học",
       "lesson": "Bài học",
-      "status": "Trạng thái"
+      "status": "Trạng thái",
+      "allExperts": "Tất cả chuyên gia",
+      "allTeachers": "Tất cả giáo viên",
+      "allConverters": "Tất cả converter",
+      "expert": "Chuyên gia",
+      "teacher": "Giáo viên",
+      "converter": "Converter",
+      "filterByRole": "Lọc theo vai trò"
     },
     "status": {
       "draft": "Bản nháp",

@@ -190,6 +190,9 @@ export const courseService = {
     search?: string;
     course_id?: string;
     status?: LessonStatus;
+    expert_ids?: string[];
+    teacher_ids?: string[];
+    converter_ids?: string[];
   }): Promise<ApiLessonListResponse> {
     const res = await client.get<ApiLessonListResponse>('/courses/lessons/', { params });
     return res.data;
@@ -218,6 +221,9 @@ export const courseService = {
     course_id?: string;
     lesson_id?: string;
     status?: SubLessonStatus;
+    expert_ids?: string[];
+    teacher_ids?: string[];
+    converter_ids?: string[];
   }): Promise<ApiSubLessonListResponse> {
     const res = await client.get<ApiSubLessonListResponse>('/courses/sub-lessons/', { params });
     return res.data;

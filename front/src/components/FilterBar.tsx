@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 export interface FilterOption {
   value: string;
@@ -21,6 +22,7 @@ interface FilterBarProps {
   onClearAll: () => void;
   hasActiveFilters: boolean;
   layout?: FilterLayout;
+  extra?: ReactNode;
 }
 
 export default function FilterBar({
@@ -31,6 +33,7 @@ export default function FilterBar({
   onClearAll,
   hasActiveFilters,
   layout = 'stacked',
+  extra,
 }: FilterBarProps) {
   return (
     <div className={`card p-4 ${layout === 'inline' ? 'space-y-3' : 'space-y-3'}`}>
@@ -94,6 +97,9 @@ export default function FilterBar({
               Clear
             </button>
           )}
+
+          {/* Extra (e.g. role filter button) */}
+          {extra && <div className="ml-auto">{extra}</div>}
         </div>
       ) : (
         <>
