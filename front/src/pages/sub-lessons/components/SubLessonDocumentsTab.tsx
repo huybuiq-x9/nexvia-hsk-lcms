@@ -21,6 +21,7 @@ interface SubLessonDocumentsTabProps {
   subLessonStatus: string;
   onRefresh: () => void;
   onDocumentsChange?: (count: number) => void;
+  onPreviewOpen?: () => void;
   canUpload?: boolean;
   canPreview?: boolean;
   canDownload?: boolean;
@@ -33,6 +34,7 @@ export function SubLessonDocumentsTab({
   subLessonStatus,
   onRefresh,
   onDocumentsChange,
+  onPreviewOpen,
   canUpload = true,
   canPreview = true,
   canDownload = true,
@@ -141,6 +143,7 @@ export function SubLessonDocumentsTab({
       const url = await getDownloadUrl(doc.id);
       setPreviewUrl(url);
       setPreviewDoc(doc);
+      onPreviewOpen?.();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
     } finally {

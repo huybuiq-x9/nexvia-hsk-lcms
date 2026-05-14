@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, FileText, MessageSquare, Send, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ApiDocumentComment, ApiDocumentWithUploader } from '../../types/api';
@@ -62,8 +63,8 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
   const isPdf = doc.file_extension === 'pdf';
   const commentCount = (doc.comments_count ?? 0);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
         className="relative bg-white rounded-xl shadow-2xl w-full max-w-7xl mx-auto flex flex-col overflow-hidden"
@@ -201,6 +202,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

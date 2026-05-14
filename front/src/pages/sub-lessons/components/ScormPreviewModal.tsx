@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FileArchive, MessageSquare, RefreshCw, Send, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ApiScormComment, ApiScormPackage } from '../../../types/api';
@@ -107,8 +108,8 @@ export function ScormPreviewModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5">
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5">
       <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-7xl mx-auto flex flex-col overflow-hidden h-[92dvh]">
         {/* Header */}
@@ -249,6 +250,7 @@ export function ScormPreviewModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -153,6 +153,7 @@ export default function SubLessonDetailPage() {
               subLessonStatus={subLesson.status}
               onRefresh={reload}
               onDocumentsChange={setDocumentCount}
+              onPreviewOpen={() => setIsInfoDrawerOpen(false)}
               canUpload={canUploadDocuments}
               canPreview={canPreviewDocuments}
               canDownload={canDownloadDocuments}
@@ -167,6 +168,7 @@ export default function SubLessonDetailPage() {
               canComment={canCommentScorm}
               onRefresh={reload}
               onScormPackageChange={setCurrentScormPackage}
+              onPreviewOpen={() => setIsInfoDrawerOpen(false)}
             />
           )}
           {currentTab === 'questions' && <SubLessonQuestionsTab />}

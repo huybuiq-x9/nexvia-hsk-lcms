@@ -21,6 +21,7 @@ interface SubLessonScormTabProps {
   canComment?: boolean;
   onRefresh?: () => void;
   onScormPackageChange?: (pkg: ApiScormPackage | null) => void;
+  onPreviewOpen?: () => void;
 }
 
 function StatusBadge({ status }: { status: ScormPackageStatus }) {
@@ -253,6 +254,7 @@ export function SubLessonScormTab({
   canComment = false,
   onRefresh,
   onScormPackageChange,
+  onPreviewOpen,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -323,6 +325,7 @@ export function SubLessonScormTab({
       const session = await scormService.createPreviewSession(packageToPreview.id);
       setPreviewUrl(session.launch_url);
       setPreviewPackage(packageToPreview);
+      onPreviewOpen?.();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.previewError')));
     } finally {
