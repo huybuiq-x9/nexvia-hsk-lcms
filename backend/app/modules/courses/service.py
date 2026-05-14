@@ -579,6 +579,25 @@ class SubLessonService:
             raise NotFoundError("SubLesson", str(sublesson_id))
         return sl
 
+    async def _cascade_in_progress(self, lesson_id: uuid.UUID) -> None:
+        await self._db.flush()
+
+        result = await self._db.execute(
+            select(Lesson)
+            .options(selectinload(Lesson.course))
+            .where(Lesson.id == lesson_id)
+        )
+        lesson = result.scalar_one_or_none()
+        if not lesson:
+            return
+
+        if lesson.status == LessonStatus.DRAFT:
+            lesson.status = LessonStatus.IN_PROGRESS
+
+        course = lesson.course
+        if course and course.status == CourseStatus.DRAFT:
+            course.status = CourseStatus.IN_PROGRESS
+
     async def _cascade_approval(self, lesson_id: uuid.UUID) -> None:
         await self._db.flush()
 
@@ -698,6 +717,7 @@ class SubLessonService:
             from_status=from_status,
             to_status=sl.status,
         )
+        await self._cascade_in_progress(sl.lesson_id)
         await self._db.commit()
         await self._db.refresh(sl)
         return _to_sublesson_response(sl)
