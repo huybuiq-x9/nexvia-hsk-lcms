@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     SCORM_MAX_ZIP_SIZE: int = 200 * 1024 * 1024
     SCORM_MAX_EXTRACTED_SIZE: int = 750 * 1024 * 1024
     SCORM_MAX_EXTRACTED_FILES: int = 10000
+    SCORM_UPLOAD_WORKERS: int = 8
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173"]
 

@@ -20,6 +20,7 @@ class StorageService:
     def __init__(self):
         self._client = None
         self._bucket_region = None
+        self._bucket_verified = False
 
     @property
     def client(self):
@@ -36,6 +37,7 @@ class StorageService:
             config=Config(
                 signature_version="s3v4",
                 s3={"addressing_style": "virtual"},
+                max_pool_connections=20,
             ),
         )
 
@@ -70,9 +72,12 @@ class StorageService:
 
     def _ensure_bucket_exists(self) -> None:
         """AWS S3 buckets must exist before uploading."""
+        if self._bucket_verified:
+            return
         try:
             self._resolve_bucket_region()
             self.client.head_bucket(Bucket=settings.S3_BUCKET_NAME)
+            self._bucket_verified = True
         except ClientError as e:
             raise LCMSException(
                 message=f"Cannot access S3 bucket: {e}",

@@ -4,6 +4,7 @@ import posixpath
 import shutil
 import tempfile
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -251,19 +252,32 @@ def _extracted_prefix(package: ScormPackage) -> str:
 
 def _upload_extracted_files(package: ScormPackage, extract_dir: Path) -> int:
     prefix = _extracted_prefix(package)
-    files_count = 0
-    for path in extract_dir.rglob("*"):
-        if not path.is_file():
-            continue
-        rel_path = path.relative_to(extract_dir).as_posix()
-        key = f"{prefix}{rel_path}"
+    files = [
+        (path, path.relative_to(extract_dir).as_posix())
+        for path in extract_dir.rglob("*")
+        if path.is_file()
+    ]
+    if not files:
+        return 0
+
+    # Warm the bucket check once before parallel uploads
+    storage_service._ensure_bucket_exists()
+
+    def _upload_one(args: tuple[Path, str]) -> None:
+        path, rel_path = args
         storage_service.upload_local_file(
-            key=key,
+            key=f"{prefix}{rel_path}",
             file_path=path,
             content_type=storage_service.guess_mime_type(rel_path),
         )
-        files_count += 1
-    return files_count
+
+    max_workers = min(settings.SCORM_UPLOAD_WORKERS, len(files))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_upload_one, item): item[1] for item in files}
+        for future in as_completed(futures):
+            future.result()
+
+    return len(files)
 
 
 def _mark_failed(package_id: str, message: str) -> None:

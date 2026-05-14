@@ -34,7 +34,7 @@ export function useSubLessonScorm(subLessonId: string) {
     if (scormPackage?.status !== 'processing') return;
     const timer = window.setInterval(() => {
       void loadCurrentPackage(false);
-    }, 3000);
+    }, 1500);
     return () => window.clearInterval(timer);
   }, [loadCurrentPackage, scormPackage?.status]);
 
