@@ -116,36 +116,28 @@ function VersionHistory({
 
           return (
             <div key={version.id} className="group">
-              <div className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 transition-colors">
-                <div className="w-10 h-10 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
-                  <FileArchive size={20} />
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                <div className="w-9 h-9 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
+                  <FileArchive size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-800">v{version.version}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-slate-800">v{version.version}</span>
                     {version.is_current && (
                       <span className="text-xs font-medium text-blue-600">{t('scorm.current')}</span>
                     )}
-                    <StatusBadge status={version.status} />
                   </div>
-                  <div className="font-medium text-slate-900 truncate mt-1">
+                  <div className="text-sm text-slate-700 truncate">
                     {version.title || version.original_filename}
                   </div>
                   <div className="text-xs text-slate-400 truncate mt-0.5">
                     {version.launch_path || version.original_filename}
-                    <span className="mx-1.5">·</span>
+                    <span className="mx-1">·</span>
                     {formatDate(version.uploaded_at ?? version.created_at)}
                   </div>
-                  {version.status === 'processing' && (
-                    <div className="text-xs text-blue-700 mt-2">{t('scorm.processingHint')}</div>
-                  )}
-                  {version.status === 'failed' && (
-                    <div className="text-xs text-red-700 mt-2">
-                      {version.error_message || t('scorm.failedFallback')}
-                    </div>
-                  )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <StatusBadge status={version.status} />
                   {canComment && (
                     <button
                       type="button"
@@ -180,6 +172,11 @@ function VersionHistory({
                         <Eye size={15} />
                       )}
                     </button>
+                  )}
+                  {version.status === 'processing' && (
+                    <span title={t('scorm.processingHint')}>
+                      <Loader2 size={15} className="text-blue-500 animate-spin" />
+                    </span>
                   )}
                 </div>
               </div>
