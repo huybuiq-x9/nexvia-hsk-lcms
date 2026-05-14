@@ -9,7 +9,7 @@ from app.modules.courses.model import Course, Lesson, ReviewLog, SubLesson
 from app.modules.courses import schema as course_schema
 from app.modules.users.model import User
 from app.core.exceptions import NotFoundError
-from app.shared.enums import LessonStatus, ReviewAction, SubLessonStatus, UserRole
+from app.shared.enums import CourseStatus, LessonStatus, ReviewAction, SubLessonStatus, UserRole
 
 
 # ─── Module-Level Helpers (shared across classes) ──────────────────────────────
@@ -579,6 +579,39 @@ class SubLessonService:
             raise NotFoundError("SubLesson", str(sublesson_id))
         return sl
 
+    async def _cascade_approval(self, lesson_id: uuid.UUID) -> None:
+        await self._db.flush()
+
+        result = await self._db.execute(
+            select(Lesson)
+            .options(selectinload(Lesson.sub_lessons))
+            .where(Lesson.id == lesson_id)
+        )
+        lesson = result.scalar_one_or_none()
+        if not lesson:
+            return
+
+        active_sub_lessons = [s for s in lesson.sub_lessons if s.deleted_at is None]
+        if not active_sub_lessons:
+            return
+
+        if all(s.status == SubLessonStatus.APPROVED for s in active_sub_lessons):
+            lesson.status = LessonStatus.APPROVED
+            await self._db.flush()
+
+            result = await self._db.execute(
+                select(Course)
+                .options(selectinload(Course.lessons))
+                .where(Course.id == lesson.course_id)
+            )
+            course = result.scalar_one_or_none()
+            if not course:
+                return
+
+            active_lessons = [l for l in course.lessons if l.deleted_at is None]
+            if active_lessons and all(l.status == LessonStatus.APPROVED for l in active_lessons):
+                course.status = CourseStatus.READY_TO_PUBLISH
+
     async def get(
         self,
         sublesson_id: uuid.UUID,
@@ -765,6 +798,8 @@ class SubLessonService:
             from_status=from_status,
             to_status=sl.status,
         )
+        if action == ReviewAction.APPROVE_SCORM:
+            await self._cascade_approval(sl.lesson_id)
         await self._db.commit()
         await self._db.refresh(sl)
         return _to_sublesson_response(sl)
