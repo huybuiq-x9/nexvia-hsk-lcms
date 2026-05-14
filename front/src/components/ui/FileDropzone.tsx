@@ -8,14 +8,22 @@ interface FileDropzoneProps {
   onFiles: (files: File[]) => void;
   uploading?: boolean;
   disabled?: boolean;
+  multiple?: boolean;
+  label?: string;
+  hint?: string;
+  uploadingLabel?: string;
 }
 
 export function FileDropzone({
   accept = [],
-  maxSize: _maxSize = 200 * 1024 * 1024,
+  maxSize = 200 * 1024 * 1024,
   onFiles,
   uploading = false,
   disabled = false,
+  multiple = true,
+  label,
+  hint,
+  uploadingLabel,
 }: FileDropzoneProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +69,7 @@ export function FileDropzone({
           : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
         }
       `}
+      data-max-size={maxSize}
       onDragEnter={!disabled ? handleDragEnter : undefined}
       onDragOver={!disabled ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } : undefined}
       onDragLeave={!disabled ? handleDragLeave : undefined}
@@ -72,7 +81,7 @@ export function FileDropzone({
         type="file"
         className="hidden"
         accept={accept.map(e => `.${e}`).join(',')}
-        multiple
+        multiple={multiple}
         onChange={handleChange}
         disabled={disabled}
       />
@@ -80,13 +89,13 @@ export function FileDropzone({
       {uploading ? (
         <div className="flex flex-col items-center gap-2">
           <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-blue-600 font-medium">{t('documents.uploading')}</p>
+          <p className="text-sm text-blue-600 font-medium">{uploadingLabel ?? t('documents.uploading')}</p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2">
           <Upload size={24} className="text-slate-400" />
-          <p className="text-sm font-medium text-slate-600">{t('documents.dropzone')}</p>
-          <p className="text-xs text-slate-400">{t('documents.dropzoneHint')}</p>
+          <p className="text-sm font-medium text-slate-600">{label ?? t('documents.dropzone')}</p>
+          <p className="text-xs text-slate-400">{hint ?? t('documents.dropzoneHint')}</p>
         </div>
       )}
     </div>

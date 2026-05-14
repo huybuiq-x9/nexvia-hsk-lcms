@@ -304,6 +304,34 @@
     "noComments": "No comments yet.",
     "lockedAfterSubmit": "This sub-lesson has been submitted for review. Document uploads are locked until the expert reviews it."
   },
+  "scorm": {
+    "title": "SCORM",
+    "dropzone": "Drag and drop a SCORM ZIP or click to select",
+    "dropzoneHint": "SCORM 2004 .zip only, up to 200MB",
+    "uploading": "Uploading SCORM...",
+    "uploadStarted": "SCORM file received. Processing has started.",
+    "uploadError": "Failed to upload SCORM.",
+    "singleFileOnly": "Upload one SCORM file at a time.",
+    "onlyZip": "Only .zip files are allowed.",
+    "fileTooBig": "SCORM file exceeds 200MB.",
+    "uploadLocked": "You cannot upload SCORM in the current state.",
+    "noPackage": "No SCORM package yet",
+    "noPackageHint": "Upload a SCORM 2004 ZIP to start processing.",
+    "noPackageReadOnlyHint": "When the converter uploads SCORM, its status will appear here.",
+    "version": "Version",
+    "fileSize": "File size",
+    "filesCount": "Files",
+    "uploadedAt": "Uploaded at",
+    "schemaVersion": "Standard",
+    "launchPath": "Launch path",
+    "processingHint": "The task is uploading to S3, extracting, and parsing imsmanifest.xml. Status refreshes automatically.",
+    "failedFallback": "SCORM processing failed.",
+    "status": {
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed"
+    }
+  },
   "roles": {
     "admin": "Administrator",
     "teacher": "Teacher",
@@ -383,6 +411,7 @@
     },
     "tabs": {
       "documents": "Documents",
+      "scorm": "SCORM",
       "questions": "Question Bank",
       "history": "History"
     },

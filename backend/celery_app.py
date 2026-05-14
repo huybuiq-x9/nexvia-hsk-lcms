@@ -15,13 +15,17 @@ celery_app = Celery(
     "lcms",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.core.celery_tasks"],
+    include=["app.core.celery_tasks", "app.modules.scorm.tasks"],
 )
 
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
+    task_default_queue="default",
+    task_routes={
+        "app.modules.scorm.tasks.process_scorm_package_task": {"queue": "scorm"},
+    },
     timezone="UTC",
     enable_utc=True,
     task_track_started=True,

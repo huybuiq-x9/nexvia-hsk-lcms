@@ -27,6 +27,9 @@ import type {
   ApiDocumentUploadResponse,
   ApiDocumentComment,
   ApiDocumentCommentListResponse,
+  ApiScormPackage,
+  ApiScormPackageListResponse,
+  ApiScormUploadResponse,
   ApiRole,
   LessonStatus,
   SubLessonStatus,
@@ -299,6 +302,36 @@ export const documentService = {
 
   async addComment(documentId: string, content: string): Promise<ApiDocumentComment> {
     const res = await client.post<ApiDocumentComment>(`/documents/${documentId}/comments`, { content });
+    return res.data;
+  },
+};
+
+// ─── SCORM ───────────────────────────────────────────────────────────────────
+
+export const scormService = {
+  async getCurrentPackage(sublessonId: string): Promise<ApiScormPackage | null> {
+    const res = await client.get<ApiScormPackage | null>(`/scorm/sub-lessons/${sublessonId}/packages/current`);
+    return res.data;
+  },
+
+  async listPackages(sublessonId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormPackageListResponse> {
+    const res = await client.get<ApiScormPackageListResponse>(`/scorm/sub-lessons/${sublessonId}/packages`, { params });
+    return res.data;
+  },
+
+  async uploadPackage(sublessonId: string, file: File): Promise<ApiScormUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiScormUploadResponse>(
+      `/scorm/sub-lessons/${sublessonId}/packages`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async getPackage(packageId: string): Promise<ApiScormPackage> {
+    const res = await client.get<ApiScormPackage>(`/scorm/packages/${packageId}`);
     return res.data;
   },
 };

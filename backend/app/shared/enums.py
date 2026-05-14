@@ -31,6 +31,12 @@ class SubLessonStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 
+class ScormPackageStatus(str, enum.Enum):
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
 class ExamStatus(str, enum.Enum):
     DRAFT = "draft"
     SUBMITTED = "submitted"

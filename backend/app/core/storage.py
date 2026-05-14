@@ -1,5 +1,6 @@
 import boto3
 import mimetypes
+from pathlib import Path
 import re
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -114,7 +115,52 @@ class StorageService:
         download_url = self.get_presigned_download_url(key)
         return key, download_url
 
-    def get_presigned_download_url(self, stored_name: str) -> None:
+    def upload_object(
+        self,
+        key: str,
+        file_content: bytes,
+        content_type: str,
+    ) -> str:
+        """Upload bytes to an explicit S3 key."""
+        self._ensure_bucket_exists()
+        try:
+            self.client.put_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=key,
+                Body=file_content,
+                ContentType=content_type,
+            )
+        except ClientError as e:
+            raise LCMSException(
+                message=f"Failed to upload file: {e}",
+                status_code=500,
+            )
+        return key
+
+    def upload_local_file(
+        self,
+        key: str,
+        file_path: str | Path,
+        content_type: str,
+    ) -> str:
+        """Upload a local file to an explicit S3 key."""
+        self._ensure_bucket_exists()
+        try:
+            with open(file_path, "rb") as f:
+                self.client.upload_fileobj(
+                    f,
+                    settings.S3_BUCKET_NAME,
+                    key,
+                    ExtraArgs={"ContentType": content_type},
+                )
+        except ClientError as e:
+            raise LCMSException(
+                message=f"Failed to upload file: {e}",
+                status_code=500,
+            )
+        return key
+
+    def delete_file(self, stored_name: str) -> None:
         """Delete a file from S3 by its stored name (full key)."""
         try:
             self.client.delete_object(

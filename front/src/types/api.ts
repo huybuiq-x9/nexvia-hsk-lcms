@@ -3,6 +3,8 @@
 //   types/auth.ts    — API_ROLE, user, auth, role types
 //   types/course.ts  — Course, Lesson, SubLesson, System types
 //   types/document.ts — Document types
+//   types/scorm.ts   — SCORM package types
 export * from './auth';
 export * from './course';
 export * from './document';
+export * from './scorm';

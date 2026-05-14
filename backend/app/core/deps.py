@@ -169,6 +169,25 @@ def _can_comment_documents(sublesson: SubLesson, user: User, roles: set[str]) ->
     return False
 
 
+def _can_view_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    return (
+        _is_assigned_teacher(sublesson, user, roles)
+        or _is_assigned_expert(sublesson, user, roles)
+        or _is_assigned_converter(sublesson, user, roles)
+    )
+
+
+def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
+    if _is_admin(roles):
+        return True
+    return (
+        _is_assigned_converter(sublesson, user, roles)
+        and sublesson.status in (SubLessonStatus.APPROVED, SubLessonStatus.CONVERTING)
+    )
+
+
 def role_required(*roles: UserRole):
     required_roles = {role.value for role in roles}
 
@@ -408,6 +427,68 @@ async def document_upload_access_to_document(
     )
 
 
+async def scorm_view_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to view SCORM packages for this Sub-Lesson",
+    )
+
+
+async def scorm_upload_access_to_sublesson(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if _can_upload_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can upload SCORM after content approval",
+    )
+
+
+async def _load_scorm_sublesson_for_access(
+    package_id: uuid.UUID,
+    db: AsyncSession,
+):
+    from app.modules.scorm.model import ScormPackage
+
+    result = await db.execute(
+        select(ScormPackage)
+        .options(selectinload(ScormPackage.sub_lesson).selectinload(SubLesson.lesson).selectinload(Lesson.course))
+        .where(ScormPackage.id == package_id)
+    )
+    package = result.scalar_one_or_none()
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SCORM package not found")
+    return package.sub_lesson
+
+
+async def scorm_view_access_to_package(
+    package_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to access this SCORM package",
+    )
+
+
 async def teacher_submit_access_to_sublesson(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -425,6 +506,9 @@ DocumentViewAccessToDocument = Annotated[User, Depends(document_view_access_to_d
 DocumentCommentAccessToDocument = Annotated[User, Depends(document_comment_access_to_document)]
 DocumentDeleteAccessToDocument = Annotated[User, Depends(document_delete_access_to_document)]
 DocumentUploadAccessToDocument = Annotated[User, Depends(document_upload_access_to_document)]
+ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
+ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
+ScormViewAccessToPackage = Annotated[User, Depends(scorm_view_access_to_package)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
 
 

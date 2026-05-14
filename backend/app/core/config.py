@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
     S3_BUCKET_NAME: str = "lcms"
+    CLOUDFRONT_DOMAIN: str = ""
+
+    # ─── SCORM ─────────────────────────────────────────────────────────────
+    SCORM_UPLOAD_TMP_DIR: str = "/app/.tmp/scorm-uploads"
+    SCORM_MAX_ZIP_SIZE: int = 200 * 1024 * 1024
+    SCORM_MAX_EXTRACTED_SIZE: int = 750 * 1024 * 1024
+    SCORM_MAX_EXTRACTED_FILES: int = 10000
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173"]
 

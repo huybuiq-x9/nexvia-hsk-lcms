@@ -303,6 +303,34 @@
     "noComments": "Chưa có bình luận nào.",
     "lockedAfterSubmit": "Bài học con đã được gửi phê duyệt. Không thể tải tài liệu cho đến khi chuyên gia duyệt."
   },
+  "scorm": {
+    "title": "SCORM",
+    "dropzone": "Kéo thả file ZIP SCORM hoặc click để chọn",
+    "dropzoneHint": "Chỉ hỗ trợ SCORM 2004 dạng .zip, tối đa 200MB",
+    "uploading": "Đang tải SCORM...",
+    "uploadStarted": "Đã nhận file SCORM. Hệ thống đang xử lý.",
+    "uploadError": "Upload SCORM thất bại.",
+    "singleFileOnly": "Chỉ upload một file SCORM mỗi lần.",
+    "onlyZip": "Chỉ chấp nhận file .zip.",
+    "fileTooBig": "File SCORM vượt quá 200MB.",
+    "uploadLocked": "Bạn không có quyền upload SCORM ở trạng thái hiện tại.",
+    "noPackage": "Chưa có gói SCORM nào",
+    "noPackageHint": "Upload file ZIP SCORM 2004 để bắt đầu xử lý.",
+    "noPackageReadOnlyHint": "Khi converter upload SCORM, trạng thái sẽ hiển thị tại đây.",
+    "version": "Phiên bản",
+    "fileSize": "Kích thước",
+    "filesCount": "Số file",
+    "uploadedAt": "Ngày upload",
+    "schemaVersion": "Chuẩn",
+    "launchPath": "Launch path",
+    "processingHint": "Task đang upload lên S3, extract và parse imsmanifest.xml. Trạng thái sẽ tự cập nhật.",
+    "failedFallback": "Xử lý SCORM thất bại.",
+    "status": {
+      "processing": "Đang xử lý",
+      "ready": "Sẵn sàng",
+      "failed": "Thất bại"
+    }
+  },
   "roles": {
     "admin": "Quản trị viên",
     "teacher": "Giáo viên",
@@ -382,6 +410,7 @@
     },
     "tabs": {
       "documents": "Tài liệu",
+      "scorm": "SCORM",
       "questions": "Ngân hàng câu hỏi",
       "history": "Lịch sử"
     },

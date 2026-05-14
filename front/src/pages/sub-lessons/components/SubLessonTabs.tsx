@@ -1,7 +1,7 @@
-import { FileText, HelpCircle } from 'lucide-react';
+import { FileText, HelpCircle, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export type Tab = 'documents' | 'questions';
+export type Tab = 'documents' | 'scorm' | 'questions';
 
 interface SubLessonTabsProps {
   activeTab: Tab;
@@ -11,6 +11,7 @@ interface SubLessonTabsProps {
 
 const TABS: { key: Tab; labelKey: string; icon: React.ReactNode }[] = [
   { key: 'documents', labelKey: 'documents', icon: <FileText size={16} /> },
+  { key: 'scorm', labelKey: 'scorm', icon: <Package size={16} /> },
   { key: 'questions', labelKey: 'questions', icon: <HelpCircle size={16} /> },
 ];
 

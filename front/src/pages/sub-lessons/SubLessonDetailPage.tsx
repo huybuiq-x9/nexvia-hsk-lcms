@@ -9,6 +9,7 @@ import { SubLessonHeader, SubLessonInfoDrawer } from './components/SubLessonHead
 import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper';
 import { SubLessonTabs, type Tab } from './components/SubLessonTabs';
 import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
+import { SubLessonScormTab } from './components/SubLessonScormTab';
 import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
 import { API_ROLE, SUB_LESSON_STATUS } from '../../types/api';
@@ -29,11 +30,16 @@ export default function SubLessonDetailPage() {
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
 
   const isTeacher = selectedRole === API_ROLE.TEACHER;
+  const isConverter = selectedRole === API_ROLE.CONVERTER;
   const isDrafting = subLesson ? (
     subLesson.status === SUB_LESSON_STATUS.DRAFT ||
     subLesson.status === SUB_LESSON_STATUS.IN_PROGRESS
   ) : false;
   const isContentReviewing = subLesson?.status === SUB_LESSON_STATUS.REVIEWING;
+  const isReadyForScorm = subLesson ? (
+    subLesson.status === SUB_LESSON_STATUS.APPROVED ||
+    subLesson.status === SUB_LESSON_STATUS.CONVERTING
+  ) : false;
 
   const canViewDocuments = Boolean(subLesson) && (
     isAdmin ||
@@ -50,13 +56,16 @@ export default function SubLessonDetailPage() {
   const canDeleteDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canUploadDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
+  const canViewScorm = Boolean(subLesson) && (isAdmin || isTeacher || isExpert || isConverter);
+  const canUploadScorm = Boolean(subLesson) && (isAdmin || (isConverter && isReadyForScorm));
 
   // Expert / Admin review CONTENT
   const canReview = isContentReviewing && (isAdmin || isExpert);
   const visibleTabs = useMemo<Tab[]>(() => [
     ...(canViewDocuments ? (['documents'] as Tab[]) : []),
+    ...(canViewScorm ? (['scorm'] as Tab[]) : []),
     'questions',
-  ], [canViewDocuments]);
+  ], [canViewDocuments, canViewScorm]);
 
   useEffect(() => {
     if (courseInfo?.assigned_expert_id) loadUser(courseInfo.assigned_expert_id);
@@ -137,6 +146,12 @@ export default function SubLessonDetailPage() {
               canDownload={canDownloadDocuments}
               canComment={canCommentDocuments}
               canDelete={canDeleteDocuments}
+            />
+          )}
+          {currentTab === 'scorm' && canViewScorm && (
+            <SubLessonScormTab
+              subLessonId={subLesson.id}
+              canUpload={canUploadScorm}
             />
           )}
           {currentTab === 'questions' && <SubLessonQuestionsTab />}
