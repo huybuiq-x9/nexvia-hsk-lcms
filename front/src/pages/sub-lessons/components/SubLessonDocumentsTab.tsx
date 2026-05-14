@@ -412,6 +412,7 @@ export function SubLessonDocumentsTab({
           url={previewUrl}
           onClose={() => { setPreviewDoc(null); setPreviewUrl(null); }}
           onDownload={() => handleDownload(previewDoc)}
+          canComment={canComment}
         />
       )}
     </div>

@@ -400,6 +400,7 @@ export function SubLessonScormTab({
         <ScormPreviewModal
           scormPackage={previewPackage}
           launchUrl={previewUrl}
+          canComment={canComment}
           onClose={() => {
             setPreviewPackage(null);
             setPreviewUrl(null);
