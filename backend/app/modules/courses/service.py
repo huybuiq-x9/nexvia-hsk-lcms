@@ -38,10 +38,6 @@ def _sublesson_snapshot(sl: SubLesson) -> dict:
         "order_index": sl.order_index,
         "submitted_at": sl.submitted_at.isoformat() if sl.submitted_at else None,
         "approved_at": sl.approved_at.isoformat() if sl.approved_at else None,
-        "scorm_filename": sl.scorm_filename,
-        "scorm_file_size": sl.scorm_file_size,
-        "scorm_uploaded_at": sl.scorm_uploaded_at.isoformat() if sl.scorm_uploaded_at else None,
-        "scorm_uploaded_by_id": str(sl.scorm_uploaded_by_id) if sl.scorm_uploaded_by_id else None,
     }
 
 
@@ -83,10 +79,6 @@ def _to_sublesson_response(sl: SubLesson) -> course_schema.SubLessonResponse:
         order_index=sl.order_index,
         submitted_at=sl.submitted_at,
         approved_at=sl.approved_at,
-        scorm_filename=sl.scorm_filename,
-        scorm_file_size=sl.scorm_file_size,
-        scorm_uploaded_at=sl.scorm_uploaded_at,
-        scorm_uploaded_by_id=sl.scorm_uploaded_by_id,
         created_at=sl.created_at,
         updated_at=sl.updated_at,
     )
@@ -686,20 +678,10 @@ class SubLessonService:
 
         if sl.status == SubLessonStatus.REVIEWING:
             if action == ReviewAction.APPROVE:
-                sl.status = SubLessonStatus.CONVERTING
-            elif action == ReviewAction.REJECT:
-                sl.status = SubLessonStatus.IN_PROGRESS
-            else:
-                from app.core.exceptions import InvalidStatusTransitionError
-                raise InvalidStatusTransitionError(
-                    f"Invalid review action: '{action.value}'. Must be 'approve' or 'reject'."
-                )
-        elif sl.status == SubLessonStatus.SCORM_REVIEWING:
-            if action == ReviewAction.APPROVE:
                 sl.status = SubLessonStatus.APPROVED
                 sl.approved_at = datetime.now(timezone.utc)
             elif action == ReviewAction.REJECT:
-                sl.status = SubLessonStatus.CONVERTING
+                sl.status = SubLessonStatus.IN_PROGRESS
             else:
                 from app.core.exceptions import InvalidStatusTransitionError
                 raise InvalidStatusTransitionError(
@@ -709,7 +691,7 @@ class SubLessonService:
             from app.core.exceptions import InvalidStatusTransitionError
             raise InvalidStatusTransitionError(
                 f"Cannot review sublesson: current status is '{_status_value(sl.status)}', "
-                "only REVIEWING or SCORM_REVIEWING can be reviewed."
+                "only REVIEWING can be reviewed."
             )
 
         _add_review_log(
@@ -717,35 +699,6 @@ class SubLessonService:
             actor_id=actor_id,
             sublesson=sl,
             action=action,
-            from_status=from_status,
-            to_status=sl.status,
-        )
-        await self._db.commit()
-        await self._db.refresh(sl)
-        return _to_sublesson_response(sl)
-
-    async def submit_scorm(
-        self,
-        sublesson_id: uuid.UUID,
-        actor_id: uuid.UUID,
-    ) -> course_schema.SubLessonResponse:
-        sl = await self._get_sublesson_orm(sublesson_id)
-        if sl.status != SubLessonStatus.CONVERTING:
-            from app.core.exceptions import InvalidStatusTransitionError
-            raise InvalidStatusTransitionError(
-                f"Cannot submit SCORM: current status is '{_status_value(sl.status)}', "
-                "only CONVERTING can submit SCORM for review."
-            )
-        if not sl.scorm_stored_name:
-            from app.core.exceptions import InvalidStatusTransitionError
-            raise InvalidStatusTransitionError("Cannot submit SCORM: no SCORM package has been uploaded.")
-        from_status = sl.status
-        sl.status = SubLessonStatus.SCORM_REVIEWING
-        _add_review_log(
-            self._db,
-            actor_id=actor_id,
-            sublesson=sl,
-            action=ReviewAction.SUBMIT,
             from_status=from_status,
             to_status=sl.status,
         )
@@ -840,10 +793,6 @@ class SubLessonService:
                 order_index=sl.order_index,
                 submitted_at=sl.submitted_at,
                 approved_at=sl.approved_at,
-                scorm_filename=sl.scorm_filename,
-                scorm_file_size=sl.scorm_file_size,
-                scorm_uploaded_at=sl.scorm_uploaded_at,
-                scorm_uploaded_by_id=sl.scorm_uploaded_by_id,
                 created_at=sl.created_at,
                 updated_at=sl.updated_at,
                 lesson_title=lesson.title if lesson else None,

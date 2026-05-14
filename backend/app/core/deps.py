@@ -169,34 +169,6 @@ def _can_comment_documents(sublesson: SubLesson, user: User, roles: set[str]) ->
     return False
 
 
-def _can_view_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
-    if _is_admin(roles):
-        return True
-    if _is_assigned_converter(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.CONVERTING
-    if _is_assigned_expert(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.SCORM_REVIEWING
-    return False
-
-
-def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
-    if _is_admin(roles):
-        return True
-    return (
-        _is_assigned_converter(sublesson, user, roles)
-        and sublesson.status == SubLessonStatus.CONVERTING
-    )
-
-
-def _can_comment_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
-    if _is_admin(roles):
-        return True
-    return (
-        _is_assigned_expert(sublesson, user, roles)
-        and sublesson.status == SubLessonStatus.SCORM_REVIEWING
-    )
-
-
 def role_required(*roles: UserRole):
     required_roles = {role.value for role in roles}
 
@@ -436,65 +408,12 @@ async def document_upload_access_to_document(
     )
 
 
-async def scorm_view_access_to_sublesson(
-    sublesson_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
-    roles = _active_role_values(current_user)
-    sublesson = await _load_sublesson_for_access(sublesson_id, db)
-    if _can_view_scorm(sublesson, current_user, roles):
-        return current_user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="You don't have permission to access SCORM for this Sub-Lesson",
-    )
-
-
-async def scorm_upload_access_to_sublesson(
-    sublesson_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
-    roles = _active_role_values(current_user)
-    sublesson = await _load_sublesson_for_access(sublesson_id, db)
-    if _can_upload_scorm(sublesson, current_user, roles):
-        return current_user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Only the assigned converter can upload SCORM while converting",
-    )
-
-
-async def scorm_comment_access_to_sublesson(
-    sublesson_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
-    roles = _active_role_values(current_user)
-    sublesson = await _load_sublesson_for_access(sublesson_id, db)
-    if _can_comment_scorm(sublesson, current_user, roles):
-        return current_user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="You don't have permission to comment on SCORM for this Sub-Lesson",
-    )
-
-
 async def teacher_submit_access_to_sublesson(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     return await document_upload_access_to_sublesson(sublesson_id, current_user, db)
-
-
-async def converter_submit_access_to_sublesson(
-    sublesson_id: uuid.UUID,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
-    return await scorm_upload_access_to_sublesson(sublesson_id, current_user, db)
 
 
 TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
@@ -506,11 +425,7 @@ DocumentViewAccessToDocument = Annotated[User, Depends(document_view_access_to_d
 DocumentCommentAccessToDocument = Annotated[User, Depends(document_comment_access_to_document)]
 DocumentDeleteAccessToDocument = Annotated[User, Depends(document_delete_access_to_document)]
 DocumentUploadAccessToDocument = Annotated[User, Depends(document_upload_access_to_document)]
-ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
-ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
-ScormCommentAccessToSubLesson = Annotated[User, Depends(scorm_comment_access_to_sublesson)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
-ConverterSubmitAccessToSubLesson = Annotated[User, Depends(converter_submit_access_to_sublesson)]
 
 
 async def teacher_assigned_to_lesson(

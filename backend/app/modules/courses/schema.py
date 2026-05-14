@@ -28,10 +28,6 @@ class SubLessonResponse(SubLessonBase):
     status: SubLessonStatus
     submitted_at: datetime | None
     approved_at: datetime | None
-    scorm_filename: str | None = None
-    scorm_file_size: int | None = None
-    scorm_uploaded_at: datetime | None = None
-    scorm_uploaded_by_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -154,10 +150,6 @@ class SubLessonListItem(BaseModel):
     order_index: int
     submitted_at: datetime | None
     approved_at: datetime | None
-    scorm_filename: str | None = None
-    scorm_file_size: int | None = None
-    scorm_uploaded_at: datetime | None = None
-    scorm_uploaded_by_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
     # Enriched from parent lesson

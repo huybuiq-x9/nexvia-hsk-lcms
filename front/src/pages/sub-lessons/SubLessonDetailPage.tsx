@@ -10,11 +10,10 @@ import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper'
 import { SubLessonTabs, type Tab } from './components/SubLessonTabs';
 import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
 import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
-import { SubLessonScormTab } from './components/SubLessonScormTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
 import { API_ROLE, SUB_LESSON_STATUS } from '../../types/api';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'approve_scorm' | 'reject_scorm' | 'submit_scorm';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
 
 export default function SubLessonDetailPage() {
   const { t } = useTranslation();
@@ -30,20 +29,16 @@ export default function SubLessonDetailPage() {
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
 
   const isTeacher = selectedRole === API_ROLE.TEACHER;
-  const isConverter = selectedRole === API_ROLE.CONVERTER;
   const isDrafting = subLesson ? (
     subLesson.status === SUB_LESSON_STATUS.DRAFT ||
     subLesson.status === SUB_LESSON_STATUS.IN_PROGRESS
   ) : false;
   const isContentReviewing = subLesson?.status === SUB_LESSON_STATUS.REVIEWING;
-  const isConverting = subLesson?.status === SUB_LESSON_STATUS.CONVERTING;
-  const isScormReviewing = subLesson?.status === SUB_LESSON_STATUS.SCORM_REVIEWING;
 
   const canViewDocuments = Boolean(subLesson) && (
     isAdmin ||
     (isTeacher && isDrafting) ||
-    (isExpert && isContentReviewing) ||
-    (isConverter && isConverting)
+    (isExpert && isContentReviewing)
   );
   const canPreviewDocuments = canViewDocuments;
   const canDownloadDocuments = canViewDocuments;
@@ -56,35 +51,12 @@ export default function SubLessonDetailPage() {
   const canUploadDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
 
-  const canViewScorm = Boolean(subLesson) && (
-    isAdmin ||
-    (isConverter && isConverting) ||
-    (isExpert && isScormReviewing)
-  );
-  const canPreviewScorm = canViewScorm;
-  const canViewScormComments = Boolean(subLesson) && (
-    isAdmin ||
-    (isConverter && isConverting) ||
-    (isExpert && isScormReviewing)
-  );
-  const canAddScormComment = Boolean(subLesson) && (isAdmin || isExpert) && isScormReviewing;
-
   // Expert / Admin review CONTENT
   const canReview = isContentReviewing && (isAdmin || isExpert);
-
-  // Converter / Admin submit SCORM for review
-  const canUploadScorm = isConverting && (isAdmin || isConverter);
-  const canSubmitScorm = isConverting
-    && Boolean(subLesson?.scorm_filename)
-    && (isAdmin || isConverter);
-
-  // Expert / Admin review SCORM
-  const canReviewScorm = isScormReviewing && (isAdmin || isExpert);
   const visibleTabs = useMemo<Tab[]>(() => [
     ...(canViewDocuments ? (['documents'] as Tab[]) : []),
     'questions',
-    ...(canViewScorm ? (['scorm'] as Tab[]) : []),
-  ], [canViewDocuments, canViewScorm]);
+  ], [canViewDocuments]);
 
   useEffect(() => {
     if (courseInfo?.assigned_expert_id) loadUser(courseInfo.assigned_expert_id);
@@ -130,14 +102,9 @@ export default function SubLessonDetailPage() {
       <SubLessonHeader
         canSubmitForReview={canSubmitForReview}
         canReview={canReview}
-        canSubmitScorm={canSubmitScorm}
-        canReviewScorm={canReviewScorm}
         onSubmit={() => setModal({ type: 'submit', show: true })}
         onApprove={() => setModal({ type: 'approve', show: true })}
         onReject={() => setModal({ type: 'reject', show: true })}
-        onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
-        onApproveScorm={() => setModal({ type: 'approve_scorm', show: true })}
-        onRejectScorm={() => setModal({ type: 'reject_scorm', show: true })}
       />
 
       <SubLessonInfoDrawer
@@ -173,16 +140,6 @@ export default function SubLessonDetailPage() {
             />
           )}
           {currentTab === 'questions' && <SubLessonQuestionsTab />}
-          {currentTab === 'scorm' && canViewScorm && (
-            <SubLessonScormTab
-              subLessonId={subLesson.id}
-              canUpload={canUploadScorm}
-              canPreview={canPreviewScorm}
-              canViewComments={canViewScormComments}
-              canAddComment={canAddScormComment}
-              onUploaded={reload}
-            />
-          )}
         </div>
       </div>
 

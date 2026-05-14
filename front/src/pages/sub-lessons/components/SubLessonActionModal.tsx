@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, AlertCircle, CheckCircle, XCircle, Send } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '../../../contexts/ToastContext';
 import { courseService } from '../../../services';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
 
 interface SubLessonActionModalProps {
   type: ModalType;
@@ -35,18 +35,6 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
         await courseService.reviewSubLesson(subLessonId, 'reject');
         toast.success(t('courses.modal.rejectSuccess'));
         onDone();
-      } else if (type === 'submit_scorm') {
-        await courseService.submitScormSubLesson(subLessonId);
-        toast.success(t('courses.modal.submitScormSuccess'));
-        onDone();
-      } else if (type === 'approve_scorm') {
-        await courseService.reviewSubLesson(subLessonId, 'approve');
-        toast.success(t('courses.modal.approveScormSuccess'));
-        onDone();
-      } else if (type === 'reject_scorm') {
-        await courseService.reviewSubLesson(subLessonId, 'reject');
-        toast.success(t('courses.modal.rejectScormSuccess'));
-        onDone();
       }
     } catch (err: unknown) {
       const msg =
@@ -58,33 +46,24 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
   };
 
   const titleMap: Record<ModalType, string> = {
-    submit:       t('courses.modal.titleSubmit'),
-    approve:      t('courses.modal.titleApprove'),
-    reject:       t('courses.modal.titleReject'),
-    upload:       t('courses.modal.titleUploadScorm'),
-    submit_scorm: t('courses.modal.titleSubmitScorm'),
-    approve_scorm: t('courses.modal.titleApproveScorm'),
-    reject_scorm: t('courses.modal.titleRejectScorm'),
+    submit:  t('courses.modal.titleSubmit'),
+    approve: t('courses.modal.titleApprove'),
+    reject:  t('courses.modal.titleReject'),
+    upload:  t('courses.modal.titleUpload'),
   };
 
   const iconMap: Record<ModalType, React.ReactNode> = {
-    submit:        <Upload size={20} className="text-blue-600" />,
-    approve:       <CheckCircle size={20} className="text-green-600" />,
-    reject:        <XCircle size={20} className="text-red-600" />,
-    upload:        <Upload size={20} className="text-violet-600" />,
-    submit_scorm:  <Send size={20} className="text-blue-600" />,
-    approve_scorm: <CheckCircle size={20} className="text-green-600" />,
-    reject_scorm:  <XCircle size={20} className="text-red-600" />,
+    submit:  <Upload size={20} className="text-blue-600" />,
+    approve: <CheckCircle size={20} className="text-green-600" />,
+    reject:  <XCircle size={20} className="text-red-600" />,
+    upload:  <Upload size={20} className="text-violet-600" />,
   };
 
   const btnClassMap: Record<ModalType, string> = {
-    submit:        'btn-primary',
-    approve:       'bg-green-600 hover:bg-green-700 text-white',
-    reject:        'btn-danger',
-    upload:        'bg-violet-600 hover:bg-violet-700 text-white',
-    submit_scorm:  'btn-primary',
-    approve_scorm: 'bg-green-600 hover:bg-green-700 text-white',
-    reject_scorm:  'btn-danger',
+    submit:  'btn-primary',
+    approve: 'bg-green-600 hover:bg-green-700 text-white',
+    reject:  'btn-danger',
+    upload:  'bg-violet-600 hover:bg-violet-700 text-white',
   };
 
   return (
@@ -115,20 +94,7 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
             <p className="text-sm text-slate-600">{t('courses.modal.rejectDesc')}</p>
           )}
           {type === 'upload' && (
-            <>
-              <p className="text-sm text-slate-600">{t('courses.modal.uploadScormDesc')}</p>
-              <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-slate-300 transition-colors">
-                <Upload size={28} className="mx-auto mb-2 text-slate-400" />
-                <p className="text-sm text-slate-500">{t('courses.modal.dropFile')}</p>
-                <p className="text-xs text-slate-400 mt-1">{t('courses.modal.scormFormat')}</p>
-              </div>
-            </>
-          )}
-          {(type === 'submit_scorm') && (
-            <p className="text-sm text-slate-600">{t('courses.modal.submitScormDesc')}</p>
-          )}
-          {(type === 'approve_scorm' || type === 'reject_scorm') && (
-            <p className="text-sm text-slate-600">{t('courses.modal.scormReviewDesc')}</p>
+            <p className="text-sm text-slate-600">{t('courses.modal.uploadDesc')}</p>
           )}
 
           {error && (

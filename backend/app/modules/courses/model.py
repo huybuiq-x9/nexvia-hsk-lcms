@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
@@ -12,7 +12,6 @@ from app.shared.enums import CourseStatus, LessonStatus, SubLessonStatus
 if TYPE_CHECKING:
     from app.modules.users.model import User
     from app.modules.documents.model import Document
-    from app.modules.scorm.model import ScormComment, ScormPackage
 
 
 class Course(BaseModel):
@@ -107,40 +106,13 @@ class SubLesson(BaseModel):
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    scorm_stored_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    scorm_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    scorm_file_size: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    scorm_uploaded_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    scorm_uploaded_by_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
 
     lesson: Mapped["Lesson"] = relationship("Lesson", back_populates="sub_lessons")
-    scorm_uploaded_by: Mapped["User | None"] = relationship(
-        "User",
-        foreign_keys=[scorm_uploaded_by_id],
-    )
     documents: Mapped[list["Document"]] = relationship(
         "Document",
         back_populates="sub_lesson",
         cascade="all, delete-orphan",
         order_by="Document.created_at",
-    )
-    scorm_comments: Mapped[list["ScormComment"]] = relationship(
-        "ScormComment",
-        back_populates="sub_lesson",
-        cascade="all, delete-orphan",
-        order_by="ScormComment.created_at",
-    )
-    scorm_packages: Mapped[list["ScormPackage"]] = relationship(
-        "ScormPackage",
-        back_populates="sub_lesson",
-        cascade="all, delete-orphan",
-        order_by="ScormPackage.version",
     )
 
 
