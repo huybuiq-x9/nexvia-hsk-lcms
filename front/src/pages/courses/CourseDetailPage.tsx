@@ -259,7 +259,9 @@ function CourseInlineEditor({
           </div>
         ) : (
           <div>
-            <div onDragOver={e => handleDragOver(e, 0)} onDragLeave={handleDragLeave} onDrop={e => handleDrop(e, 0)} className={`relative h-1 rounded-full bg-transparent transition-all duration-150 mb-1 ${dropZoneIdx === 0 && dragIdx !== null && dragIdx !== 0 ? 'h-2 bg-blue-500' : ''}`} />
+            <div onDragOver={e => handleDragOver(e, 0)} onDragLeave={handleDragLeave} onDrop={e => handleDrop(e, 0)} className="h-5 flex items-center mb-1">
+              <div className={`w-full h-1 rounded-full transition-colors duration-150 ${dropZoneIdx === 0 && dragIdx !== null && dragIdx !== 0 ? 'bg-blue-500' : 'bg-transparent'}`} />
+            </div>
             {visibleLessons.map((lesson, actualIdx) => {
               const isDragging = dragIdx === actualIdx;
               return (
@@ -297,7 +299,9 @@ function CourseInlineEditor({
                       </div>
                     </div>
                   </div>
-                  <div onDragOver={e => handleDragOver(e, actualIdx + 1)} onDragLeave={handleDragLeave} onDrop={e => handleDrop(e, actualIdx + 1)} className={`relative h-1 rounded-full bg-transparent transition-all duration-150 mt-1 ${dropZoneIdx === actualIdx + 1 && dragIdx !== null && dragIdx !== actualIdx + 1 ? 'h-2 bg-blue-500' : ''}`} />
+                  <div onDragOver={e => handleDragOver(e, actualIdx + 1)} onDragLeave={handleDragLeave} onDrop={e => handleDrop(e, actualIdx + 1)} className="h-5 flex items-center mt-1">
+                    <div className={`w-full h-1 rounded-full transition-colors duration-150 ${dropZoneIdx === actualIdx + 1 && dragIdx !== null && dragIdx !== actualIdx && dragIdx !== actualIdx + 1 ? 'bg-blue-500' : 'bg-transparent'}`} />
+                  </div>
                 </div>
               );
             })}
