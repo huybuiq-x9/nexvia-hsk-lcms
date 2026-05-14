@@ -29,6 +29,7 @@ export default function SubLessonDetailPage() {
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
   const [currentScormPackage, setCurrentScormPackage] = useState<ApiScormPackage | null>(null);
+  const [documentCount, setDocumentCount] = useState(0);
 
   const isTeacher = selectedRole === API_ROLE.TEACHER;
   const isConverter = selectedRole === API_ROLE.CONVERTER;
@@ -57,7 +58,7 @@ export default function SubLessonDetailPage() {
   );
   const canDeleteDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canUploadDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
-  const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
+  const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting && documentCount > 0;
   const canViewScorm = Boolean(subLesson) && (isAdmin || isTeacher || isExpert || isConverter);
   const canUploadScorm = Boolean(subLesson) && isReadyForScorm && (isAdmin || isConverter);
   const canCommentScorm = canViewScorm;
@@ -151,6 +152,7 @@ export default function SubLessonDetailPage() {
               subLessonId={subLesson.id}
               subLessonStatus={subLesson.status}
               onRefresh={reload}
+              onDocumentsChange={setDocumentCount}
               canUpload={canUploadDocuments}
               canPreview={canPreviewDocuments}
               canDownload={canDownloadDocuments}

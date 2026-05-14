@@ -470,7 +470,7 @@
       "reject_scorm": "Rejected SCORM"
     },
     "actions": {
-      "submitForReview": "Submit for Review",
+      "submitForReview": "Submit",
       "approve": "Approve",
       "reject": "Reject",
       "submitScorm": "Submit SCORM",

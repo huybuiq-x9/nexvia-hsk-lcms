@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Download, Trash2, Eye, MessageSquare, Send, Upload } from 'lucide-react';
 import { useSubLessonDocuments } from '../hooks/useSubLessonDocuments';
@@ -20,6 +20,7 @@ interface SubLessonDocumentsTabProps {
   subLessonId: string;
   subLessonStatus: string;
   onRefresh: () => void;
+  onDocumentsChange?: (count: number) => void;
   canUpload?: boolean;
   canPreview?: boolean;
   canDownload?: boolean;
@@ -31,6 +32,7 @@ export function SubLessonDocumentsTab({
   subLessonId,
   subLessonStatus,
   onRefresh,
+  onDocumentsChange,
   canUpload = true,
   canPreview = true,
   canDownload = true,
@@ -48,6 +50,10 @@ export function SubLessonDocumentsTab({
     getDownloadUrl,
     reload,
   } = useSubLessonDocuments(subLessonId, onRefresh);
+
+  useEffect(() => {
+    if (!loading) onDocumentsChange?.(documents.length);
+  }, [documents.length, loading, onDocumentsChange]);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
