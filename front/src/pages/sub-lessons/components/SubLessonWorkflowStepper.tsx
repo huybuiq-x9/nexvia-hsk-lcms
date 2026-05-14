@@ -12,12 +12,12 @@ const WORKFLOW_STEPS = [
 ];
 
 const WORKFLOW_LABELS: Record<string, string> = {
-  [SUB_LESSON_STATUS.DRAFT]:          'stepDraft',
-  [SUB_LESSON_STATUS.IN_PROGRESS]:    'stepInProgress',
-  [SUB_LESSON_STATUS.REVIEWING]:      'stepReviewing',
-  [SUB_LESSON_STATUS.CONVERTING]:     'stepConverting',
+  [SUB_LESSON_STATUS.DRAFT]:           'stepDraft',
+  [SUB_LESSON_STATUS.IN_PROGRESS]:     'stepInProgress',
+  [SUB_LESSON_STATUS.REVIEWING]:       'stepReviewing',
+  [SUB_LESSON_STATUS.CONVERTING]:      'stepConverting',
   [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'stepScormReviewing',
-  [SUB_LESSON_STATUS.APPROVED]:       'stepApproved',
+  [SUB_LESSON_STATUS.APPROVED]:        'stepApproved',
 };
 
 interface SubLessonWorkflowStepperProps {

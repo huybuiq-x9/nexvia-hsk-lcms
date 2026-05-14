@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import (
     AdminOnly,
-    ConverterSubmitAccessToSubLesson,
+    ConverterSubmitScormAccess,
     CurrentUser,
     ExpertAssignedToSubLesson,
+    ExpertReviewScormAccess,
     TeacherAssignedToLesson,
     TeacherAssignedToSubLesson,
     TeacherSubmitAccessToSubLesson,
@@ -281,7 +282,19 @@ async def review_sublesson(
 async def submit_scorm_sublesson(
     sublesson_id: uuid.UUID,
     service: Annotated[SubLessonService, Depends(get_sublesson_service)],
-    current_user: ConverterSubmitAccessToSubLesson,
+    current_user: ConverterSubmitScormAccess,
 ):
-    """Converter gửi SCORM đã upload để Expert review lần 2."""
     return await service.submit_scorm(sublesson_id, current_user.id)
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/review-scorm",
+    response_model=course_schema.SubLessonResponse,
+)
+async def review_scorm_sublesson(
+    sublesson_id: uuid.UUID,
+    data: course_schema.ScormReviewRequest,
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
+    current_user: ExpertReviewScormAccess,
+):
+    return await service.review_scorm(sublesson_id, data.action, current_user.id)

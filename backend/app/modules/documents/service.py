@@ -1,9 +1,11 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from fastapi import UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.concurrency import run_in_threadpool
 from app.modules.documents.model import Document, DocumentComment
 from app.modules.documents.schema import (
     DocumentResponse,
@@ -175,21 +177,34 @@ async def upload_documents(
     if sublesson.status == SubLessonStatus.DRAFT:
         sublesson.status = SubLessonStatus.IN_PROGRESS
 
-    results = []
+    # Read + validate all files first (async HTTP body reads)
+    file_data: list[tuple[str, bytes, str, str]] = []
     for file in files:
         content = await file.read()
         ext, mime_type = _validate_document_file(file, content)
-        stored_name, download_url = storage_service.upload_file(
+        file_data.append((file.filename or "unknown", content, ext, mime_type))
+
+    # Upload all files to S3 concurrently (non-blocking)
+    async def _upload_one(filename: str, content: bytes, mime_type: str) -> tuple[str, str]:
+        return await run_in_threadpool(
+            storage_service.upload_file,
             file_content=content,
-            original_filename=file.filename or "unknown",
+            original_filename=filename,
             content_type=mime_type,
             sub_lesson_id=str(sub_lesson_id),
         )
 
+    upload_results: list[tuple[str, str]] = await asyncio.gather(
+        *[_upload_one(name, content, mime) for name, content, _ext, mime in file_data]
+    )
+
+    # DB operations (sequential, single session)
+    results = []
+    for (filename, content, ext, mime_type), (stored_name, download_url) in zip(file_data, upload_results):
         existing_result = await db.execute(
             select(Document)
             .where(Document.sub_lesson_id == sub_lesson_id)
-            .where(Document.original_name == (file.filename or "unknown"))
+            .where(Document.original_name == filename)
             .where(Document.deleted_at.is_(None))
             .order_by(Document.version.desc())
         )
@@ -210,7 +225,7 @@ async def upload_documents(
         doc = Document(
             sub_lesson_id=sub_lesson_id,
             uploader_id=uploader_id,
-            original_name=file.filename or "unknown",
+            original_name=filename,
             stored_name=stored_name,
             file_extension=ext,
             file_size=len(content),
@@ -266,7 +281,8 @@ async def reupload_document(
             f"Replacement file must be '.{current_doc.file_extension}' to match the current document."
         )
 
-    stored_name, _ = storage_service.upload_file(
+    stored_name, _ = await run_in_threadpool(
+        storage_service.upload_file,
         file_content=content,
         original_filename=current_doc.original_name,
         content_type=mime_type,
@@ -318,7 +334,7 @@ async def delete_document(
     document_id: uuid.UUID,
 ) -> None:
     doc = await _get_document_orm(db, document_id)
-    storage_service.delete_file(doc.stored_name)
+    await run_in_threadpool(storage_service.delete_file, doc.stored_name)
     doc.deleted_at = datetime.now(timezone.utc)
     await db.commit()
 
@@ -328,7 +344,7 @@ async def get_download_url(
     document_id: uuid.UUID,
 ) -> str:
     doc = await _get_document_orm(db, document_id)
-    return storage_service.get_presigned_download_url(doc.stored_name)
+    return await run_in_threadpool(storage_service.get_presigned_download_url, doc.stored_name)
 
 
 async def add_comment(

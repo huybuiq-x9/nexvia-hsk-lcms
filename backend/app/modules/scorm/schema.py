@@ -1,30 +1,10 @@
 from datetime import datetime
 import uuid
 from typing import Annotated
+
 from pydantic import BaseModel, ConfigDict, Field
 
-
-class ScormPackageInfo(BaseModel):
-    id: uuid.UUID | None = None
-    sub_lesson_id: uuid.UUID
-    title: str
-    schema: str
-    schema_version: str
-    sco_launch: str
-    launch_url: str | None = None
-    filename: str
-    stored_name: str
-    file_size: int | None = None
-    uploaded_at: datetime | None = None
-    uploaded_by_id: uuid.UUID | None = None
-    files_count: int
-    version: int = 1
-    is_current: bool = True
-    comments_count: int = 0
-
-
-class ScormFileListResponse(BaseModel):
-    files: list[str]
+from app.shared.enums import ScormPackageStatus
 
 
 class ScormCommentAuthorInfo(BaseModel):
@@ -36,7 +16,7 @@ class ScormCommentAuthorInfo(BaseModel):
 class ScormCommentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
-    sub_lesson_id: uuid.UUID
+    scorm_package_id: uuid.UUID
     author_id: uuid.UUID
     content: str
     created_at: datetime
@@ -51,3 +31,47 @@ class ScormCommentCreate(BaseModel):
 class ScormCommentListResponse(BaseModel):
     total: int
     items: list[ScormCommentResponse]
+
+
+class ScormPackageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    sub_lesson_id: uuid.UUID
+    uploader_id: uuid.UUID | None
+    original_filename: str
+    source_key: str | None
+    extracted_prefix: str | None
+    title: str | None
+    manifest_identifier: str | None
+    organization_identifier: str | None
+    schema_name: str | None
+    schema_version: str | None
+    launch_path: str | None
+    launch_parameters: str | None
+    file_size: int
+    files_count: int
+    version: int
+    is_current: bool
+    status: ScormPackageStatus
+    error_message: str | None
+    task_id: str | None
+    uploaded_at: datetime | None
+    processed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    comments_count: int = 0
+
+
+class ScormUploadResponse(BaseModel):
+    package: ScormPackageResponse
+
+
+class ScormPackageListResponse(BaseModel):
+    total: int
+    items: list[ScormPackageResponse]
+
+
+class ScormPreviewSessionResponse(BaseModel):
+    launch_url: str
+    expires_in: int

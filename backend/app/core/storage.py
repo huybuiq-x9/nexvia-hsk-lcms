@@ -1,5 +1,6 @@
 import boto3
 import mimetypes
+from pathlib import Path
 import re
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -19,6 +20,7 @@ class StorageService:
     def __init__(self):
         self._client = None
         self._bucket_region = None
+        self._bucket_verified = False
 
     @property
     def client(self):
@@ -35,6 +37,7 @@ class StorageService:
             config=Config(
                 signature_version="s3v4",
                 s3={"addressing_style": "virtual"},
+                max_pool_connections=20,
             ),
         )
 
@@ -69,9 +72,12 @@ class StorageService:
 
     def _ensure_bucket_exists(self) -> None:
         """AWS S3 buckets must exist before uploading."""
+        if self._bucket_verified:
+            return
         try:
             self._resolve_bucket_region()
             self.client.head_bucket(Bucket=settings.S3_BUCKET_NAME)
+            self._bucket_verified = True
         except ClientError as e:
             raise LCMSException(
                 message=f"Cannot access S3 bucket: {e}",
@@ -114,33 +120,72 @@ class StorageService:
         download_url = self.get_presigned_download_url(key)
         return key, download_url
 
-    def upload_scorm_package(
+    def upload_object(
         self,
+        key: str,
         file_content: bytes,
-        original_filename: str,
-        sub_lesson_id: str,
-    ) -> tuple[str, str]:
-        """Upload a SCORM zip to S3 and return (stored_name, download_url)."""
+        content_type: str,
+    ) -> str:
+        """Upload bytes to an explicit S3 key."""
         self._ensure_bucket_exists()
-
-        safe_name = _sanitize_filename(original_filename)
-        key = f"Scorm/{sub_lesson_id}/{safe_name}"
-
         try:
             self.client.put_object(
                 Bucket=settings.S3_BUCKET_NAME,
                 Key=key,
                 Body=file_content,
-                ContentType="application/zip",
+                ContentType=content_type,
             )
         except ClientError as e:
             raise LCMSException(
-                message=f"Failed to upload SCORM package: {e}",
+                message=f"Failed to upload file: {e}",
                 status_code=500,
             )
+        return key
 
-        download_url = self.get_presigned_download_url(key)
-        return key, download_url
+    def upload_local_file(
+        self,
+        key: str,
+        file_path: str | Path,
+        content_type: str,
+    ) -> str:
+        """Upload a local file to an explicit S3 key."""
+        self._ensure_bucket_exists()
+        try:
+            with open(file_path, "rb") as f:
+                self.client.upload_fileobj(
+                    f,
+                    settings.S3_BUCKET_NAME,
+                    key,
+                    ExtraArgs={"ContentType": content_type},
+                )
+        except ClientError as e:
+            raise LCMSException(
+                message=f"Failed to upload file: {e}",
+                status_code=500,
+            )
+        return key
+
+    def get_object(self, key: str) -> dict:
+        """Return an S3 object response for streaming by key."""
+        self._resolve_bucket_region()
+        try:
+            return self.client.get_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=key,
+            )
+        except ClientError as e:
+            error = e.response.get("Error", {})
+            code = error.get("Code")
+            http_status = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if code in {"NoSuchKey", "NotFound", "404"} or http_status == 404:
+                raise LCMSException(
+                    message="File not found",
+                    status_code=404,
+                )
+            raise LCMSException(
+                message=f"Failed to read file: {e}",
+                status_code=500,
+            )
 
     def delete_file(self, stored_name: str) -> None:
         """Delete a file from S3 by its stored name (full key)."""

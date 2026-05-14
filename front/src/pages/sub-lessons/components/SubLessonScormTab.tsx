@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, MessageSquare, Send, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Eye, FileArchive, MessageSquare, Play, Send, Upload } from 'lucide-react';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { useToast } from '../../../contexts/ToastContext';
-import { formatDate, formatFileSize } from '../../../utils/formatters';
 import { scormService } from '../../../services';
-import { createScormPreviewRuntime, type ScormRuntimeSnapshot } from '../../../utils/scormRuntime';
-import type { ApiScormComment, ApiScormPackageInfo } from '../../../types/api';
+import { formatDate } from '../../../utils/formatters';
+import type { ApiScormComment, ApiScormPackage, ScormPackageStatus } from '../../../types/api';
+import { useSubLessonScorm } from '../hooks/useSubLessonScorm';
+import { ScormPreviewModal } from './ScormPreviewModal';
+
+const MAX_SCORM_SIZE = 200 * 1024 * 1024;
 
 const getApiErrorMessage = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback;
@@ -15,344 +18,404 @@ const getApiErrorMessage = (err: unknown, fallback: string) =>
 interface SubLessonScormTabProps {
   subLessonId: string;
   canUpload?: boolean;
-  canPreview?: boolean;
-  canViewComments?: boolean;
-  canAddComment?: boolean;
-  onUploaded?: () => void;
+  canComment?: boolean;
+  onRefresh?: () => void;
+  onScormPackageChange?: (pkg: ApiScormPackage | null) => void;
+  onPreviewOpen?: () => void;
+}
+
+function StatusBadge({ status }: { status: ScormPackageStatus }) {
+  const { t } = useTranslation();
+  const styles: Record<ScormPackageStatus, string> = {
+    processing: 'bg-blue-50 text-blue-700 border-blue-200',
+    ready: 'bg-green-50 text-green-700 border-green-200',
+    failed: 'bg-red-50 text-red-700 border-red-200',
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium ${styles[status]}`}>
+      {status === 'processing' && <Loader2 size={12} className="animate-spin" />}
+      {status === 'ready' && <CheckCircle2 size={12} />}
+      {status === 'failed' && <AlertCircle size={12} />}
+      {t(`scorm.status.${status}`)}
+    </span>
+  );
+}
+
+function VersionHistory({
+  versions,
+  onPreview,
+  previewLoadingId,
+  canComment,
+}: {
+  versions: ApiScormPackage[];
+  onPreview: (scormPackage: ApiScormPackage) => void;
+  previewLoadingId: string | null;
+  canComment?: boolean;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, ApiScormComment[]>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [sendingComment, setSendingComment] = useState<Record<string, boolean>>({});
+  const commentInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  const toggleComments = async (versionId: string) => {
+    if (!canComment) return;
+    const isExpanding = expandedId !== versionId;
+    if (isExpanding) {
+      setExpandedId(versionId);
+      if (!commentsMap[versionId]) {
+        setLoadingComments(prev => ({ ...prev, [versionId]: true }));
+        try {
+          const res = await scormService.listComments(versionId);
+          setCommentsMap(prev => ({ ...prev, [versionId]: res.items }));
+        } catch {
+          toast.error(t('scorm.commentsLoadError'));
+        } finally {
+          setLoadingComments(prev => ({ ...prev, [versionId]: false }));
+        }
+      }
+      setTimeout(() => { commentInputRefs.current[versionId]?.focus(); }, 50);
+    } else {
+      setExpandedId(null);
+    }
+  };
+
+  const sendComment = async (versionId: string) => {
+    if (!canComment) return;
+    const text = commentText[versionId]?.trim();
+    if (!text) return;
+    setSendingComment(prev => ({ ...prev, [versionId]: true }));
+    try {
+      const comment = await scormService.addComment(versionId, text);
+      setCommentsMap(prev => ({ ...prev, [versionId]: [...(prev[versionId] || []), comment] }));
+      setCommentText(prev => ({ ...prev, [versionId]: '' }));
+    } catch {
+      toast.error(t('scorm.commentSendError'));
+    } finally {
+      setSendingComment(prev => ({ ...prev, [versionId]: false }));
+    }
+  };
+
+  if (versions.length === 0) return null;
+
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900">{t('scorm.versionsTitle')}</h3>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {versions.map(version => {
+          const isPreviewLoading = previewLoadingId === version.id;
+          const isExpanded = expandedId === version.id;
+          const versionComments = commentsMap[version.id] || [];
+          const isLoadingCmt = loadingComments[version.id];
+          const isSendingCmt = sendingComment[version.id];
+          const versionCommentText = commentText[version.id] || '';
+          const commentCount = isExpanded ? versionComments.length : (version.comments_count ?? 0);
+
+          return (
+            <div key={version.id} className="group">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                <div className="w-9 h-9 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
+                  <FileArchive size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-slate-800">v{version.version}</span>
+                    {version.is_current && (
+                      <span className="text-xs font-medium text-blue-600">{t('scorm.current')}</span>
+                    )}
+                  </div>
+                  <div className="text-sm text-slate-700 truncate">
+                    {version.title || version.original_filename}
+                  </div>
+                  <div className="text-xs text-slate-400 truncate mt-0.5">
+                    {version.launch_path || version.original_filename}
+                    <span className="mx-1">·</span>
+                    {formatDate(version.uploaded_at ?? version.created_at)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <StatusBadge status={version.status} />
+                  {canComment && (
+                    <button
+                      type="button"
+                      onClick={() => toggleComments(version.id)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative"
+                      title={t('scorm.comments')}
+                      style={{
+                        backgroundColor: isExpanded ? 'rgb(239 246 255)' : undefined,
+                        color: isExpanded ? 'rgb(37 99 235)' : 'rgb(148 163 184)',
+                      }}
+                    >
+                      <MessageSquare size={15} />
+                      {commentCount > 0 && !isExpanded && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                          {commentCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  {version.status === 'ready' && (
+                    <button
+                      type="button"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={previewLoadingId !== null}
+                      onClick={() => onPreview(version)}
+                      title={t('scorm.preview')}
+                      aria-label={t('scorm.preview')}
+                    >
+                      {isPreviewLoading ? (
+                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Eye size={15} />
+                      )}
+                    </button>
+                  )}
+                  {version.status === 'processing' && (
+                    <span title={t('scorm.processingHint')}>
+                      <Loader2 size={15} className="text-blue-500 animate-spin" />
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Inline comments panel */}
+              {canComment && isExpanded && (
+                <div className="pl-4 pr-4 pb-4 ml-4 border-l-2 border-blue-200">
+                  <div className="space-y-2 mb-3">
+                    {isLoadingCmt ? (
+                      <div className="flex justify-center py-4">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : versionComments.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-2">{t('scorm.noComments')}</p>
+                    ) : (
+                      versionComments.map(comment => (
+                        <div key={comment.id} className="flex gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[9px] font-bold text-blue-600">
+                              {comment.author.full_name[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-slate-700">{comment.author.full_name}</span>
+                              <span className="text-[10px] text-slate-400">{formatDate(comment.created_at)}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5 whitespace-pre-wrap break-words">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      ref={el => { commentInputRefs.current[version.id] = el; }}
+                      value={versionCommentText}
+                      onChange={e => setCommentText(prev => ({ ...prev, [version.id]: e.target.value }))}
+                      placeholder={t('scorm.commentPlaceholder')}
+                      className="input resize-none flex-1 text-xs py-2"
+                      rows={2}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendComment(version.id);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => sendComment(version.id)}
+                      disabled={isSendingCmt || !versionCommentText.trim()}
+                      className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
+                      title={t('scorm.sendComment')}
+                    >
+                      <Send size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function SubLessonScormTab({
   subLessonId,
   canUpload = false,
-  canPreview = true,
-  canViewComments = true,
-  canAddComment = true,
-  onUploaded,
+  canComment = false,
+  onRefresh,
+  onScormPackageChange,
+  onPreviewOpen,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [info, setInfo] = useState<ApiScormPackageInfo | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<ApiScormComment[]>([]);
-  const [commentsLoaded, setCommentsLoaded] = useState(false);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [sendingComment, setSendingComment] = useState(false);
-  const [runtimeSnapshot, setRuntimeSnapshot] = useState<ScormRuntimeSnapshot>({
-    initialized: false,
-    data: {},
-    events: [],
-  });
-  const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const reuploadInputRef = useRef<HTMLInputElement | null>(null);
+  const { scormPackage, versions, loading, uploading, uploadPackage, reuploadPackage } = useSubLessonScorm(subLessonId);
+  const reuploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const runtime = createScormPreviewRuntime(setRuntimeSnapshot);
-    return () => runtime.dispose();
-  }, []);
+    onScormPackageChange?.(scormPackage);
+  }, [scormPackage, onScormPackageChange]);
+  const [previewPackage, setPreviewPackage] = useState<ApiScormPackage | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
 
-  const launchUrl = info?.sco_launch
-    ? scormService.buildLaunchUrl(subLessonId, info.sco_launch)
-    : null;
-
-  const openPreview = async () => {
-    if (!canPreview) return;
-    if (info) {
-      setShowPreview(true);
-      return;
+  const validateFile = (files: File[]) => {
+    if (files.length > 1) {
+      toast.error(t('scorm.singleFileOnly'));
+      return null;
     }
-    setPreviewLoading(true);
-    try {
-      const data = await scormService.getPackageInfo(subLessonId);
-      setInfo(data);
-      setShowPreview(true);
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 404) {
-        toast.error(t('courses.noScorm'));
-      } else {
-        toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
-      }
-    } finally {
-      setPreviewLoading(false);
+    const file = files[0];
+    if (!file) return null;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      toast.error(t('scorm.onlyZip'));
+      return null;
     }
-  };
-
-  const uploadScormFile = async (file: File, successMessage: string) => {
-    setUploading(true);
-    try {
-      const uploaded = await scormService.uploadPackage(subLessonId, file);
-      setInfo(uploaded);
-      setShowPreview(false);
-      setCommentsOpen(false);
-      setComments([]);
-      setCommentsLoaded(false);
-      onUploaded?.();
-      toast.success(successMessage);
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
-    } finally {
-      setUploading(false);
+    if (file.size > MAX_SCORM_SIZE) {
+      toast.error(t('scorm.fileTooBig'));
+      return null;
     }
+    return file;
   };
 
   const handleFiles = async (files: File[]) => {
-    if (!canUpload) return;
-    const file = files[0];
+    if (!canUpload || uploading || scormPackage) return;
+    const file = validateFile(files);
     if (!file) return;
-    await uploadScormFile(file, t('scorm.uploadSuccess'));
+
+    try {
+      await uploadPackage(file);
+      toast.success(t('scorm.uploadStarted'));
+      onRefresh?.();
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
+    }
   };
 
   const handleReupload = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!canUpload) return;
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
+    if (!canUpload || uploading || !scormPackage) return;
+    const file = validateFile(files);
     if (!file) return;
-    await uploadScormFile(file, t('scorm.reuploadSuccess'));
-  };
 
-  const toggleComments = async () => {
-    if (!canViewComments) return;
-    const nextOpen = !commentsOpen;
-    setCommentsOpen(nextOpen);
-    if (!nextOpen) return;
-
-    if (!commentsLoaded) {
-      setCommentsLoading(true);
-      try {
-        const res = await scormService.listComments(subLessonId);
-        setComments(res.items);
-        setCommentsLoaded(true);
-      } catch (err: unknown) {
-        toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
-      } finally {
-        setCommentsLoading(false);
-      }
-    }
-
-    setTimeout(() => commentInputRef.current?.focus(), 50);
-  };
-
-  const sendComment = async () => {
-    if (!canAddComment) return;
-    const content = commentText.trim();
-    if (!content) return;
-
-    setSendingComment(true);
     try {
-      const comment = await scormService.addComment(subLessonId, content);
-      setComments(prev => [...prev, comment]);
-      setCommentText('');
-      setInfo(prev => prev ? {
-        ...prev,
-        comments_count: (prev.comments_count ?? 0) + 1,
-      } : prev);
+      await reuploadPackage(scormPackage.id, file);
+      toast.success(t('scorm.reuploadStarted'));
+      onRefresh?.();
     } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
-    } finally {
-      setSendingComment(false);
+      toast.error(getApiErrorMessage(err, t('scorm.reuploadError')));
     }
   };
+
+  const handlePreview = async (packageToPreview: ApiScormPackage) => {
+    if (packageToPreview.status !== 'ready' || previewLoadingId) return;
+    setPreviewLoadingId(packageToPreview.id);
+    setPreviewUrl(null);
+    setPreviewPackage(null);
+    try {
+      const session = await scormService.createPreviewSession(packageToPreview.id);
+      setPreviewUrl(session.launch_url);
+      setPreviewPackage(packageToPreview);
+      onPreviewOpen?.();
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('scorm.previewError')));
+    } finally {
+      setPreviewLoadingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {canUpload && !info && (
+      {canUpload && !scormPackage && (
         <FileDropzone
           accept={['zip']}
-          maxSize={500 * 1024 * 1024}
+          maxSize={MAX_SCORM_SIZE}
+          multiple={false}
           onFiles={handleFiles}
           uploading={uploading}
+          label={t('scorm.dropzone')}
+          hint={t('scorm.dropzoneHint')}
+          uploadingLabel={t('scorm.uploading')}
         />
       )}
 
-      {!info ? (
-        <EmptyState
-          icon={<FileArchive size={40} className="opacity-50" />}
-          message={t('courses.noScorm')}
-          hint={canUpload ? t('scorm.noPackageHintUpload') : t('scorm.noPackageHint')}
+      {canUpload && scormPackage && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+          <div>
+            <p className="text-sm font-medium text-blue-900">{t('scorm.versionManagedTitle')}</p>
+            <p className="text-xs text-blue-700 mt-0.5">{t('scorm.versionManagedHint')}</p>
+          </div>
+          <input
+            ref={reuploadInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={handleReupload}
+          />
+          <button
+            type="button"
+            className="btn btn-primary inline-flex items-center justify-center gap-2 shrink-0"
+            disabled={uploading}
+            onClick={() => reuploadInputRef.current?.click()}
+          >
+            {uploading ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Upload size={15} />
+            )}
+            {t('scorm.reupload')}
+          </button>
+        </div>
+      )}
+
+      {!canUpload && (
+        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-600">
+          {t('scorm.uploadLocked')}
+        </div>
+      )}
+
+      {scormPackage ? (
+        <VersionHistory
+          versions={versions.length > 0 ? versions : [scormPackage]}
+          onPreview={handlePreview}
+          previewLoadingId={previewLoadingId}
+          canComment={canComment}
         />
       ) : (
-        <>
-          <div className="border border-slate-200 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                  <FileArchive size={20} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-slate-900 truncate">{info.title}</h3>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{info.filename}</p>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 mt-1">
-                    <span className="font-medium text-slate-500">v{info.version}</span>
-                    {info.file_size !== null && <span>{formatFileSize(info.file_size)}</span>}
-                    <span>{info.schema_version || info.schema}</span>
-                    <span>{t('scorm.filesCount', { count: info.files_count })}</span>
-                    {info.uploaded_at && <span>{formatDate(info.uploaded_at)}</span>}
-                  </div>
-                </div>
-              </div>
+        <EmptyState
+          icon={<FileArchive size={36} />}
+          message={t('scorm.noPackage')}
+          hint={canUpload ? t('scorm.noPackageHint') : t('scorm.noPackageReadOnlyHint')}
+        />
+      )}
 
-              <div className="flex items-center gap-2">
-                {canViewComments && (
-                  <button
-                    onClick={toggleComments}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors relative"
-                    title={t('documents.comments')}
-                  >
-                    <MessageSquare size={14} />
-                    {(info.comments_count ?? 0) > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                        {info.comments_count}
-                      </span>
-                    )}
-                  </button>
-                )}
-                {canPreview && (
-                  <button
-                    onClick={openPreview}
-                    disabled={previewLoading}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
-                    title={t('documents.preview')}
-                  >
-                    {previewLoading ? (
-                      <span className="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    ) : launchUrl ? (
-                      <Eye size={14} />
-                    ) : (
-                      <Eye size={14} className="opacity-30" />
-                    )}
-                  </button>
-                )}
-                {canUpload && (
-                  <>
-                    <input
-                      ref={reuploadInputRef}
-                      type="file"
-                      accept=".zip"
-                      className="hidden"
-                      onChange={handleReupload}
-                    />
-                    <button
-                      onClick={() => reuploadInputRef.current?.click()}
-                      disabled={uploading}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50"
-                      title={t('scorm.reupload')}
-                    >
-                      {uploading ? (
-                        <span className="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Upload size={14} />
-                      )}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {canViewComments && commentsOpen && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <div className="space-y-3 mb-3">
-                  {commentsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  ) : comments.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">{t('documents.noComments')}</p>
-                  ) : (
-                    comments.map(comment => (
-                      <div key={comment.id} className="flex gap-2">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[10px] font-bold text-blue-600">
-                            {comment.author.full_name[0]?.toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-700">
-                              {comment.author.full_name}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {formatDate(comment.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-600 mt-0.5 whitespace-pre-wrap break-words">
-                            {comment.content}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {canAddComment && (
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      ref={commentInputRef}
-                      value={commentText}
-                      onChange={event => setCommentText(event.target.value)}
-                      placeholder={t('documents.commentPlaceholder')}
-                      className="input resize-none flex-1 text-xs py-2"
-                      rows={2}
-                      onKeyDown={event => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
-                          event.preventDefault();
-                          sendComment();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={sendComment}
-                      disabled={sendingComment || !commentText.trim()}
-                      className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
-                      title={t('documents.sendComment')}
-                    >
-                      {sendingComment ? (
-                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Send size={13} />
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {canPreview && showPreview && (
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 bg-slate-50">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                  <Eye size={16} />
-                  {t('scorm.preview')}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
-                  <span className={runtimeSnapshot.initialized ? 'text-green-700' : 'text-slate-500'}>
-                    {runtimeSnapshot.initialized ? t('scorm.runtimeRunning') : t('scorm.runtimeIdle')}
-                  </span>
-                  <span>{t('scorm.runtimeEvents', { count: runtimeSnapshot.events.length })}</span>
-                </div>
-              </div>
-
-              {launchUrl ? (
-                <iframe
-                  key={launchUrl}
-                  title={t('scorm.preview')}
-                  src={launchUrl}
-                  className="w-full h-[640px] bg-white"
-                  allow="fullscreen; autoplay"
-                />
-              ) : (
-                <div className="h-64 flex flex-col items-center justify-center text-slate-400">
-                  <Play size={28} className="mb-2" />
-                  <p className="text-sm">{t('scorm.noLaunchFile')}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+      {previewPackage && previewUrl && (
+        <ScormPreviewModal
+          scormPackage={previewPackage}
+          launchUrl={previewUrl}
+          canComment={canComment}
+          onClose={() => {
+            setPreviewPackage(null);
+            setPreviewUrl(null);
+          }}
+        />
       )}
     </div>
   );

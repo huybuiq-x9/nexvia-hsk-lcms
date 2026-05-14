@@ -1,29 +1,77 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, FileText, MessageSquare, Send, X } from 'lucide-react';
+import { FileArchive, MessageSquare, RefreshCw, Send, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { ApiDocumentComment, ApiDocumentWithUploader } from '../../types/api';
-import { documentService } from '../../services';
-import { useToast } from '../../contexts/ToastContext';
-import { formatDate } from '../../utils/formatters';
+import type { ApiScormComment, ApiScormPackage } from '../../../types/api';
+import type { Scorm2004API } from 'scorm-again';
+import { scormService } from '../../../services';
+import { useToast } from '../../../contexts/ToastContext';
+import { formatDate } from '../../../utils/formatters';
 
-interface FilePreviewModalProps {
-  doc: ApiDocumentWithUploader;
-  url: string | null;
+declare global {
+  interface Window {
+    API_1484_11?: Scorm2004API;
+  }
+}
+
+interface ScormPreviewModalProps {
+  scormPackage: ApiScormPackage;
+  launchUrl: string;
   onClose: () => void;
-  onDownload: () => void;
   canComment?: boolean;
 }
 
-export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = false }: FilePreviewModalProps) {
+export function ScormPreviewModal({
+  scormPackage,
+  launchUrl,
+  onClose,
+  canComment = false,
+}: ScormPreviewModalProps) {
   const { t } = useTranslation();
   const toast = useToast();
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [frameKey, setFrameKey] = useState(0);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<ApiDocumentComment[]>([]);
+  const [comments, setComments] = useState<ApiScormComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const title = scormPackage.title || scormPackage.original_filename;
+
+  useEffect(() => {
+    let api: Scorm2004API | null = null;
+    let disposed = false;
+
+    void import('scorm-again').then(({ Scorm2004API }) => {
+      if (disposed) return;
+      api = new Scorm2004API({
+        autocommit: true,
+        autocommitSeconds: 10,
+        dataCommitFormat: 'json',
+        renderCommonCommitFields: true,
+        sendFullCommit: true,
+        logLevel: import.meta.env.DEV ? 'INFO' : 'ERROR',
+        onLogMessage: (level, message) => {
+          if (import.meta.env.DEV) {
+            console.debug(`[SCORM ${level}]`, message);
+          }
+        },
+      });
+
+      api.cmi.learner_id = 'preview-user';
+      api.cmi.learner_name = 'Preview User';
+      window.API_1484_11 = api;
+      setRuntimeReady(true);
+    });
+
+    return () => {
+      disposed = true;
+      if (api && window.API_1484_11 === api) {
+        delete window.API_1484_11;
+      }
+    };
+  }, [scormPackage.id]);
 
   const handleToggleComments = async () => {
     if (!canComment) return;
@@ -32,10 +80,10 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
     if (opening && comments.length === 0) {
       setLoadingComments(true);
       try {
-        const res = await documentService.listComments(doc.id);
+        const res = await scormService.listComments(scormPackage.id);
         setComments(res.items);
       } catch {
-        toast.error(t('documents.noComments'));
+        toast.error(t('scorm.commentsLoadError'));
       } finally {
         setLoadingComments(false);
         setTimeout(() => commentInputRef.current?.focus(), 50);
@@ -50,86 +98,86 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
     if (!text || sendingComment) return;
     setSendingComment(true);
     try {
-      const comment = await documentService.addComment(doc.id, text);
+      const comment = await scormService.addComment(scormPackage.id, text);
       setComments(prev => [...prev, comment]);
       setCommentText('');
     } catch {
-      toast.error(t('documents.sendComment'));
+      toast.error(t('scorm.commentSendError'));
     } finally {
       setSendingComment(false);
     }
   };
 
-  const isPdf = doc.file_extension === 'pdf';
-  const commentCount = (doc.comments_count ?? 0);
-
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="relative bg-white rounded-xl shadow-2xl w-full max-w-7xl mx-auto flex flex-col overflow-hidden"
-        style={{ height: '92dvh' }}
-      >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5">
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-7xl mx-auto flex flex-col overflow-hidden h-[92dvh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <FileText size={16} className="text-blue-600 shrink-0" />
-            <span className="text-sm font-medium text-slate-800 truncate">{doc.original_name}</span>
+            <FileArchive size={16} className="text-blue-600 shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-900 truncate">{title}</h2>
+              <p className="text-xs text-slate-400 truncate">
+                {scormPackage.launch_path || scormPackage.original_filename}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {canComment && isPdf && (
+            {canComment && (
               <button
                 type="button"
                 onClick={handleToggleComments}
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative"
-                title={t('documents.comments')}
+                className="w-8 h-8 flex items-center justify-center rounded-md transition-colors relative"
+                title={t('scorm.comments')}
+                aria-label={t('scorm.comments')}
                 style={{
                   backgroundColor: showComments ? 'rgb(239 246 255)' : undefined,
-                  color: showComments ? 'rgb(37 99 235)' : 'rgb(148 163 184)',
+                  color: showComments ? 'rgb(37 99 235)' : 'rgb(100 116 139)',
                 }}
               >
                 <MessageSquare size={15} />
-                {commentCount > 0 && !showComments && (
+                {(scormPackage.comments_count ?? 0) > 0 && !showComments && (
                   <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                    {commentCount}
+                    {scormPackage.comments_count}
                   </span>
                 )}
               </button>
             )}
             <button
               type="button"
-              onClick={onDownload}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-              title={t('documents.download')}
+              onClick={() => setFrameKey(key => key + 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+              title={t('scorm.reloadPreview')}
+              aria-label={t('scorm.reloadPreview')}
             >
-              <Download size={15} />
+              <RefreshCw size={15} />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none"
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+              title={t('scorm.closePreview')}
+              aria-label={t('scorm.closePreview')}
             >
               <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* Body: PDF iframe + optional comment panel */}
+        {/* Body: iframe + optional comment panel */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 overflow-hidden">
-            {url ? (
-              isPdf ? (
-                <iframe src={url} title={doc.original_name} className="w-full h-full border-0" />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
-                  <FileText size={48} className="opacity-30" />
-                  <p className="text-sm">{t('documents.previewNotSupported')}</p>
-                  <button onClick={onDownload} className="btn btn-primary flex items-center gap-2">
-                    <Download size={14} />
-                    {t('documents.downloadToView')}
-                  </button>
-                </div>
-              )
+          {/* SCORM iframe */}
+          <div className="flex-1 overflow-hidden bg-slate-100">
+            {runtimeReady ? (
+              <iframe
+                key={frameKey}
+                src={launchUrl}
+                title={title}
+                className="w-full h-full border-0 bg-white"
+                allow="fullscreen"
+                allowFullScreen
+              />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -138,10 +186,10 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
           </div>
 
           {/* Comment panel */}
-          {canComment && isPdf && showComments && (
+          {canComment && showComments && (
             <div className="w-72 shrink-0 border-l border-slate-200 flex flex-col bg-white">
               <div className="px-4 py-3 border-b border-slate-100 shrink-0">
-                <h3 className="text-sm font-semibold text-slate-800">{t('documents.comments')}</h3>
+                <h3 className="text-sm font-semibold text-slate-800">{t('scorm.comments')}</h3>
               </div>
 
               {/* Comments list */}
@@ -151,7 +199,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : comments.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic text-center py-4">{t('documents.noComments')}</p>
+                  <p className="text-xs text-slate-400 italic text-center py-4">{t('scorm.noComments')}</p>
                 ) : (
                   comments.map(comment => (
                     <div key={comment.id} className="flex gap-2">
@@ -178,7 +226,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
                   ref={commentInputRef}
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
-                  placeholder={t('documents.commentPlaceholder')}
+                  placeholder={t('scorm.commentPlaceholder')}
                   className="input resize-none flex-1 text-xs py-2"
                   rows={2}
                   onKeyDown={e => {
@@ -193,7 +241,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
                   onClick={handleSendComment}
                   disabled={sendingComment || !commentText.trim()}
                   className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
-                  title={t('documents.sendComment')}
+                  title={t('scorm.sendComment')}
                 >
                   <Send size={13} />
                 </button>

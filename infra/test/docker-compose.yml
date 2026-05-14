@@ -11,7 +11,6 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ../common/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -35,6 +34,10 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lcms}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - scorm_tmp:/app/.tmp/scorm-uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,6 +48,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ─── Celery Worker ──────────────────────────────────────────
+  celery:
+    build:
+      context: ../..
+      dockerfile: infra/common/Dockerfile.backend
+    container_name: lcms_celery_test
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-lcms}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - scorm_tmp:/app/.tmp/scorm-uploads
+    command: celery -A celery_app worker --loglevel=info --queues=default,scorm --concurrency=2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # ─── Frontend ────────────────────────────────────────────────
   frontend:
@@ -78,3 +107,6 @@ services:
   postgres:
     ports:
       - "5432:5432"
+
+volumes:
+  scorm_tmp:

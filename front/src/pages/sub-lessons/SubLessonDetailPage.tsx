@@ -9,12 +9,12 @@ import { SubLessonHeader, SubLessonInfoDrawer } from './components/SubLessonHead
 import { SubLessonWorkflowStepper } from './components/SubLessonWorkflowStepper';
 import { SubLessonTabs, type Tab } from './components/SubLessonTabs';
 import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
-import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonScormTab } from './components/SubLessonScormTab';
+import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
-import { API_ROLE, SUB_LESSON_STATUS } from '../../types/api';
+import { API_ROLE, SUB_LESSON_STATUS, type ApiScormPackage } from '../../types/api';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'approve_scorm' | 'reject_scorm' | 'submit_scorm';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
 
 export default function SubLessonDetailPage() {
   const { t } = useTranslation();
@@ -28,6 +28,8 @@ export default function SubLessonDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('documents');
   const [modal, setModal] = useState<{ type: ModalType; show: boolean }>({ type: 'submit', show: false });
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
+  const [currentScormPackage, setCurrentScormPackage] = useState<ApiScormPackage | null>(null);
+  const [documentCount, setDocumentCount] = useState(0);
 
   const isTeacher = selectedRole === API_ROLE.TEACHER;
   const isConverter = selectedRole === API_ROLE.CONVERTER;
@@ -36,14 +38,16 @@ export default function SubLessonDetailPage() {
     subLesson.status === SUB_LESSON_STATUS.IN_PROGRESS
   ) : false;
   const isContentReviewing = subLesson?.status === SUB_LESSON_STATUS.REVIEWING;
-  const isConverting = subLesson?.status === SUB_LESSON_STATUS.CONVERTING;
+  const isReadyForScorm = subLesson ? (
+    subLesson.status === SUB_LESSON_STATUS.CONVERTING ||
+    subLesson.status === SUB_LESSON_STATUS.SCORM_REVIEWING
+  ) : false;
   const isScormReviewing = subLesson?.status === SUB_LESSON_STATUS.SCORM_REVIEWING;
 
   const canViewDocuments = Boolean(subLesson) && (
     isAdmin ||
     (isTeacher && isDrafting) ||
-    (isExpert && isContentReviewing) ||
-    (isConverter && isConverting)
+    (isExpert && isContentReviewing)
   );
   const canPreviewDocuments = canViewDocuments;
   const canDownloadDocuments = canViewDocuments;
@@ -54,36 +58,19 @@ export default function SubLessonDetailPage() {
   );
   const canDeleteDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canUploadDocuments = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
-  const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
-
-  const canViewScorm = Boolean(subLesson) && (
-    isAdmin ||
-    (isConverter && isConverting) ||
-    (isExpert && isScormReviewing)
-  );
-  const canPreviewScorm = canViewScorm;
-  const canViewScormComments = Boolean(subLesson) && (
-    isAdmin ||
-    (isConverter && isConverting) ||
-    (isExpert && isScormReviewing)
-  );
-  const canAddScormComment = Boolean(subLesson) && (isAdmin || isExpert) && isScormReviewing;
+  const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting && documentCount > 0;
+  const canViewScorm = Boolean(subLesson) && (isAdmin || isTeacher || isExpert || isConverter);
+  const canUploadScorm = Boolean(subLesson) && isReadyForScorm && (isAdmin || isConverter);
+  const canCommentScorm = canViewScorm;
+  const canSubmitScorm = Boolean(subLesson) && subLesson?.status === SUB_LESSON_STATUS.CONVERTING && currentScormPackage?.status === 'ready' && (isAdmin || isConverter);
+  const canReviewScorm = isScormReviewing && (isAdmin || isExpert);
 
   // Expert / Admin review CONTENT
   const canReview = isContentReviewing && (isAdmin || isExpert);
-
-  // Converter / Admin submit SCORM for review
-  const canUploadScorm = isConverting && (isAdmin || isConverter);
-  const canSubmitScorm = isConverting
-    && Boolean(subLesson?.scorm_filename)
-    && (isAdmin || isConverter);
-
-  // Expert / Admin review SCORM
-  const canReviewScorm = isScormReviewing && (isAdmin || isExpert);
   const visibleTabs = useMemo<Tab[]>(() => [
     ...(canViewDocuments ? (['documents'] as Tab[]) : []),
-    'questions',
     ...(canViewScorm ? (['scorm'] as Tab[]) : []),
+    'questions',
   ], [canViewDocuments, canViewScorm]);
 
   useEffect(() => {
@@ -165,6 +152,8 @@ export default function SubLessonDetailPage() {
               subLessonId={subLesson.id}
               subLessonStatus={subLesson.status}
               onRefresh={reload}
+              onDocumentsChange={setDocumentCount}
+              onPreviewOpen={() => setIsInfoDrawerOpen(false)}
               canUpload={canUploadDocuments}
               canPreview={canPreviewDocuments}
               canDownload={canDownloadDocuments}
@@ -172,17 +161,17 @@ export default function SubLessonDetailPage() {
               canDelete={canDeleteDocuments}
             />
           )}
-          {currentTab === 'questions' && <SubLessonQuestionsTab />}
           {currentTab === 'scorm' && canViewScorm && (
             <SubLessonScormTab
               subLessonId={subLesson.id}
               canUpload={canUploadScorm}
-              canPreview={canPreviewScorm}
-              canViewComments={canViewScormComments}
-              canAddComment={canAddScormComment}
-              onUploaded={reload}
+              canComment={canCommentScorm}
+              onRefresh={reload}
+              onScormPackageChange={setCurrentScormPackage}
+              onPreviewOpen={() => setIsInfoDrawerOpen(false)}
             />
           )}
+          {currentTab === 'questions' && <SubLessonQuestionsTab />}
         </div>
       </div>
 

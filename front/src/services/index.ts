@@ -1,4 +1,4 @@
-import client, { API_BASE_URL } from './apiClient';
+import client from './apiClient';
 import type {
   ApiAuthResponse,
   ApiTokenResponse,
@@ -27,10 +27,12 @@ import type {
   ApiDocumentUploadResponse,
   ApiDocumentComment,
   ApiDocumentCommentListResponse,
-  ApiScormFileListResponse,
+  ApiScormPackage,
+  ApiScormPackageListResponse,
+  ApiScormPreviewSessionResponse,
+  ApiScormUploadResponse,
   ApiScormComment,
   ApiScormCommentListResponse,
-  ApiScormPackageInfo,
   ApiRole,
   LessonStatus,
   SubLessonStatus,
@@ -247,52 +249,14 @@ export const courseService = {
     return res.data;
   },
 
-  async submitScormSubLesson(sublessonId: string): Promise<ApiSubLessonResponse> {
+  async submitScorm(sublessonId: string): Promise<ApiSubLessonResponse> {
     const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/submit-scorm`);
     return res.data;
   },
-};
 
-// ─── SCORM ───────────────────────────────────────────────────────────────────
-
-const encodeScormPath = (path: string): string =>
-  path.split('/').map(part => encodeURIComponent(part)).join('/');
-
-export const scormService = {
-  async getPackageInfo(sublessonId: string): Promise<ApiScormPackageInfo> {
-    const res = await client.get<ApiScormPackageInfo>(`/scorm/preview/${sublessonId}`);
+  async reviewScorm(sublessonId: string, action: 'approve_scorm' | 'reject_scorm'): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/review-scorm`, { action });
     return res.data;
-  },
-
-  async uploadPackage(sublessonId: string, file: File): Promise<ApiScormPackageInfo> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await client.post<ApiScormPackageInfo>(
-      `/scorm/sub-lessons/${sublessonId}/package`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
-    return res.data;
-  },
-
-  async listFiles(sublessonId: string): Promise<ApiScormFileListResponse> {
-    const res = await client.get<ApiScormFileListResponse>(`/scorm/preview/${sublessonId}/files`);
-    return res.data;
-  },
-
-  async listComments(sublessonId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormCommentListResponse> {
-    const res = await client.get<ApiScormCommentListResponse>(`/scorm/sub-lessons/${sublessonId}/comments`, { params });
-    return res.data;
-  },
-
-  async addComment(sublessonId: string, content: string): Promise<ApiScormComment> {
-    const res = await client.post<ApiScormComment>(`/scorm/sub-lessons/${sublessonId}/comments`, { content });
-    return res.data;
-  },
-
-  buildLaunchUrl(sublessonId: string, launchPath: string): string {
-    const token = localStorage.getItem('access_token') ?? '';
-    return `${API_BASE_URL}/scorm/preview/${sublessonId}/asset/${encodeURIComponent(token)}/${encodeScormPath(launchPath)}`;
   },
 };
 
@@ -351,6 +315,66 @@ export const documentService = {
 
   async addComment(documentId: string, content: string): Promise<ApiDocumentComment> {
     const res = await client.post<ApiDocumentComment>(`/documents/${documentId}/comments`, { content });
+    return res.data;
+  },
+};
+
+// ─── SCORM ───────────────────────────────────────────────────────────────────
+
+export const scormService = {
+  async getCurrentPackage(sublessonId: string): Promise<ApiScormPackage | null> {
+    const res = await client.get<ApiScormPackage | null>(`/scorm/sub-lessons/${sublessonId}/packages/current`);
+    return res.data;
+  },
+
+  async listPackages(sublessonId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormPackageListResponse> {
+    const res = await client.get<ApiScormPackageListResponse>(`/scorm/sub-lessons/${sublessonId}/packages`, { params });
+    return res.data;
+  },
+
+  async uploadPackage(sublessonId: string, file: File): Promise<ApiScormUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiScormUploadResponse>(
+      `/scorm/sub-lessons/${sublessonId}/packages`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async reuploadPackage(packageId: string, file: File): Promise<ApiScormUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiScormUploadResponse>(
+      `/scorm/packages/${packageId}/reupload`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  async getPackage(packageId: string): Promise<ApiScormPackage> {
+    const res = await client.get<ApiScormPackage>(`/scorm/packages/${packageId}`);
+    return res.data;
+  },
+
+  async createPreviewSession(packageId: string): Promise<ApiScormPreviewSessionResponse> {
+    const res = await client.post<ApiScormPreviewSessionResponse>(
+      `/scorm/packages/${packageId}/preview-session`,
+      undefined,
+      { withCredentials: true }
+    );
+    return res.data;
+  },
+
+  async listComments(packageId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormCommentListResponse> {
+    const res = await client.get<ApiScormCommentListResponse>(`/scorm/packages/${packageId}/comments`, { params });
+    return res.data;
+  },
+
+  async addComment(packageId: string, content: string): Promise<ApiScormComment> {
+    const res = await client.post<ApiScormComment>(`/scorm/packages/${packageId}/comments`, { content });
     return res.data;
   },
 };

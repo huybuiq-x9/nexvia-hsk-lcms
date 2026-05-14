@@ -30,8 +30,8 @@ export const SUB_LESSON_STATUS = {
   IN_PROGRESS: 'in_progress',
   REVIEWING: 'reviewing',
   CONVERTING: 'converting',
-  SCORM_REVIEWING: 'scorm_reviewing',
   APPROVED: 'approved',
+  SCORM_REVIEWING: 'scorm_reviewing',
 } as const;
 
 export type SubLessonStatus = (typeof SUB_LESSON_STATUS)[keyof typeof SUB_LESSON_STATUS];
@@ -55,12 +55,12 @@ export const LESSON_STATUS_COLORS: Record<LessonStatus, string> = {
 };
 
 export const SUB_LESSON_STATUS_COLORS: Record<SubLessonStatus, string> = {
-  [SUB_LESSON_STATUS.DRAFT]:          'bg-slate-50 text-slate-600 border-slate-200',
-  [SUB_LESSON_STATUS.IN_PROGRESS]:    'bg-blue-50 text-blue-700 border-blue-200',
-  [SUB_LESSON_STATUS.REVIEWING]:      'bg-amber-50 text-amber-700 border-amber-200',
-  [SUB_LESSON_STATUS.CONVERTING]:     'bg-purple-50 text-purple-700 border-purple-200',
-  [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'bg-orange-50 text-orange-700 border-orange-200',
-  [SUB_LESSON_STATUS.APPROVED]:       'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.DRAFT]:           'bg-slate-50 text-slate-600 border-slate-200',
+  [SUB_LESSON_STATUS.IN_PROGRESS]:     'bg-blue-50 text-blue-700 border-blue-200',
+  [SUB_LESSON_STATUS.REVIEWING]:       'bg-amber-50 text-amber-700 border-amber-200',
+  [SUB_LESSON_STATUS.CONVERTING]:      'bg-purple-50 text-purple-700 border-purple-200',
+  [SUB_LESSON_STATUS.APPROVED]:        'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
 // ─── SubLesson ────────────────────────────────────────────────────────────────
@@ -74,10 +74,6 @@ export interface ApiSubLessonResponse {
   order_index: number;
   submitted_at: string | null;
   approved_at: string | null;
-  scorm_filename: string | null;
-  scorm_file_size: number | null;
-  scorm_uploaded_at: string | null;
-  scorm_uploaded_by_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -97,10 +93,6 @@ export interface ApiSubLessonListItem {
   order_index: number;
   submitted_at: string | null;
   approved_at: string | null;
-  scorm_filename: string | null;
-  scorm_file_size: number | null;
-  scorm_uploaded_at: string | null;
-  scorm_uploaded_by_id: string | null;
   created_at: string;
   updated_at: string;
   lesson_title: string | null;
@@ -134,6 +126,9 @@ export type ReviewLogAction =
   | 'reupload_document'
   | 'upload_scorm'
   | 'reupload_scorm'
+  | 'submit_scorm'
+  | 'approve_scorm'
+  | 'reject_scorm'
   | 'assign_converter'
   | 'publish'
   | 'unpublish'
@@ -161,51 +156,6 @@ export interface ApiReviewLog {
 export interface ApiReviewLogListResponse {
   total: number;
   items: ApiReviewLog[];
-}
-
-// ─── SCORM ───────────────────────────────────────────────────────────────────
-
-export interface ApiScormPackageInfo {
-  id: string | null;
-  sub_lesson_id: string;
-  title: string;
-  schema: string;
-  schema_version: string;
-  sco_launch: string;
-  launch_url: string | null;
-  filename: string;
-  stored_name: string;
-  file_size: number | null;
-  uploaded_at: string | null;
-  uploaded_by_id: string | null;
-  files_count: number;
-  version: number;
-  is_current: boolean;
-  comments_count: number;
-}
-
-export interface ApiScormFileListResponse {
-  files: string[];
-}
-
-export interface ApiScormCommentAuthor {
-  id: string;
-  full_name: string;
-}
-
-export interface ApiScormComment {
-  id: string;
-  sub_lesson_id: string;
-  author_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  author: ApiScormCommentAuthor;
-}
-
-export interface ApiScormCommentListResponse {
-  total: number;
-  items: ApiScormComment[];
 }
 
 // ─── Lesson ──────────────────────────────────────────────────────────────────

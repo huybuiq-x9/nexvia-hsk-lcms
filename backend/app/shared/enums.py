@@ -27,9 +27,15 @@ class SubLessonStatus(str, enum.Enum):
     IN_PROGRESS = "in_progress"
     REVIEWING = "reviewing"
     CONVERTING = "converting"
-    SCORM_REVIEWING = "scorm_reviewing"
     APPROVED = "approved"
     REJECTED = "rejected"
+    SCORM_REVIEWING = "scorm_reviewing"
+
+
+class ScormPackageStatus(str, enum.Enum):
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
 
 
 class ExamStatus(str, enum.Enum):
@@ -64,22 +70,22 @@ class ReviewAction(str, enum.Enum):
     REJECT = "reject"
     UPLOAD_DOCUMENT = "upload_document"
     REUPLOAD_DOCUMENT = "reupload_document"
-    UPLOAD_SCORM = "upload_scorm"
-    REUPLOAD_SCORM = "reupload_scorm"
     ASSIGN_CONVERTER = "assign_converter"
     PUBLISH = "publish"
     UNPUBLISH = "unpublish"
     ASSIGN_TEACHER = "assign_teacher"
     ASSIGN_EXPERT = "assign_expert"
+    UPLOAD_SCORM = "upload_scorm"
+    REUPLOAD_SCORM = "reupload_scorm"
+    SUBMIT_SCORM = "submit_scorm"
+    APPROVE_SCORM = "approve_scorm"
+    REJECT_SCORM = "reject_scorm"
 
 
 class NotificationEvent(str, enum.Enum):
     TEACHER_SUBMITTED = "teacher_submitted"
     EXPERT_REJECTED_SUBLESSON = "expert_rejected_sublesson"
     EXPERT_APPROVED_CONTENT = "expert_approved_content"
-    CONVERTER_UPLOADED_SCORM = "converter_uploaded_scorm"
-    EXPERT_REJECTED_SCORM = "expert_rejected_scorm"
-    EXPERT_APPROVED_SCORM = "expert_approved_scorm"
     ADMIN_PUBLISHED_COURSE = "admin_published_course"
     TEACHER_SUBMITTED_EXAM = "teacher_submitted_exam"
     EXPERT_REJECTED_EXAM = "expert_rejected_exam"

@@ -1,547 +1,437 @@
+import os
 import posixpath
 import uuid
 import zipfile
-from datetime import datetime, timezone
-from io import BytesIO
-from urllib.parse import unquote, urlsplit
-from xml.etree.ElementTree import ParseError
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from urllib.parse import quote, unquote
 
-from botocore.exceptions import ClientError
 from fastapi import UploadFile
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
-from app.core.exceptions import ForbiddenError, LCMSException, NotFoundError
+from app.core.exceptions import LCMSException, NotFoundError
+from app.core.security import create_scorm_preview_token
 from app.core.storage import storage_service
 from app.modules.courses.model import SubLesson
-from app.modules.courses.service import add_review_log
-from app.modules.scorm.manifest import parse_imsmanifest
 from app.modules.scorm.model import ScormComment, ScormPackage
 from app.modules.scorm.schema import (
     ScormCommentAuthorInfo,
     ScormCommentCreate,
     ScormCommentListResponse,
     ScormCommentResponse,
-    ScormFileListResponse,
-    ScormPackageInfo,
+    ScormPackageListResponse,
+    ScormPackageResponse,
+    ScormPreviewSessionResponse,
+    ScormUploadResponse,
 )
-from app.shared.enums import ReviewAction, SubLessonStatus
+from app.shared.enums import ReviewAction, ScormPackageStatus, SubLessonStatus
 
 
-MAX_SCORM_SIZE = 500 * 1024 * 1024
+CHUNK_SIZE = 1024 * 1024
+SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS = 30 * 60
 
 
-class ScormService:
-    @property
-    def client(self):
-        return storage_service.client
+async def _get_sublesson_orm(db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
+    result = await db.execute(select(SubLesson).where(SubLesson.id == sublesson_id))
+    sublesson = result.scalar_one_or_none()
+    if not sublesson:
+        raise NotFoundError("SubLesson", str(sublesson_id))
+    return sublesson
 
-    async def _get_sublesson_orm(self, db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
-        result = await db.execute(select(SubLesson).where(SubLesson.id == sublesson_id))
-        sublesson = result.scalar_one_or_none()
-        if not sublesson:
-            raise NotFoundError("SubLesson", str(sublesson_id))
-        return sublesson
 
-    async def _get_current_package(
-        self,
-        db: AsyncSession,
-        sublesson_id: uuid.UUID,
-    ) -> ScormPackage | None:
-        result = await db.execute(
-            select(ScormPackage)
-            .where(ScormPackage.sub_lesson_id == sublesson_id)
-            .where(ScormPackage.is_current.is_(True))
-            .where(ScormPackage.deleted_at.is_(None))
-            .order_by(ScormPackage.version.desc())
-        )
-        return result.scalars().first()
+async def _get_package_orm(db: AsyncSession, package_id: uuid.UUID) -> ScormPackage:
+    result = await db.execute(
+        select(ScormPackage)
+        .where(ScormPackage.id == package_id)
+        .where(ScormPackage.deleted_at.is_(None))
+    )
+    package = result.scalar_one_or_none()
+    if not package:
+        raise NotFoundError("SCORM package", str(package_id))
+    return package
 
-    async def _get_max_package_version(self, db: AsyncSession, sublesson_id: uuid.UUID) -> int:
-        result = await db.execute(
-            select(func.max(ScormPackage.version))
-            .where(ScormPackage.sub_lesson_id == sublesson_id)
-            .where(ScormPackage.deleted_at.is_(None))
-        )
-        return result.scalar() or 0
 
-    def _get_s3_object(self, stored_name: str) -> bytes:
-        try:
-            response = self.client.get_object(
-                Bucket=settings.S3_BUCKET_NAME,
-                Key=stored_name,
-            )
-            return response["Body"].read()
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "")
-            if error_code in ("NoSuchKey", "404"):
-                raise NotFoundError("SCORM package", stored_name)
-            raise LCMSException(f"Failed to get SCORM package: {e}", status_code=500)
+def _to_response(package: ScormPackage) -> ScormPackageResponse:
+    resp = ScormPackageResponse.model_validate(package)
+    # Only count if already eagerly loaded — avoid async lazy-load errors
+    if "comments" in package.__dict__:
+        return resp.model_copy(update={"comments_count": len(package.__dict__["comments"])})
+    return resp
 
-    def _read_zip(self, stored_name: str) -> zipfile.ZipFile:
-        try:
-            return zipfile.ZipFile(BytesIO(self._get_s3_object(stored_name)))
-        except zipfile.BadZipFile:
-            raise LCMSException("Invalid SCORM ZIP file", status_code=400)
 
-    def _inspect_package(self, content: bytes) -> tuple[dict, list[str]]:
-        try:
-            with zipfile.ZipFile(BytesIO(content)) as zf:
-                names = sorted(name for name in zf.namelist() if not name.endswith("/"))
-                manifest_name = next(
-                    (name for name in names if name.lower().endswith("imsmanifest.xml")),
-                    None,
-                )
-                if not manifest_name:
-                    raise LCMSException("SCORM package must contain imsmanifest.xml", status_code=400)
+def preview_cookie_name(package_id: uuid.UUID) -> str:
+    return f"scorm_preview_{package_id.hex}"
 
-                manifest_text = zf.read(manifest_name).decode("utf-8", errors="ignore")
-                try:
-                    info = parse_imsmanifest(manifest_text)
-                except ParseError:
-                    raise LCMSException("Invalid imsmanifest.xml", status_code=400)
-                info["sco_launch"] = self._resolve_launch_path(
-                    info.get("sco_launch") or "",
-                    manifest_name,
-                    names,
-                )
 
-                version = (info.get("schema_version") or "").lower()
-                if "2004" not in version and "1.3" not in version:
+def _validate_zip_filename(filename: str | None) -> str:
+    original_filename = filename or "package.zip"
+    if not original_filename.lower().endswith(".zip"):
+        raise LCMSException("Only .zip SCORM packages are allowed", status_code=400)
+    return original_filename
+
+
+def _ensure_ready_for_preview(package: ScormPackage) -> None:
+    if package.status != ScormPackageStatus.READY.value:
+        raise LCMSException("SCORM package is not ready for preview", status_code=400)
+    if not package.extracted_prefix or not package.launch_path:
+        raise LCMSException("SCORM package preview metadata is incomplete", status_code=400)
+
+
+def _normalize_asset_path(asset_path: str) -> str:
+    clean = unquote(asset_path).replace("\\", "/").strip()
+    if not clean or clean.startswith("/"):
+        raise LCMSException("Invalid SCORM asset path", status_code=400)
+    normalized = posixpath.normpath(clean)
+    if normalized in ("", ".", "..") or normalized.startswith("../"):
+        raise LCMSException("Invalid SCORM asset path", status_code=400)
+    return normalized
+
+
+def _asset_key(package: ScormPackage, asset_path: str) -> str:
+    normalized_path = _normalize_asset_path(asset_path)
+    prefix = (package.extracted_prefix or "").rstrip("/")
+    if not prefix:
+        raise LCMSException("SCORM package extracted files are not available", status_code=400)
+    return f"{prefix}/{normalized_path}"
+
+
+def _launch_url(package: ScormPackage) -> str:
+    launch_path = quote(package.launch_path or "", safe="/")
+    launch_url = f"/api/v1/scorm/packages/{package.id}/assets/{launch_path}"
+    launch_parameters = (package.launch_parameters or "").strip()
+    if launch_parameters:
+        if launch_parameters.startswith("?"):
+            launch_url = f"{launch_url}{launch_parameters}"
+        else:
+            launch_url = f"{launch_url}?{launch_parameters}"
+    return launch_url
+
+
+async def _write_upload_to_staging(file: UploadFile, package_id: uuid.UUID) -> tuple[str, int]:
+    staging_dir = Path(settings.SCORM_UPLOAD_TMP_DIR)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    staging_path = staging_dir / f"{package_id}.zip"
+
+    total_size = 0
+    try:
+        with open(staging_path, "wb") as out:
+            while True:
+                chunk = await file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > settings.SCORM_MAX_ZIP_SIZE:
                     raise LCMSException(
-                        "Only SCORM 2004 packages are supported",
+                        f"SCORM package exceeds maximum size of {settings.SCORM_MAX_ZIP_SIZE // (1024 * 1024)} MB",
                         status_code=400,
                     )
-                return info, names
-        except zipfile.BadZipFile:
-            raise LCMSException("Invalid ZIP file", status_code=400)
+                out.write(chunk)
+    except Exception:
+        if staging_path.exists():
+            staging_path.unlink()
+        raise
 
-    async def upload_package(
-        self,
-        db: AsyncSession,
-        sublesson_id: uuid.UUID,
-        uploader_id: uuid.UUID,
-        file: UploadFile,
-    ) -> ScormPackageInfo:
-        filename = file.filename or "scorm.zip"
-        if not filename.lower().endswith(".zip"):
-            raise ForbiddenError("Only .zip SCORM packages are allowed")
+    if total_size == 0:
+        staging_path.unlink(missing_ok=True)
+        raise LCMSException("SCORM package is empty", status_code=400)
+    if not zipfile.is_zipfile(staging_path):
+        staging_path.unlink(missing_ok=True)
+        raise LCMSException("Uploaded file is not a valid ZIP archive", status_code=400)
 
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        if sublesson.status not in (SubLessonStatus.CONVERTING, SubLessonStatus.SCORM_REVIEWING):
-            raise ForbiddenError(
-                f"Cannot upload SCORM: sublesson status is '{sublesson.status.value}'. "
-                "SCORM can only be uploaded while converting or reviewing SCORM."
-            )
+    return str(staging_path), total_size
 
-        content = await file.read()
-        if len(content) > MAX_SCORM_SIZE:
-            raise ForbiddenError(
-                f"SCORM package exceeds maximum size of {MAX_SCORM_SIZE // (1024 * 1024)} MB"
-            )
 
-        info, names = self._inspect_package(content)
-        current_package = await self._get_current_package(db, sublesson_id)
-        max_version = await self._get_max_package_version(db, sublesson_id)
-        is_reupload = current_package is not None or sublesson.scorm_stored_name is not None
+async def upload_package(
+    db: AsyncSession,
+    sub_lesson_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> ScormUploadResponse:
+    from app.modules.courses.service import add_review_log
 
-        if not current_package and sublesson.scorm_stored_name:
-            legacy_info = self.get_package_info_from_sublesson(sublesson)
-            legacy_package = ScormPackage(
-                sub_lesson_id=sublesson.id,
-                uploader_id=sublesson.scorm_uploaded_by_id,
-                title=legacy_info.title,
-                schema=legacy_info.schema,
-                schema_version=legacy_info.schema_version,
-                sco_launch=legacy_info.sco_launch,
-                filename=legacy_info.filename,
-                stored_name=legacy_info.stored_name,
-                file_size=legacy_info.file_size,
-                uploaded_at=sublesson.scorm_uploaded_at,
-                files_count=legacy_info.files_count,
-                version=max(max_version, 1),
-                is_current=False,
-            )
-            db.add(legacy_package)
-            max_version = max(max_version, legacy_package.version)
-
-        current_packages = await db.execute(
-            select(ScormPackage)
-            .where(ScormPackage.sub_lesson_id == sublesson_id)
-            .where(ScormPackage.deleted_at.is_(None))
-        )
-        for package in current_packages.scalars().all():
-            package.is_current = False
-
-        stored_name, _ = storage_service.upload_scorm_package(
-            file_content=content,
-            original_filename=filename,
-            sub_lesson_id=str(sublesson_id),
+    sublesson = await _get_sublesson_orm(db, sub_lesson_id)
+    existing_result = await db.execute(
+        select(ScormPackage.id)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .limit(1)
+    )
+    if existing_result.scalar_one_or_none() is not None:
+        raise LCMSException(
+            "SCORM package already exists for this SubLesson. Use reupload to create a new version.",
+            status_code=409,
         )
 
-        uploaded_at = datetime.now(timezone.utc)
-        package = ScormPackage(
-            sub_lesson_id=sublesson_id,
-            uploader_id=uploader_id,
-            title=info.get("title") or sublesson.title,
-            schema=info.get("schema") or "SCORM",
-            schema_version=info.get("schema_version") or "",
-            sco_launch=info.get("sco_launch") or "",
-            filename=filename,
-            stored_name=stored_name,
-            file_size=len(content),
-            uploaded_at=uploaded_at,
-            files_count=len(names),
-            version=max_version + 1,
-            is_current=True,
-        )
-        db.add(package)
+    result = await _create_package_version(
+        db=db,
+        sub_lesson_id=sub_lesson_id,
+        uploader_id=uploader_id,
+        file=file,
+    )
+    add_review_log(
+        db,
+        actor_id=uploader_id,
+        sublesson=sublesson,
+        action=ReviewAction.UPLOAD_SCORM,
+        from_status=sublesson.status,
+        to_status=sublesson.status,
+    )
+    await db.commit()
+    return result
 
-        sublesson.scorm_stored_name = stored_name
-        sublesson.scorm_filename = filename
-        sublesson.scorm_file_size = len(content)
-        sublesson.scorm_uploaded_at = uploaded_at
-        sublesson.scorm_uploaded_by_id = uploader_id
-        add_review_log(
-            db,
-            actor_id=uploader_id,
-            sublesson=sublesson,
-            action=ReviewAction.REUPLOAD_SCORM if is_reupload else ReviewAction.UPLOAD_SCORM,
-            from_status=sublesson.status,
-            to_status=sublesson.status,
-            comment=f"{filename} v{package.version}",
-        )
 
+async def reupload_package(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> ScormUploadResponse:
+    from app.modules.courses.service import add_review_log
+
+    current_package = await _get_package_orm(db, package_id)
+    if not current_package.is_current:
+        raise LCMSException("Only the current SCORM package can be re-uploaded", status_code=400)
+
+    sublesson = await _get_sublesson_orm(db, current_package.sub_lesson_id)
+    result = await _create_package_version(
+        db=db,
+        sub_lesson_id=current_package.sub_lesson_id,
+        uploader_id=uploader_id,
+        file=file,
+    )
+    add_review_log(
+        db,
+        actor_id=uploader_id,
+        sublesson=sublesson,
+        action=ReviewAction.REUPLOAD_SCORM,
+        from_status=sublesson.status,
+        to_status=sublesson.status,
+    )
+    await db.commit()
+    return result
+
+
+async def _create_package_version(
+    db: AsyncSession,
+    sub_lesson_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> ScormUploadResponse:
+    original_filename = _validate_zip_filename(file.filename)
+    package_id = uuid.uuid4()
+    staging_path, file_size = await _write_upload_to_staging(file, package_id)
+
+    max_version_result = await db.execute(
+        select(func.max(ScormPackage.version))
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+    )
+    next_version = (max_version_result.scalar() or 0) + 1
+
+    await db.execute(
+        update(ScormPackage)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .where(ScormPackage.is_current.is_(True))
+        .values(is_current=False)
+    )
+
+    package = ScormPackage(
+        id=package_id,
+        sub_lesson_id=sub_lesson_id,
+        uploader_id=uploader_id,
+        original_filename=original_filename,
+        file_size=file_size,
+        version=next_version,
+        is_current=True,
+        status=ScormPackageStatus.PROCESSING.value,
+        uploaded_at=datetime.now(timezone.utc),
+        created_by=uploader_id,
+        updated_by=uploader_id,
+    )
+    db.add(package)
+    await db.commit()
+    await db.refresh(package)
+
+    from app.modules.scorm.tasks import process_scorm_package_task
+
+    try:
+        async_result = await run_in_threadpool(
+            process_scorm_package_task.apply_async,
+            args=[str(package.id), staging_path],
+            queue="scorm",
+        )
+    except Exception:
+        if os.path.exists(staging_path):
+            os.unlink(staging_path)
+        package.status = ScormPackageStatus.FAILED.value
+        package.error_message = "Failed to enqueue SCORM processing task"
         await db.commit()
-        await db.refresh(package)
-        return self.get_package_info_from_package(package, comments_count=0)
+        raise LCMSException("Failed to enqueue SCORM processing task", status_code=500)
 
-    def _require_scorm(self, sublesson: SubLesson) -> None:
-        if not sublesson.scorm_stored_name:
-            raise NotFoundError("SCORM package", str(sublesson.id))
-
-    def _normalize_path(self, file_path: str) -> str:
-        path = unquote(urlsplit(file_path).path).replace("\\", "/")
-        normalized = posixpath.normpath(path).lstrip("/")
-        if normalized == "." or normalized.startswith("../"):
-            raise ForbiddenError("Invalid SCORM file path")
-        return normalized
-
-    def _resolve_launch_path(self, launch_path: str, manifest_name: str, names: list[str]) -> str:
-        if launch_path:
-            normalized_launch = self._normalize_path(launch_path)
-            resolved_launch = self._resolve_zip_member(normalized_launch, names, manifest_name)
-            if resolved_launch:
-                return resolved_launch
-
-        manifest_dir = posixpath.dirname(manifest_name)
-        html_candidates = [
-            name for name in names
-            if name.lower().endswith((".html", ".htm"))
-        ]
-        if manifest_dir:
-            manifest_dir_prefix = f"{manifest_dir}/"
-            scoped_candidates = [
-                name for name in html_candidates
-                if name.startswith(manifest_dir_prefix)
-            ]
-            if scoped_candidates:
-                return scoped_candidates[0]
-        return html_candidates[0] if html_candidates else ""
-
-    def _resolve_zip_member(
-        self,
-        normalized_path: str,
-        names: list[str] | set[str],
-        manifest_name: str | None = None,
-    ) -> str | None:
-        names_set = set(names)
-        if normalized_path in names_set:
-            return normalized_path
-
-        if not manifest_name:
-            manifest_name = next(
-                (name for name in names_set if name.lower().endswith("imsmanifest.xml")),
-                None,
-            )
-        if not manifest_name:
-            return None
-
-        manifest_dir = posixpath.dirname(manifest_name)
-        if not manifest_dir:
-            return None
-
-        candidate = posixpath.normpath(posixpath.join(manifest_dir, normalized_path))
-        if candidate.startswith("../"):
-            return None
-        return candidate if candidate in names_set else None
-
-    def get_package_info_from_sublesson(
-        self,
-        sublesson: SubLesson,
-        comments_count: int = 0,
-    ) -> ScormPackageInfo:
-        self._require_scorm(sublesson)
-        with self._read_zip(sublesson.scorm_stored_name or "") as zf:
-            names = sorted(name for name in zf.namelist() if not name.endswith("/"))
-            manifest_name = next(
-                (name for name in names if name.lower().endswith("imsmanifest.xml")),
-                None,
-            )
-            info = {}
-            if manifest_name:
-                manifest_text = zf.read(manifest_name).decode("utf-8", errors="ignore")
-                try:
-                    info = parse_imsmanifest(manifest_text)
-                except ParseError:
-                    raise LCMSException("Invalid imsmanifest.xml", status_code=400)
-
-            launch = self._resolve_launch_path(
-                info.get("sco_launch") or "",
-                manifest_name,
-                names,
-            )
-
-        return ScormPackageInfo(
-            id=None,
-            sub_lesson_id=sublesson.id,
-            title=info.get("title") or sublesson.title,
-            schema=info.get("schema") or "SCORM",
-            schema_version=info.get("schema_version") or "",
-            sco_launch=launch,
-            filename=sublesson.scorm_filename or "",
-            stored_name=sublesson.scorm_stored_name or "",
-            file_size=sublesson.scorm_file_size,
-            uploaded_at=sublesson.scorm_uploaded_at,
-            uploaded_by_id=sublesson.scorm_uploaded_by_id,
-            files_count=len(names),
-            version=1,
-            is_current=True,
-            comments_count=comments_count,
-        )
-
-    def get_package_info_from_package(
-        self,
-        package: ScormPackage,
-        comments_count: int = 0,
-    ) -> ScormPackageInfo:
-        return ScormPackageInfo(
-            id=package.id,
-            sub_lesson_id=package.sub_lesson_id,
-            title=package.title,
-            schema=package.schema,
-            schema_version=package.schema_version,
-            sco_launch=package.sco_launch,
-            filename=package.filename,
-            stored_name=package.stored_name,
-            file_size=package.file_size,
-            uploaded_at=package.uploaded_at,
-            uploaded_by_id=package.uploader_id,
-            files_count=package.files_count,
-            version=package.version,
-            is_current=package.is_current,
-            comments_count=comments_count,
-        )
-
-    async def get_package_info(self, db: AsyncSession, sublesson_id: uuid.UUID) -> ScormPackageInfo:
-        current_package = await self._get_current_package(db, sublesson_id)
-        if current_package:
-            comments_count = await db.scalar(
-                select(func.count())
-                .select_from(ScormComment)
-                .where(ScormComment.scorm_package_id == current_package.id)
-                .where(ScormComment.deleted_at.is_(None))
-            ) or 0
-            return self.get_package_info_from_package(current_package, comments_count=comments_count)
-
-        result = await db.execute(
-            select(SubLesson)
-            .options(selectinload(SubLesson.scorm_comments))
-            .where(SubLesson.id == sublesson_id)
-        )
-        sublesson = result.scalar_one_or_none()
-        if not sublesson:
-            raise NotFoundError("SubLesson", str(sublesson_id))
-        return self.get_package_info_from_sublesson(
-            sublesson,
-            comments_count=len(sublesson.scorm_comments or []),
-        )
-
-    async def get_file_list(self, db: AsyncSession, sublesson_id: uuid.UUID) -> ScormFileListResponse:
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        package = await self._get_current_package(db, sublesson_id)
-        stored_name = package.stored_name if package else sublesson.scorm_stored_name
-        if not stored_name:
-            raise NotFoundError("SCORM package", str(sublesson.id))
-        with self._read_zip(stored_name) as zf:
-            files = sorted(name for name in zf.namelist() if not name.endswith("/"))
-        return ScormFileListResponse(files=files)
-
-    async def get_file_content(
-        self,
-        db: AsyncSession,
-        sublesson_id: uuid.UUID,
-        file_path: str,
-        asset_base_url: str,
-    ) -> tuple[bytes, str]:
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        package = await self._get_current_package(db, sublesson_id)
-        stored_name = package.stored_name if package else sublesson.scorm_stored_name
-        if not stored_name:
-            raise NotFoundError("SCORM package", str(sublesson.id))
-        normalized_path = self._normalize_path(file_path)
-
-        with self._read_zip(stored_name) as zf:
-            names = set(name for name in zf.namelist() if not name.endswith("/"))
-            resolved_path = self._resolve_zip_member(normalized_path, names)
-            if not resolved_path:
-                raise NotFoundError("SCORM file", normalized_path)
-            raw_content = zf.read(resolved_path)
-
-        content_type = self._content_type(resolved_path)
-        if resolved_path.lower().endswith((".html", ".htm")):
-            raw_content = self._inject_preview_bootstrap(raw_content, resolved_path, asset_base_url)
-            content_type = "text/html; charset=utf-8"
-        return raw_content, content_type
-
-    def _to_comment_response(self, comment: ScormComment) -> ScormCommentResponse:
-        return ScormCommentResponse(
-            id=comment.id,
-            sub_lesson_id=comment.sub_lesson_id,
-            author_id=comment.author_id,
-            content=comment.content,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-            author=ScormCommentAuthorInfo(
-                id=comment.author.id,
-                full_name=comment.author.full_name,
-            ) if hasattr(comment, "author") and comment.author else ScormCommentAuthorInfo(
-                id=comment.author_id,
-                full_name="",
-            ),
-        )
-
-    async def list_comments(
-        self,
-        db: AsyncSession,
-        sublesson_id: uuid.UUID,
-        skip: int = 0,
-        limit: int = 50,
-    ) -> ScormCommentListResponse:
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        package = await self._get_current_package(db, sublesson_id)
-        if not package:
-            self._require_scorm(sublesson)
-
-        query = (
-            select(ScormComment)
-            .options(selectinload(ScormComment.author))
-            .where(ScormComment.sub_lesson_id == sublesson_id)
-            .where(ScormComment.deleted_at.is_(None))
-            .order_by(ScormComment.created_at.asc())
-        )
-        if package:
-            query = query.where(ScormComment.scorm_package_id == package.id)
-        else:
-            query = query.where(ScormComment.scorm_package_id.is_(None))
-
-        count_q = select(func.count()).select_from(query.subquery())
-        total = (await db.execute(count_q)).scalar() or 0
-
-        result = await db.execute(query.offset(skip).limit(limit))
-        comments = list(result.scalars().all())
-        return ScormCommentListResponse(
-            total=total,
-            items=[self._to_comment_response(comment) for comment in comments],
-        )
-
-    async def add_comment(
-        self,
-        db: AsyncSession,
-        sublesson_id: uuid.UUID,
-        author_id: uuid.UUID,
-        data: ScormCommentCreate,
-    ) -> ScormCommentResponse:
-        sublesson = await self._get_sublesson_orm(db, sublesson_id)
-        package = await self._get_current_package(db, sublesson_id)
-        if not package:
-            self._require_scorm(sublesson)
-
-        comment = ScormComment(
-            sub_lesson_id=sublesson_id,
-            scorm_package_id=package.id if package else None,
-            author_id=author_id,
-            content=data.content,
-        )
-        db.add(comment)
-        await db.commit()
-
-        result = await db.execute(
-            select(ScormComment)
-            .options(selectinload(ScormComment.author))
-            .where(ScormComment.id == comment.id)
-        )
-        comment = result.scalar_one()
-        return self._to_comment_response(comment)
-
-    def _content_type(self, file_path: str) -> str:
-        ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
-        return {
-            "html": "text/html; charset=utf-8",
-            "htm": "text/html; charset=utf-8",
-            "css": "text/css; charset=utf-8",
-            "js": "application/javascript; charset=utf-8",
-            "xml": "application/xml; charset=utf-8",
-            "json": "application/json; charset=utf-8",
-            "txt": "text/plain; charset=utf-8",
-            "jpg": "image/jpeg",
-            "jpeg": "image/jpeg",
-            "png": "image/png",
-            "gif": "image/gif",
-            "svg": "image/svg+xml",
-            "webp": "image/webp",
-            "mp3": "audio/mpeg",
-            "m4a": "audio/mp4",
-            "ogg": "audio/ogg",
-            "mp4": "video/mp4",
-            "webm": "video/webm",
-            "pdf": "application/pdf",
-        }.get(ext, "application/octet-stream")
-
-    def _inject_preview_bootstrap(self, raw_content: bytes, file_path: str, asset_base_url: str) -> bytes:
-        html = raw_content.decode("utf-8", errors="ignore")
-        base_dir = posixpath.dirname(file_path)
-        base_href = f"{asset_base_url.rstrip('/')}/"
-        if base_dir:
-            base_href = f"{asset_base_url.rstrip('/')}/{base_dir}/"
-
-        base_tag = f'<base href="{base_href}">'
-        bootstrap = """
-<script>
-(function(){
-  try {
-    if (window.parent && window.parent !== window) {
-      window.API_1484_11 = window.parent.API_1484_11 || window.API_1484_11;
-      window.API = window.parent.API || window.API;
-    }
-  } catch(e) {}
-})();
-</script>
-"""
-        injection = base_tag + bootstrap
-        lower = html.lower()
-        head_index = lower.find("<head>")
-        if head_index >= 0:
-            insert_at = head_index + len("<head>")
-            html = html[:insert_at] + injection + html[insert_at:]
-        elif lower.find("<html>") >= 0:
-            insert_at = lower.find("<html>") + len("<html>")
-            html = html[:insert_at] + "<head>" + injection + "</head>" + html[insert_at:]
-        else:
-            html = "<head>" + injection + "</head>" + html
-        return html.encode("utf-8")
+    package.task_id = async_result.id
+    await db.commit()
+    await db.refresh(package)
+    return ScormUploadResponse(package=_to_response(package))
 
 
-scorm_service = ScormService()
+async def get_package(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+) -> ScormPackageResponse:
+    package = await _get_package_orm(db, package_id)
+    return _to_response(package)
+
+
+async def get_current_package(
+    db: AsyncSession,
+    sub_lesson_id: uuid.UUID,
+) -> ScormPackageResponse | None:
+    await _get_sublesson_orm(db, sub_lesson_id)
+    result = await db.execute(
+        select(ScormPackage)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .where(ScormPackage.is_current.is_(True))
+        .order_by(ScormPackage.created_at.desc())
+        .limit(1)
+    )
+    package = result.scalar_one_or_none()
+    return _to_response(package) if package else None
+
+
+async def list_packages(
+    db: AsyncSession,
+    sub_lesson_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 20,
+) -> ScormPackageListResponse:
+    await _get_sublesson_orm(db, sub_lesson_id)
+    query = (
+        select(ScormPackage)
+        .options(selectinload(ScormPackage.comments))
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .order_by(ScormPackage.created_at.desc())
+    )
+    count_q = select(func.count()).select_from(
+        select(ScormPackage)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .subquery()
+    )
+    total = (await db.execute(count_q)).scalar() or 0
+    result = await db.execute(query.offset(skip).limit(limit))
+    packages = list(result.scalars().all())
+    return ScormPackageListResponse(
+        total=total,
+        items=[_to_response(package) for package in packages],
+    )
+
+
+async def create_preview_session(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+) -> tuple[ScormPreviewSessionResponse, str]:
+    package = await _get_package_orm(db, package_id)
+    _ensure_ready_for_preview(package)
+
+    token = create_scorm_preview_token(
+        str(package.id),
+        expires_delta=timedelta(seconds=SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS),
+    )
+    return (
+        ScormPreviewSessionResponse(
+            launch_url=_launch_url(package),
+            expires_in=SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS,
+        ),
+        token,
+    )
+
+
+async def get_asset_object(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    asset_path: str,
+) -> dict:
+    package = await _get_package_orm(db, package_id)
+    _ensure_ready_for_preview(package)
+    key = _asset_key(package, asset_path)
+    obj = await run_in_threadpool(storage_service.get_object, key)
+    if not obj.get("ContentType"):
+        obj["ContentType"] = storage_service.guess_mime_type(asset_path)
+    return obj
+
+
+def _to_comment_response(comment: ScormComment) -> ScormCommentResponse:
+    return ScormCommentResponse(
+        id=comment.id,
+        scorm_package_id=comment.scorm_package_id,
+        author_id=comment.author_id,
+        content=comment.content,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+        author=ScormCommentAuthorInfo(
+            id=comment.author.id,
+            full_name=comment.author.full_name,
+        ) if hasattr(comment, "author") and comment.author else ScormCommentAuthorInfo(
+            id=comment.author_id,
+            full_name="",
+        ),
+    )
+
+
+async def add_comment(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    author_id: uuid.UUID,
+    data: ScormCommentCreate,
+) -> ScormCommentResponse:
+    await _get_package_orm(db, package_id)
+
+    comment = ScormComment(
+        scorm_package_id=package_id,
+        author_id=author_id,
+        content=data.content,
+    )
+    db.add(comment)
+    await db.commit()
+
+    result = await db.execute(
+        select(ScormComment)
+        .options(selectinload(ScormComment.author))
+        .where(ScormComment.id == comment.id)
+    )
+    comment = result.scalar_one()
+    return _to_comment_response(comment)
+
+
+async def list_comments(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
+) -> ScormCommentListResponse:
+    await _get_package_orm(db, package_id)
+
+    query = (
+        select(ScormComment)
+        .options(selectinload(ScormComment.author))
+        .where(ScormComment.scorm_package_id == package_id)
+        .order_by(ScormComment.created_at.asc())
+    )
+
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    result = await db.execute(query.offset(skip).limit(limit))
+    comments = list(result.scalars().all())
+
+    return ScormCommentListResponse(
+        total=total,
+        items=[_to_comment_response(c) for c in comments],
+    )

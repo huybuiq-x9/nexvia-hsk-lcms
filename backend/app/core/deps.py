@@ -172,11 +172,11 @@ def _can_comment_documents(sublesson: SubLesson, user: User, roles: set[str]) ->
 def _can_view_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
     if _is_admin(roles):
         return True
-    if _is_assigned_converter(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.CONVERTING
-    if _is_assigned_expert(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.SCORM_REVIEWING
-    return False
+    return (
+        _is_assigned_teacher(sublesson, user, roles)
+        or _is_assigned_expert(sublesson, user, roles)
+        or _is_assigned_converter(sublesson, user, roles)
+    )
 
 
 def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
@@ -185,15 +185,6 @@ def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool
     return (
         _is_assigned_converter(sublesson, user, roles)
         and sublesson.status == SubLessonStatus.CONVERTING
-    )
-
-
-def _can_comment_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
-    if _is_admin(roles):
-        return True
-    return (
-        _is_assigned_expert(sublesson, user, roles)
-        and sublesson.status == SubLessonStatus.SCORM_REVIEWING
     )
 
 
@@ -447,7 +438,7 @@ async def scorm_view_access_to_sublesson(
         return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="You don't have permission to access SCORM for this Sub-Lesson",
+        detail="You don't have permission to view SCORM packages for this Sub-Lesson",
     )
 
 
@@ -462,22 +453,69 @@ async def scorm_upload_access_to_sublesson(
         return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Only the assigned converter can upload SCORM while converting",
+        detail="Only the assigned converter can upload SCORM after content approval",
     )
 
 
-async def scorm_comment_access_to_sublesson(
-    sublesson_id: uuid.UUID,
+async def _load_scorm_sublesson_for_access(
+    package_id: uuid.UUID,
+    db: AsyncSession,
+):
+    from app.modules.scorm.model import ScormPackage
+
+    result = await db.execute(
+        select(ScormPackage)
+        .options(selectinload(ScormPackage.sub_lesson).selectinload(SubLesson.lesson).selectinload(Lesson.course))
+        .where(ScormPackage.id == package_id)
+    )
+    package = result.scalar_one_or_none()
+    if not package:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="SCORM package not found")
+    return package.sub_lesson
+
+
+async def scorm_view_access_to_package(
+    package_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     roles = _active_role_values(current_user)
-    sublesson = await _load_sublesson_for_access(sublesson_id, db)
-    if _can_comment_scorm(sublesson, current_user, roles):
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
         return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="You don't have permission to comment on SCORM for this Sub-Lesson",
+        detail="You don't have permission to access this SCORM package",
+    )
+
+
+async def scorm_upload_access_to_package(
+    package_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_upload_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can re-upload SCORM after content approval",
+    )
+
+
+async def scorm_comment_access_to_package(
+    package_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to comment on this SCORM package",
     )
 
 
@@ -489,12 +527,44 @@ async def teacher_submit_access_to_sublesson(
     return await document_upload_access_to_sublesson(sublesson_id, current_user, db)
 
 
-async def converter_submit_access_to_sublesson(
+async def converter_submit_scorm_access(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
-    return await scorm_upload_access_to_sublesson(sublesson_id, current_user, db)
+    roles = _active_role_values(current_user)
+    if _is_admin(roles):
+        return current_user
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if (
+        _is_assigned_converter(sublesson, current_user, roles)
+        and sublesson.status == SubLessonStatus.CONVERTING
+    ):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can submit SCORM for review when status is CONVERTING",
+    )
+
+
+async def expert_review_scorm_access(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    if _is_admin(roles):
+        return current_user
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if (
+        _is_assigned_expert(sublesson, current_user, roles)
+        and sublesson.status == SubLessonStatus.SCORM_REVIEWING
+    ):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned expert can review SCORM when status is SCORM_REVIEWING",
+    )
 
 
 TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
@@ -508,9 +578,12 @@ DocumentDeleteAccessToDocument = Annotated[User, Depends(document_delete_access_
 DocumentUploadAccessToDocument = Annotated[User, Depends(document_upload_access_to_document)]
 ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
 ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
-ScormCommentAccessToSubLesson = Annotated[User, Depends(scorm_comment_access_to_sublesson)]
+ScormViewAccessToPackage = Annotated[User, Depends(scorm_view_access_to_package)]
+ScormUploadAccessToPackage = Annotated[User, Depends(scorm_upload_access_to_package)]
+ScormCommentAccessToPackage = Annotated[User, Depends(scorm_comment_access_to_package)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
-ConverterSubmitAccessToSubLesson = Annotated[User, Depends(converter_submit_access_to_sublesson)]
+ConverterSubmitScormAccess = Annotated[User, Depends(converter_submit_scorm_access)]
+ExpertReviewScormAccess = Annotated[User, Depends(expert_review_scorm_access)]
 
 
 async def teacher_assigned_to_lesson(
