@@ -114,6 +114,7 @@ class LessonBrief(BaseModel):
     assigned_teacher_id: uuid.UUID | None
     assigned_converter_id: uuid.UUID | None
     sub_lessons_count: int = 0
+    approved_sub_lessons_count: int = 0
 
 
 class CourseWithLessonsResponse(CourseResponse):

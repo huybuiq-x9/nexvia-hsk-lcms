@@ -471,6 +471,23 @@ export default function LessonDetailPage() {
               <div className="text-xs text-slate-400">{t('courses.lessonDetail.subLessonCount')}</div>
               <div className="text-sm font-medium text-slate-800 mt-0.5">{lesson.sub_lessons.length}</div>
             </div>
+            {lesson.sub_lessons.length > 0 && (() => {
+              const approved = lesson.sub_lessons.filter(sl => sl.status === 'approved').length;
+              const total = lesson.sub_lessons.length;
+              const pct = Math.round((approved / total) * 100);
+              return (
+                <div>
+                  <div className="text-xs text-slate-400 mb-1.5">Progress</div>
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>{approved}/{total} sub-lessons approved</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <div className="text-xs text-slate-400">{t('courses.lessonDetail.updatedAt')}</div>
               <div className="text-sm font-medium text-slate-800 mt-0.5">
@@ -526,11 +543,27 @@ export default function LessonDetailPage() {
       {/* Sub-lessons */}
       <div className="card overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="font-semibold text-slate-900">{t('courses.lessonDetail.subLessons')}</h2>
             <p className="text-xs text-slate-500 mt-0.5">
               {lesson.sub_lessons.length} {t('courses.lessons')}
             </p>
+            {lesson.sub_lessons.length > 0 && (() => {
+              const approved = lesson.sub_lessons.filter(sl => sl.status === 'approved').length;
+              const total = lesson.sub_lessons.length;
+              const pct = Math.round((approved / total) * 100);
+              return (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>{approved}/{total} sub-lessons approved</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

@@ -86,6 +86,7 @@ def _to_sublesson_response(sl: SubLesson) -> course_schema.SubLessonResponse:
 
 def _lesson_brief(lesson: Lesson) -> course_schema.LessonBrief:
     active_sub_lessons = [sl for sl in (lesson.sub_lessons or []) if sl.deleted_at is None]
+    approved_count = sum(1 for sl in active_sub_lessons if sl.status == SubLessonStatus.APPROVED)
     return course_schema.LessonBrief(
         id=lesson.id,
         title=lesson.title,
@@ -95,6 +96,7 @@ def _lesson_brief(lesson: Lesson) -> course_schema.LessonBrief:
         assigned_teacher_id=lesson.assigned_teacher_id,
         assigned_converter_id=lesson.assigned_converter_id,
         sub_lessons_count=len(active_sub_lessons),
+        approved_sub_lessons_count=approved_count,
     )
 
 

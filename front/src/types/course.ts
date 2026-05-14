@@ -182,6 +182,7 @@ export interface ApiLessonBrief {
   assigned_teacher_id: string | null;
   assigned_converter_id: string | null;
   sub_lessons_count: number;
+  approved_sub_lessons_count: number;
 }
 
 export interface ApiLessonListItem extends ApiLessonBrief {

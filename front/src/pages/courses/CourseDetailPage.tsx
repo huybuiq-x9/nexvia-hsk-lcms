@@ -459,6 +459,23 @@ export default function CourseDetailPage() {
               <div className="text-xs text-slate-400">{t('courses.subLessons')}</div>
               <div className="text-sm font-medium text-slate-800 mt-0.5">{totalSubLessons}</div>
             </div>
+            {course.lessons.length > 0 && (() => {
+              const approved = course.lessons.filter(l => l.status === 'approved').length;
+              const total = course.lessons.length;
+              const pct = Math.round((approved / total) * 100);
+              return (
+                <div>
+                  <div className="text-xs text-slate-400 mb-1.5">Progress</div>
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>{approved}/{total} lessons approved</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <div className="text-xs text-slate-400">{t('courses.columnCreatedAt')}</div>
               <div className="text-sm font-medium text-slate-800 mt-0.5">{formatDateShort(course.created_at)}</div>
@@ -538,6 +555,22 @@ export default function CourseDetailPage() {
         <div className="p-5 border-b border-slate-100">
           <h2 className="font-semibold text-slate-900">{t('courses.contentTitle')}</h2>
           <p className="text-xs text-slate-500 mt-0.5">{course.lessons.length} {t('courses.lessons')} · {totalSubLessons} {t('courses.subLessons')}</p>
+          {course.lessons.length > 0 && (() => {
+            const approved = course.lessons.filter(l => l.status === 'approved').length;
+            const total = course.lessons.length;
+            const pct = Math.round((approved / total) * 100);
+            return (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>{approved}/{total} lessons approved</span>
+                  <span>{pct}%</span>
+                </div>
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {course.lessons.length === 0 ? (
@@ -563,6 +596,17 @@ export default function CourseDetailPage() {
                       <span className="text-sm font-medium text-slate-800 hover:text-blue-600 transition-colors">{lesson.title}</span>
                       {lesson.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{lesson.description}</div>}
                     </div>
+                    {(lesson.sub_lessons_count ?? 0) > 0 && (
+                      <div className="w-20 shrink-0">
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${lesson.approved_sub_lessons_count === lesson.sub_lessons_count ? 'bg-green-500' : 'bg-blue-400'}`}
+                            style={{ width: `${Math.round(((lesson.approved_sub_lessons_count ?? 0) / lesson.sub_lessons_count) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5 text-right">{lesson.approved_sub_lessons_count ?? 0}/{lesson.sub_lessons_count}</div>
+                      </div>
+                    )}
                     <StatusBadge status={lesson.status} type="lesson" />
                     <span className="text-xs text-slate-400 shrink-0">{lesson.sub_lessons_count ?? 0} {t('courses.subLessons')}</span>
                   </div>

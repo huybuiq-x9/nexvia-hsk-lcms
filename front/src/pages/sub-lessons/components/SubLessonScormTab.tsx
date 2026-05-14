@@ -356,7 +356,7 @@ export function SubLessonScormTab({
         />
       )}
 
-      {canUpload && scormPackage && (
+      {canUpload && scormPackage && scormPackage.status === 'ready' && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
           <div>
             <p className="text-sm font-medium text-blue-900">{t('scorm.versionManagedTitle')}</p>

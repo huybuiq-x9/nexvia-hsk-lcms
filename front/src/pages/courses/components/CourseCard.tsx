@@ -61,6 +61,22 @@ export function CourseCard({ course, expert, onDelete, isDeleting }: CourseCardP
           <span>{course.lessons.length} {t('courses.lessons')}</span>
           <span>{course.lessons.reduce((acc, l) => acc + (l.sub_lessons_count ?? 0), 0)} {t('courses.subLessons')}</span>
         </div>
+        {course.lessons.length > 0 && (() => {
+          const approved = course.lessons.filter(l => l.status === 'approved').length;
+          const total = course.lessons.length;
+          const pct = Math.round((approved / total) * 100);
+          return (
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-slate-400 mb-1">
+                <span>{approved}/{total} lessons approved</span>
+                <span>{pct}%</span>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="flex flex-col items-end gap-2 shrink-0">
