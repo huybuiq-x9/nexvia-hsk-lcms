@@ -330,6 +330,17 @@ export const scormService = {
     return res.data;
   },
 
+  async reuploadPackage(packageId: string, file: File): Promise<ApiScormUploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post<ApiScormUploadResponse>(
+      `/scorm/packages/${packageId}/reupload`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
   async getPackage(packageId: string): Promise<ApiScormPackage> {
     const res = await client.get<ApiScormPackage>(`/scorm/packages/${packageId}`);
     return res.data;

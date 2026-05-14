@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import (
     ScormUploadAccessToSubLesson,
+    ScormUploadAccessToPackage,
     ScormViewAccessToPackage,
     ScormViewAccessToSubLesson,
     get_db,
@@ -34,6 +35,25 @@ async def upload_scorm_package(
     return await service.upload_package(
         db=db,
         sub_lesson_id=sublesson_id,
+        uploader_id=current_user.id,
+        file=file,
+    )
+
+
+@router.post(
+    "/packages/{package_id}/reupload",
+    response_model=ScormUploadResponse,
+    status_code=201,
+)
+async def reupload_scorm_package(
+    package_id: uuid.UUID,
+    current_user: ScormUploadAccessToPackage,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: UploadFile = File(...),
+) -> ScormUploadResponse:
+    return await service.reupload_package(
+        db=db,
+        package_id=package_id,
         uploader_id=current_user.id,
         file=file,
     )

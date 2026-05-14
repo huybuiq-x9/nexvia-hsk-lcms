@@ -95,6 +95,50 @@ async def upload_package(
     file: UploadFile,
 ) -> ScormUploadResponse:
     await _get_sublesson_orm(db, sub_lesson_id)
+    existing_result = await db.execute(
+        select(ScormPackage.id)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .limit(1)
+    )
+    if existing_result.scalar_one_or_none() is not None:
+        raise LCMSException(
+            "SCORM package already exists for this SubLesson. Use reupload to create a new version.",
+            status_code=409,
+        )
+
+    return await _create_package_version(
+        db=db,
+        sub_lesson_id=sub_lesson_id,
+        uploader_id=uploader_id,
+        file=file,
+    )
+
+
+async def reupload_package(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> ScormUploadResponse:
+    current_package = await _get_package_orm(db, package_id)
+    if not current_package.is_current:
+        raise LCMSException("Only the current SCORM package can be re-uploaded", status_code=400)
+
+    return await _create_package_version(
+        db=db,
+        sub_lesson_id=current_package.sub_lesson_id,
+        uploader_id=uploader_id,
+        file=file,
+    )
+
+
+async def _create_package_version(
+    db: AsyncSession,
+    sub_lesson_id: uuid.UUID,
+    uploader_id: uuid.UUID,
+    file: UploadFile,
+) -> ScormUploadResponse:
     original_filename = _validate_zip_filename(file.filename)
     package_id = uuid.uuid4()
     staging_path, file_size = await _write_upload_to_staging(file, package_id)

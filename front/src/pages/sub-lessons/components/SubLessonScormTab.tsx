@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle2, FileArchive, Loader2 } from 'lucide-react';
+import { useRef, type ChangeEvent } from 'react';
+import { AlertCircle, CheckCircle2, FileArchive, Loader2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
@@ -99,37 +100,93 @@ function ScormPackageSummary({ scormPackage }: { scormPackage: ApiScormPackage }
   );
 }
 
+function VersionHistory({ versions }: { versions: ApiScormPackage[] }) {
+  const { t } = useTranslation();
+  if (versions.length <= 1) return null;
+
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+        <h3 className="text-sm font-semibold text-slate-900">{t('scorm.versionsTitle')}</h3>
+      </div>
+      <div className="divide-y divide-slate-100">
+        {versions.map(version => (
+          <div key={version.id} className="grid grid-cols-1 md:grid-cols-[120px_1fr_140px_180px] gap-2 px-4 py-3 text-sm">
+            <div className="font-semibold text-slate-800">
+              v{version.version}
+              {version.is_current && (
+                <span className="ml-2 text-xs font-medium text-blue-600">{t('scorm.current')}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="font-medium text-slate-800 truncate">{version.title || version.original_filename}</div>
+              <div className="text-xs text-slate-400 truncate">{version.launch_path || version.original_filename}</div>
+            </div>
+            <div>
+              <StatusBadge status={version.status} />
+            </div>
+            <div className="text-slate-500 md:text-right">
+              {formatDate(version.uploaded_at ?? version.created_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SubLessonScormTab({
   subLessonId,
   canUpload = false,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { scormPackage, loading, uploading, uploadPackage } = useSubLessonScorm(subLessonId);
+  const { scormPackage, versions, loading, uploading, uploadPackage, reuploadPackage } = useSubLessonScorm(subLessonId);
+  const reuploadInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFiles = async (files: File[]) => {
-    if (!canUpload || uploading) return;
-    const file = files[0];
-    if (!file) return;
-
+  const validateFile = (files: File[]) => {
     if (files.length > 1) {
       toast.error(t('scorm.singleFileOnly'));
-      return;
+      return null;
     }
+    const file = files[0];
+    if (!file) return null;
     if (!file.name.toLowerCase().endsWith('.zip')) {
       toast.error(t('scorm.onlyZip'));
-      return;
+      return null;
     }
     if (file.size > MAX_SCORM_SIZE) {
       toast.error(t('scorm.fileTooBig'));
-      return;
+      return null;
     }
+    return file;
+  };
+
+  const handleFiles = async (files: File[]) => {
+    if (!canUpload || uploading || scormPackage) return;
+    const file = validateFile(files);
+    if (!file) return;
 
     try {
       await uploadPackage(file);
       toast.success(t('scorm.uploadStarted'));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
+    }
+  };
+
+  const handleReupload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!canUpload || uploading || !scormPackage) return;
+    const file = validateFile(files);
+    if (!file) return;
+
+    try {
+      await reuploadPackage(scormPackage.id, file);
+      toast.success(t('scorm.reuploadStarted'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('scorm.reuploadError')));
     }
   };
 
@@ -143,7 +200,7 @@ export function SubLessonScormTab({
 
   return (
     <div className="space-y-4">
-      {canUpload && (
+      {canUpload && !scormPackage && (
         <FileDropzone
           accept={['zip']}
           maxSize={MAX_SCORM_SIZE}
@@ -156,6 +213,35 @@ export function SubLessonScormTab({
         />
       )}
 
+      {canUpload && scormPackage && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+          <div>
+            <p className="text-sm font-medium text-blue-900">{t('scorm.versionManagedTitle')}</p>
+            <p className="text-xs text-blue-700 mt-0.5">{t('scorm.versionManagedHint')}</p>
+          </div>
+          <input
+            ref={reuploadInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={handleReupload}
+          />
+          <button
+            type="button"
+            className="btn btn-primary inline-flex items-center justify-center gap-2 shrink-0"
+            disabled={uploading}
+            onClick={() => reuploadInputRef.current?.click()}
+          >
+            {uploading ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Upload size={15} />
+            )}
+            {t('scorm.reupload')}
+          </button>
+        </div>
+      )}
+
       {!canUpload && (
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-600">
           {t('scorm.uploadLocked')}
@@ -163,7 +249,10 @@ export function SubLessonScormTab({
       )}
 
       {scormPackage ? (
-        <ScormPackageSummary scormPackage={scormPackage} />
+        <>
+          <ScormPackageSummary scormPackage={scormPackage} />
+          <VersionHistory versions={versions} />
+        </>
       ) : (
         <EmptyState
           icon={<FileArchive size={36} />}

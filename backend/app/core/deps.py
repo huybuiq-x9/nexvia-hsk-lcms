@@ -489,6 +489,21 @@ async def scorm_view_access_to_package(
     )
 
 
+async def scorm_upload_access_to_package(
+    package_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_upload_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can re-upload SCORM after content approval",
+    )
+
+
 async def teacher_submit_access_to_sublesson(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -509,6 +524,7 @@ DocumentUploadAccessToDocument = Annotated[User, Depends(document_upload_access_
 ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_sublesson)]
 ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
 ScormViewAccessToPackage = Annotated[User, Depends(scorm_view_access_to_package)]
+ScormUploadAccessToPackage = Annotated[User, Depends(scorm_upload_access_to_package)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
 
 

@@ -4,14 +4,19 @@ import type { ApiScormPackage } from '../../../types/api';
 
 export function useSubLessonScorm(subLessonId: string) {
   const [scormPackage, setScormPackage] = useState<ApiScormPackage | null>(null);
+  const [versions, setVersions] = useState<ApiScormPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   const loadCurrentPackage = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const current = await scormService.getCurrentPackage(subLessonId);
+      const [current, versionList] = await Promise.all([
+        scormService.getCurrentPackage(subLessonId),
+        scormService.listPackages(subLessonId, { limit: 100 }),
+      ]);
       setScormPackage(current);
+      setVersions(versionList.items);
       return current;
     } finally {
       if (showLoading) setLoading(false);
@@ -38,6 +43,19 @@ export function useSubLessonScorm(subLessonId: string) {
     try {
       const res = await scormService.uploadPackage(subLessonId, file);
       setScormPackage(res.package);
+      await loadCurrentPackage(false);
+      return res.package;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const reuploadPackage = async (packageId: string, file: File) => {
+    setUploading(true);
+    try {
+      const res = await scormService.reuploadPackage(packageId, file);
+      setScormPackage(res.package);
+      await loadCurrentPackage(false);
       return res.package;
     } finally {
       setUploading(false);
@@ -46,9 +64,11 @@ export function useSubLessonScorm(subLessonId: string) {
 
   return {
     scormPackage,
+    versions,
     loading,
     uploading,
     uploadPackage,
+    reuploadPackage,
     reload: loadCurrentPackage,
   };
 }
