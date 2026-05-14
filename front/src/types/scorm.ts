@@ -35,3 +35,8 @@ export interface ApiScormPackageListResponse {
   total: number;
   items: ApiScormPackage[];
 }
+
+export interface ApiScormPreviewSessionResponse {
+  launch_url: string;
+  expires_in: number;
+}

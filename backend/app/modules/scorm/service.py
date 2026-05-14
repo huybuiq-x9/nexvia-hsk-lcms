@@ -1,26 +1,33 @@
 import os
+import posixpath
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.exceptions import LCMSException, NotFoundError
+from app.core.security import create_scorm_preview_token
+from app.core.storage import storage_service
 from app.modules.courses.model import SubLesson
 from app.modules.scorm.model import ScormPackage
 from app.modules.scorm.schema import (
     ScormPackageListResponse,
     ScormPackageResponse,
+    ScormPreviewSessionResponse,
     ScormUploadResponse,
 )
 from app.shared.enums import ScormPackageStatus
 
 
 CHUNK_SIZE = 1024 * 1024
+SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS = 30 * 60
 
 
 async def _get_sublesson_orm(db: AsyncSession, sublesson_id: uuid.UUID) -> SubLesson:
@@ -47,11 +54,52 @@ def _to_response(package: ScormPackage) -> ScormPackageResponse:
     return ScormPackageResponse.model_validate(package)
 
 
+def preview_cookie_name(package_id: uuid.UUID) -> str:
+    return f"scorm_preview_{package_id.hex}"
+
+
 def _validate_zip_filename(filename: str | None) -> str:
     original_filename = filename or "package.zip"
     if not original_filename.lower().endswith(".zip"):
         raise LCMSException("Only .zip SCORM packages are allowed", status_code=400)
     return original_filename
+
+
+def _ensure_ready_for_preview(package: ScormPackage) -> None:
+    if package.status != ScormPackageStatus.READY.value:
+        raise LCMSException("SCORM package is not ready for preview", status_code=400)
+    if not package.extracted_prefix or not package.launch_path:
+        raise LCMSException("SCORM package preview metadata is incomplete", status_code=400)
+
+
+def _normalize_asset_path(asset_path: str) -> str:
+    clean = unquote(asset_path).replace("\\", "/").strip()
+    if not clean or clean.startswith("/"):
+        raise LCMSException("Invalid SCORM asset path", status_code=400)
+    normalized = posixpath.normpath(clean)
+    if normalized in ("", ".", "..") or normalized.startswith("../"):
+        raise LCMSException("Invalid SCORM asset path", status_code=400)
+    return normalized
+
+
+def _asset_key(package: ScormPackage, asset_path: str) -> str:
+    normalized_path = _normalize_asset_path(asset_path)
+    prefix = (package.extracted_prefix or "").rstrip("/")
+    if not prefix:
+        raise LCMSException("SCORM package extracted files are not available", status_code=400)
+    return f"{prefix}/{normalized_path}"
+
+
+def _launch_url(package: ScormPackage) -> str:
+    launch_path = quote(package.launch_path or "", safe="/")
+    launch_url = f"/api/v1/scorm/packages/{package.id}/assets/{launch_path}"
+    launch_parameters = (package.launch_parameters or "").strip()
+    if launch_parameters:
+        if launch_parameters.startswith("?"):
+            launch_url = f"{launch_url}{launch_parameters}"
+        else:
+            launch_url = f"{launch_url}?{launch_parameters}"
+    return launch_url
 
 
 async def _write_upload_to_staging(file: UploadFile, package_id: uuid.UUID) -> tuple[str, int]:
@@ -242,3 +290,37 @@ async def list_packages(
         total=total,
         items=[_to_response(package) for package in packages],
     )
+
+
+async def create_preview_session(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+) -> tuple[ScormPreviewSessionResponse, str]:
+    package = await _get_package_orm(db, package_id)
+    _ensure_ready_for_preview(package)
+
+    token = create_scorm_preview_token(
+        str(package.id),
+        expires_delta=timedelta(seconds=SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS),
+    )
+    return (
+        ScormPreviewSessionResponse(
+            launch_url=_launch_url(package),
+            expires_in=SCORM_PREVIEW_TOKEN_EXPIRE_SECONDS,
+        ),
+        token,
+    )
+
+
+async def get_asset_object(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    asset_path: str,
+) -> dict:
+    package = await _get_package_orm(db, package_id)
+    _ensure_ready_for_preview(package)
+    key = _asset_key(package, asset_path)
+    obj = await run_in_threadpool(storage_service.get_object, key)
+    if not obj.get("ContentType"):
+        obj["ContentType"] = storage_service.guess_mime_type(asset_path)
+    return obj

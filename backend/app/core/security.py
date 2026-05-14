@@ -9,6 +9,7 @@ from app.core.config import settings
 ALGORITHM = "HS256"
 BCRYPT_MAX_PASSWORD_BYTES = 72
 RESET_TOKEN_EXPIRE_MINUTES = 15
+SCORM_PREVIEW_TOKEN_EXPIRE_MINUTES = 30
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -78,6 +79,27 @@ def decode_refresh_token(token: str) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != "refresh":
+            raise JWTError("Invalid token type")
+        return payload
+    except JWTError as e:
+        raise e
+
+
+def create_scorm_preview_token(package_id: str, expires_delta: timedelta | None = None) -> str:
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=SCORM_PREVIEW_TOKEN_EXPIRE_MINUTES
+        )
+    to_encode = {"sub": package_id, "exp": expire, "type": "scorm_preview"}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_scorm_preview_token(token: str) -> dict[str, Any]:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "scorm_preview":
             raise JWTError("Invalid token type")
         return payload
     except JWTError as e:

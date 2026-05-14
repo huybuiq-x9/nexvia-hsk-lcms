@@ -29,6 +29,7 @@ import type {
   ApiDocumentCommentListResponse,
   ApiScormPackage,
   ApiScormPackageListResponse,
+  ApiScormPreviewSessionResponse,
   ApiScormUploadResponse,
   ApiRole,
   LessonStatus,
@@ -343,6 +344,15 @@ export const scormService = {
 
   async getPackage(packageId: string): Promise<ApiScormPackage> {
     const res = await client.get<ApiScormPackage>(`/scorm/packages/${packageId}`);
+    return res.data;
+  },
+
+  async createPreviewSession(packageId: string): Promise<ApiScormPreviewSessionResponse> {
+    const res = await client.post<ApiScormPreviewSessionResponse>(
+      `/scorm/packages/${packageId}/preview-session`,
+      undefined,
+      { withCredentials: true }
+    );
     return res.data;
   },
 };

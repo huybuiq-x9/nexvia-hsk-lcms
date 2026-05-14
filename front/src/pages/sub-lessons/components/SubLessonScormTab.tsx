@@ -1,12 +1,14 @@
-import { useRef, type ChangeEvent } from 'react';
-import { AlertCircle, CheckCircle2, FileArchive, Loader2, Upload } from 'lucide-react';
+import { useRef, useState, type ChangeEvent } from 'react';
+import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { useToast } from '../../../contexts/ToastContext';
-import { formatDate, formatFileSize } from '../../../utils/formatters';
+import { scormService } from '../../../services';
+import { formatDate } from '../../../utils/formatters';
 import type { ApiScormPackage, ScormPackageStatus } from '../../../types/api';
 import { useSubLessonScorm } from '../hooks/useSubLessonScorm';
+import { ScormPreviewModal } from './ScormPreviewModal';
 
 const MAX_SCORM_SIZE = 200 * 1024 * 1024;
 
@@ -36,73 +38,17 @@ function StatusBadge({ status }: { status: ScormPackageStatus }) {
   );
 }
 
-function ScormPackageSummary({ scormPackage }: { scormPackage: ApiScormPackage }) {
+function VersionHistory({
+  versions,
+  onPreview,
+  previewLoadingId,
+}: {
+  versions: ApiScormPackage[];
+  onPreview: (scormPackage: ApiScormPackage) => void;
+  previewLoadingId: string | null;
+}) {
   const { t } = useTranslation();
-
-  return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
-      <div className="flex items-start gap-3 p-4 bg-slate-50">
-        <div className="w-10 h-10 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
-          <FileArchive size={20} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-semibold text-slate-900 truncate">
-              {scormPackage.title || scormPackage.original_filename}
-            </h3>
-            <StatusBadge status={scormPackage.status} />
-          </div>
-          <p className="text-xs text-slate-500 mt-1 truncate">{scormPackage.original_filename}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 text-sm">
-        <div>
-          <div className="text-xs text-slate-400">{t('scorm.version')}</div>
-          <div className="font-medium text-slate-700">v{scormPackage.version}</div>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400">{t('scorm.fileSize')}</div>
-          <div className="font-medium text-slate-700">{formatFileSize(scormPackage.file_size)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400">{t('scorm.filesCount')}</div>
-          <div className="font-medium text-slate-700">{scormPackage.files_count || '-'}</div>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400">{t('scorm.uploadedAt')}</div>
-          <div className="font-medium text-slate-700">
-            {formatDate(scormPackage.uploaded_at ?? scormPackage.created_at)}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-slate-400">{t('scorm.schemaVersion')}</div>
-          <div className="font-medium text-slate-700">{scormPackage.schema_version || '-'}</div>
-        </div>
-        <div className="sm:col-span-2 lg:col-span-3">
-          <div className="text-xs text-slate-400">{t('scorm.launchPath')}</div>
-          <div className="font-medium text-slate-700 truncate">{scormPackage.launch_path || '-'}</div>
-        </div>
-      </div>
-
-      {scormPackage.status === 'processing' && (
-        <div className="px-4 pb-4 text-xs text-blue-700">
-          {t('scorm.processingHint')}
-        </div>
-      )}
-
-      {scormPackage.status === 'failed' && (
-        <div className="mx-4 mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
-          {scormPackage.error_message || t('scorm.failedFallback')}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VersionHistory({ versions }: { versions: ApiScormPackage[] }) {
-  const { t } = useTranslation();
-  if (versions.length <= 1) return null;
+  if (versions.length === 0) return null;
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -110,26 +56,58 @@ function VersionHistory({ versions }: { versions: ApiScormPackage[] }) {
         <h3 className="text-sm font-semibold text-slate-900">{t('scorm.versionsTitle')}</h3>
       </div>
       <div className="divide-y divide-slate-100">
-        {versions.map(version => (
-          <div key={version.id} className="grid grid-cols-1 md:grid-cols-[120px_1fr_140px_180px] gap-2 px-4 py-3 text-sm">
-            <div className="font-semibold text-slate-800">
-              v{version.version}
-              {version.is_current && (
-                <span className="ml-2 text-xs font-medium text-blue-600">{t('scorm.current')}</span>
+        {versions.map(version => {
+          const isPreviewLoading = previewLoadingId === version.id;
+          return (
+            <div key={version.id} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 transition-colors">
+              <div className="w-10 h-10 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
+                <FileArchive size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-slate-800">v{version.version}</span>
+                  {version.is_current && (
+                    <span className="text-xs font-medium text-blue-600">{t('scorm.current')}</span>
+                  )}
+                  <StatusBadge status={version.status} />
+                </div>
+                <div className="font-medium text-slate-900 truncate mt-1">
+                  {version.title || version.original_filename}
+                </div>
+                <div className="text-xs text-slate-400 truncate mt-0.5">
+                  {version.launch_path || version.original_filename}
+                  <span className="mx-1.5">·</span>
+                  {formatDate(version.uploaded_at ?? version.created_at)}
+                </div>
+                {version.status === 'processing' && (
+                  <div className="text-xs text-blue-700 mt-2">
+                    {t('scorm.processingHint')}
+                  </div>
+                )}
+                {version.status === 'failed' && (
+                  <div className="text-xs text-red-700 mt-2">
+                    {version.error_message || t('scorm.failedFallback')}
+                  </div>
+                )}
+              </div>
+              {version.status === 'ready' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary px-3 py-2 shrink-0"
+                  disabled={previewLoadingId !== null}
+                  onClick={() => onPreview(version)}
+                >
+                  {isPreviewLoading ? (
+                    <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Eye size={15} />
+                  )}
+                  {t('scorm.preview')}
+                </button>
               )}
             </div>
-            <div className="min-w-0">
-              <div className="font-medium text-slate-800 truncate">{version.title || version.original_filename}</div>
-              <div className="text-xs text-slate-400 truncate">{version.launch_path || version.original_filename}</div>
-            </div>
-            <div>
-              <StatusBadge status={version.status} />
-            </div>
-            <div className="text-slate-500 md:text-right">
-              {formatDate(version.uploaded_at ?? version.created_at)}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -143,6 +121,9 @@ export function SubLessonScormTab({
   const toast = useToast();
   const { scormPackage, versions, loading, uploading, uploadPackage, reuploadPackage } = useSubLessonScorm(subLessonId);
   const reuploadInputRef = useRef<HTMLInputElement>(null);
+  const [previewPackage, setPreviewPackage] = useState<ApiScormPackage | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
 
   const validateFile = (files: File[]) => {
     if (files.length > 1) {
@@ -187,6 +168,22 @@ export function SubLessonScormTab({
       toast.success(t('scorm.reuploadStarted'));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.reuploadError')));
+    }
+  };
+
+  const handlePreview = async (packageToPreview: ApiScormPackage) => {
+    if (packageToPreview.status !== 'ready' || previewLoadingId) return;
+    setPreviewLoadingId(packageToPreview.id);
+    setPreviewUrl(null);
+    setPreviewPackage(null);
+    try {
+      const session = await scormService.createPreviewSession(packageToPreview.id);
+      setPreviewUrl(session.launch_url);
+      setPreviewPackage(packageToPreview);
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('scorm.previewError')));
+    } finally {
+      setPreviewLoadingId(null);
     }
   };
 
@@ -249,15 +246,27 @@ export function SubLessonScormTab({
       )}
 
       {scormPackage ? (
-        <>
-          <ScormPackageSummary scormPackage={scormPackage} />
-          <VersionHistory versions={versions} />
-        </>
+        <VersionHistory
+          versions={versions.length > 0 ? versions : [scormPackage]}
+          onPreview={handlePreview}
+          previewLoadingId={previewLoadingId}
+        />
       ) : (
         <EmptyState
           icon={<FileArchive size={36} />}
           message={t('scorm.noPackage')}
           hint={canUpload ? t('scorm.noPackageHint') : t('scorm.noPackageReadOnlyHint')}
+        />
+      )}
+
+      {previewPackage && previewUrl && (
+        <ScormPreviewModal
+          scormPackage={previewPackage}
+          launchUrl={previewUrl}
+          onClose={() => {
+            setPreviewPackage(null);
+            setPreviewUrl(null);
+          }}
         />
       )}
     </div>

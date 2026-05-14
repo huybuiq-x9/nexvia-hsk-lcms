@@ -160,6 +160,28 @@ class StorageService:
             )
         return key
 
+    def get_object(self, key: str) -> dict:
+        """Return an S3 object response for streaming by key."""
+        self._resolve_bucket_region()
+        try:
+            return self.client.get_object(
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=key,
+            )
+        except ClientError as e:
+            error = e.response.get("Error", {})
+            code = error.get("Code")
+            http_status = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+            if code in {"NoSuchKey", "NotFound", "404"} or http_status == 404:
+                raise LCMSException(
+                    message="File not found",
+                    status_code=404,
+                )
+            raise LCMSException(
+                message=f"Failed to read file: {e}",
+                status_code=500,
+            )
+
     def delete_file(self, stored_name: str) -> None:
         """Delete a file from S3 by its stored name (full key)."""
         try:

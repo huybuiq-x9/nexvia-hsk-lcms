@@ -42,3 +42,8 @@ class ScormUploadResponse(BaseModel):
 class ScormPackageListResponse(BaseModel):
     total: int
     items: list[ScormPackageResponse]
+
+
+class ScormPreviewSessionResponse(BaseModel):
+    launch_url: str
+    expires_in: int
