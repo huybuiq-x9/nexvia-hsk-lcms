@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { FileText, ChevronRight, BookOpen, Layers, User, UserCheck, Users, Trash2 } from 'lucide-react';
+import { FileText, BookOpen, Layers, User, UserCheck, Users, Trash2 } from 'lucide-react';
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -183,7 +183,7 @@ export default function SubLessonsPage() {
             <Link
               key={sl.id}
               to={`/sub-lessons/${sl.id}`}
-              className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group relative"
+              className="card p-5 pr-10 flex items-start gap-4 hover:shadow-md transition-all group relative"
             >
               {isAdmin && selectedRole === API_ROLE.ADMIN && (
                 <button
@@ -242,7 +242,6 @@ export default function SubLessonsPage() {
                   isAssigned={Boolean(sl.assigned_converter_id)}
                 />
               </div>
-              <ChevronRight size={18} className="text-slate-300 group-hover:text-slate-500 shrink-0 mt-1 transition-colors" />
             </Link>
           ))
         )}

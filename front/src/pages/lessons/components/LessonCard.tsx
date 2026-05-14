@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Users, User, UserCheck, Trash2 } from 'lucide-react';
+import { Users, User, UserCheck, Trash2 } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
 import { ConfirmModal } from '../../../components/ui/ConfirmModal';
@@ -41,7 +41,7 @@ export function LessonCard({ lesson, expert, teacher, converter, onDelete }: Les
     <>
       <Link
         to={`/lessons/${lesson.id}`}
-        className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group relative"
+        className="card p-5 pr-10 flex items-start gap-4 hover:shadow-md transition-all group relative"
       >
         {onDelete && (
           <button
@@ -112,10 +112,6 @@ export function LessonCard({ lesson, expert, teacher, converter, onDelete }: Les
         )}
       </div>
 
-      <ChevronRight
-        size={18}
-        className="text-slate-300 group-hover:text-slate-500 shrink-0 mt-1 transition-colors"
-      />
       </Link>
 
       {showDeleteConfirm && (

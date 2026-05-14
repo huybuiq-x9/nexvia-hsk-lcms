@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, Users, Trash2 } from 'lucide-react';
+import { Users, Trash2 } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
 import type { ApiCourseWithLessons, ApiUserWithRoles } from '../../../types/api';
@@ -26,7 +26,7 @@ export function CourseCard({ course, expert, onDelete, isDeleting }: CourseCardP
   return (
     <Link
       to={`/courses/${course.id}`}
-      className="card p-5 flex items-start gap-4 hover:shadow-md transition-all group relative"
+      className="card p-5 pr-10 flex items-start gap-4 hover:shadow-md transition-all group relative"
     >
       {onDelete && (
         <button
@@ -77,10 +77,6 @@ export function CourseCard({ course, expert, onDelete, isDeleting }: CourseCardP
         </div>
       </div>
 
-      <ChevronRight
-        size={18}
-        className="text-slate-300 group-hover:text-slate-500 shrink-0 mt-1 transition-colors"
-      />
     </Link>
   );
 }
