@@ -248,6 +248,16 @@ export const courseService = {
     const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/review`, { action });
     return res.data;
   },
+
+  async submitScorm(sublessonId: string): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/submit-scorm`);
+    return res.data;
+  },
+
+  async reviewScorm(sublessonId: string, action: 'approve_scorm' | 'reject_scorm'): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/review-scorm`, { action });
+    return res.data;
+  },
 };
 
 // ─── System ───────────────────────────────────────────────────────────────────

@@ -165,6 +165,10 @@ class SubLessonReviewRequest(BaseModel):
     action: ReviewAction
 
 
+class ScormReviewRequest(BaseModel):
+    action: ReviewAction
+
+
 class SubLessonListResponse(BaseModel):
     total: int
     items: list[SubLessonListItem]

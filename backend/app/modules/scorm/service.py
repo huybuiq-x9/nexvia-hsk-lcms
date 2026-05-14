@@ -28,7 +28,7 @@ from app.modules.scorm.schema import (
     ScormPreviewSessionResponse,
     ScormUploadResponse,
 )
-from app.shared.enums import ScormPackageStatus
+from app.shared.enums import ScormPackageStatus, SubLessonStatus
 
 
 CHUNK_SIZE = 1024 * 1024

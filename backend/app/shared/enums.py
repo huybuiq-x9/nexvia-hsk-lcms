@@ -29,6 +29,7 @@ class SubLessonStatus(str, enum.Enum):
     CONVERTING = "converting"
     APPROVED = "approved"
     REJECTED = "rejected"
+    SCORM_REVIEWING = "scorm_reviewing"
 
 
 class ScormPackageStatus(str, enum.Enum):
@@ -74,6 +75,9 @@ class ReviewAction(str, enum.Enum):
     UNPUBLISH = "unpublish"
     ASSIGN_TEACHER = "assign_teacher"
     ASSIGN_EXPERT = "assign_expert"
+    SUBMIT_SCORM = "submit_scorm"
+    APPROVE_SCORM = "approve_scorm"
+    REJECT_SCORM = "reject_scorm"
 
 
 class NotificationEvent(str, enum.Enum):

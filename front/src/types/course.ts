@@ -31,6 +31,7 @@ export const SUB_LESSON_STATUS = {
   REVIEWING: 'reviewing',
   CONVERTING: 'converting',
   APPROVED: 'approved',
+  SCORM_REVIEWING: 'scorm_reviewing',
 } as const;
 
 export type SubLessonStatus = (typeof SUB_LESSON_STATUS)[keyof typeof SUB_LESSON_STATUS];
@@ -54,11 +55,12 @@ export const LESSON_STATUS_COLORS: Record<LessonStatus, string> = {
 };
 
 export const SUB_LESSON_STATUS_COLORS: Record<SubLessonStatus, string> = {
-  [SUB_LESSON_STATUS.DRAFT]:        'bg-slate-50 text-slate-600 border-slate-200',
-  [SUB_LESSON_STATUS.IN_PROGRESS]:  'bg-blue-50 text-blue-700 border-blue-200',
-  [SUB_LESSON_STATUS.REVIEWING]:    'bg-amber-50 text-amber-700 border-amber-200',
-  [SUB_LESSON_STATUS.CONVERTING]:   'bg-purple-50 text-purple-700 border-purple-200',
-  [SUB_LESSON_STATUS.APPROVED]:     'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.DRAFT]:           'bg-slate-50 text-slate-600 border-slate-200',
+  [SUB_LESSON_STATUS.IN_PROGRESS]:     'bg-blue-50 text-blue-700 border-blue-200',
+  [SUB_LESSON_STATUS.REVIEWING]:       'bg-amber-50 text-amber-700 border-amber-200',
+  [SUB_LESSON_STATUS.CONVERTING]:      'bg-purple-50 text-purple-700 border-purple-200',
+  [SUB_LESSON_STATUS.APPROVED]:        'bg-green-50 text-green-700 border-green-200',
+  [SUB_LESSON_STATUS.SCORM_REVIEWING]: 'bg-cyan-50 text-cyan-700 border-cyan-200',
 };
 
 // ─── SubLesson ────────────────────────────────────────────────────────────────

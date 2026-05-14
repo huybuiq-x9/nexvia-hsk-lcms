@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, XCircle, PackageCheck } from 'lucide-react';
 import { useToast } from '../../../contexts/ToastContext';
 import { courseService } from '../../../services';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
 
 interface SubLessonActionModalProps {
   type: ModalType;
@@ -35,6 +35,18 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
         await courseService.reviewSubLesson(subLessonId, 'reject');
         toast.success(t('courses.modal.rejectSuccess'));
         onDone();
+      } else if (type === 'submit_scorm') {
+        await courseService.submitScorm(subLessonId);
+        toast.success(t('courses.modal.submitScormSuccess'));
+        onDone();
+      } else if (type === 'approve_scorm') {
+        await courseService.reviewScorm(subLessonId, 'approve_scorm');
+        toast.success(t('courses.modal.approveScormSuccess'));
+        onDone();
+      } else if (type === 'reject_scorm') {
+        await courseService.reviewScorm(subLessonId, 'reject_scorm');
+        toast.success(t('courses.modal.rejectScormSuccess'));
+        onDone();
       }
     } catch (err: unknown) {
       const msg =
@@ -46,24 +58,33 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
   };
 
   const titleMap: Record<ModalType, string> = {
-    submit:  t('courses.modal.titleSubmit'),
-    approve: t('courses.modal.titleApprove'),
-    reject:  t('courses.modal.titleReject'),
-    upload:  t('courses.modal.titleUpload'),
+    submit:        t('courses.modal.titleSubmit'),
+    approve:       t('courses.modal.titleApprove'),
+    reject:        t('courses.modal.titleReject'),
+    upload:        t('courses.modal.titleUpload'),
+    submit_scorm:  t('courses.modal.titleSubmitScorm'),
+    approve_scorm: t('courses.modal.titleApproveScorm'),
+    reject_scorm:  t('courses.modal.titleRejectScorm'),
   };
 
   const iconMap: Record<ModalType, React.ReactNode> = {
-    submit:  <Upload size={20} className="text-blue-600" />,
-    approve: <CheckCircle size={20} className="text-green-600" />,
-    reject:  <XCircle size={20} className="text-red-600" />,
-    upload:  <Upload size={20} className="text-violet-600" />,
+    submit:        <Upload size={20} className="text-blue-600" />,
+    approve:       <CheckCircle size={20} className="text-green-600" />,
+    reject:        <XCircle size={20} className="text-red-600" />,
+    upload:        <Upload size={20} className="text-violet-600" />,
+    submit_scorm:  <PackageCheck size={20} className="text-blue-600" />,
+    approve_scorm: <CheckCircle size={20} className="text-green-600" />,
+    reject_scorm:  <XCircle size={20} className="text-red-600" />,
   };
 
   const btnClassMap: Record<ModalType, string> = {
-    submit:  'btn-primary',
-    approve: 'bg-green-600 hover:bg-green-700 text-white',
-    reject:  'btn-danger',
-    upload:  'bg-violet-600 hover:bg-violet-700 text-white',
+    submit:        'btn-primary',
+    approve:       'bg-green-600 hover:bg-green-700 text-white',
+    reject:        'btn-danger',
+    upload:        'bg-violet-600 hover:bg-violet-700 text-white',
+    submit_scorm:  'btn-primary',
+    approve_scorm: 'bg-green-600 hover:bg-green-700 text-white',
+    reject_scorm:  'btn-danger',
   };
 
   return (
@@ -95,6 +116,15 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
           )}
           {type === 'upload' && (
             <p className="text-sm text-slate-600">{t('courses.modal.uploadDesc')}</p>
+          )}
+          {type === 'submit_scorm' && (
+            <p className="text-sm text-slate-600">{t('courses.modal.submitScormDesc')}</p>
+          )}
+          {type === 'approve_scorm' && (
+            <p className="text-sm text-slate-600">{t('courses.modal.approveScormDesc')}</p>
+          )}
+          {type === 'reject_scorm' && (
+            <p className="text-sm text-slate-600">{t('courses.modal.rejectScormDesc')}</p>
           )}
 
           {error && (

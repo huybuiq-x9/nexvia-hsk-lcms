@@ -184,7 +184,7 @@ def _can_upload_scorm(sublesson: SubLesson, user: User, roles: set[str]) -> bool
         return True
     return (
         _is_assigned_converter(sublesson, user, roles)
-        and sublesson.status in (SubLessonStatus.APPROVED, SubLessonStatus.CONVERTING)
+        and sublesson.status == SubLessonStatus.CONVERTING
     )
 
 
@@ -527,6 +527,46 @@ async def teacher_submit_access_to_sublesson(
     return await document_upload_access_to_sublesson(sublesson_id, current_user, db)
 
 
+async def converter_submit_scorm_access(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    if _is_admin(roles):
+        return current_user
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if (
+        _is_assigned_converter(sublesson, current_user, roles)
+        and sublesson.status == SubLessonStatus.CONVERTING
+    ):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned converter can submit SCORM for review when status is CONVERTING",
+    )
+
+
+async def expert_review_scorm_access(
+    sublesson_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    if _is_admin(roles):
+        return current_user
+    sublesson = await _load_sublesson_for_access(sublesson_id, db)
+    if (
+        _is_assigned_expert(sublesson, current_user, roles)
+        and sublesson.status == SubLessonStatus.SCORM_REVIEWING
+    ):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only the assigned expert can review SCORM when status is SCORM_REVIEWING",
+    )
+
+
 TeacherAssignedToSubLesson = Annotated[User, Depends(teacher_assigned_to_sublesson)]
 ExpertAssignedToSubLesson = Annotated[User, Depends(expert_assigned_to_sublesson)]
 TeacherAssignedToDocument = Annotated[User, Depends(teacher_assigned_to_document)]
@@ -542,6 +582,8 @@ ScormViewAccessToPackage = Annotated[User, Depends(scorm_view_access_to_package)
 ScormUploadAccessToPackage = Annotated[User, Depends(scorm_upload_access_to_package)]
 ScormCommentAccessToPackage = Annotated[User, Depends(scorm_comment_access_to_package)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
+ConverterSubmitScormAccess = Annotated[User, Depends(converter_submit_scorm_access)]
+ExpertReviewScormAccess = Annotated[User, Depends(expert_review_scorm_access)]
 
 
 async def teacher_assigned_to_lesson(

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, CheckCircle, XCircle, UploadCloud, User, UserCheck, Users } from 'lucide-react';
+import { Send, CheckCircle, XCircle, UploadCloud, User, UserCheck, Users, PackageCheck, PackageX } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { CollapsibleDrawer } from '../../../components/ui/CollapsibleDrawer';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
@@ -9,20 +9,30 @@ import type { ApiReviewLog, ApiSubLessonResponse, ApiUserWithRoles } from '../..
 interface SubLessonHeaderProps {
   canSubmitForReview?: boolean;
   canReview?: boolean;
+  canSubmitScorm?: boolean;
+  canReviewScorm?: boolean;
   onSubmit?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
+  onSubmitScorm?: () => void;
+  onApproveScorm?: () => void;
+  onRejectScorm?: () => void;
 }
 
 export function SubLessonHeader({
   canSubmitForReview,
   canReview,
+  canSubmitScorm,
+  canReviewScorm,
   onSubmit,
   onApprove,
   onReject,
+  onSubmitScorm,
+  onApproveScorm,
+  onRejectScorm,
 }: SubLessonHeaderProps) {
   const { t } = useTranslation();
-  const hasActions = canSubmitForReview || canReview;
+  const hasActions = canSubmitForReview || canReview || canSubmitScorm || canReviewScorm;
 
   if (!hasActions) return null;
 
@@ -55,7 +65,34 @@ export function SubLessonHeader({
               {t('subLessons.actions.approve')}
             </button>
           </>
-          )}
+        )}
+        {canSubmitScorm && (
+          <button
+            onClick={onSubmitScorm}
+            className="btn btn-primary flex items-center gap-1 text-xs py-1.5 px-2.5"
+          >
+            <PackageCheck size={12} />
+            {t('subLessons.actions.submitScorm')}
+          </button>
+        )}
+        {canReviewScorm && (
+          <>
+            <button
+              onClick={onRejectScorm}
+              className="btn flex items-center gap-1 text-xs border border-red-200 text-red-600 hover:bg-red-50 py-1.5 px-2.5"
+            >
+              <XCircle size={12} />
+              {t('subLessons.actions.rejectScorm')}
+            </button>
+            <button
+              onClick={onApproveScorm}
+              className="btn flex items-center gap-1 text-xs bg-green-600 hover:bg-green-700 text-white border-0 py-1.5 px-2.5"
+            >
+              <CheckCircle size={12} />
+              {t('subLessons.actions.approveScorm')}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -88,18 +125,13 @@ export function SubLessonInfoDrawer({
 }) {
   const { t } = useTranslation();
   const getReviewLogLabel = (log: ApiReviewLog) => {
-    if (log.action === 'approve') {
-      return t('subLessons.reviewLog.approveContent');
-    }
-    if (log.action === 'reject') {
-      return t('subLessons.reviewLog.rejectContent');
-    }
-    if (log.action === 'upload_document') {
-      return t('subLessons.reviewLog.uploadDocument');
-    }
-    if (log.action === 'reupload_document') {
-      return t('subLessons.reviewLog.reuploadDocument');
-    }
+    if (log.action === 'approve') return t('subLessons.reviewLog.approveContent');
+    if (log.action === 'reject') return t('subLessons.reviewLog.rejectContent');
+    if (log.action === 'upload_document') return t('subLessons.reviewLog.uploadDocument');
+    if (log.action === 'reupload_document') return t('subLessons.reviewLog.reuploadDocument');
+    if (log.action === 'submit_scorm') return t('subLessons.reviewLog.submit_scorm');
+    if (log.action === 'approve_scorm') return t('subLessons.reviewLog.approve_scorm');
+    if (log.action === 'reject_scorm') return t('subLessons.reviewLog.reject_scorm');
     return t(`subLessons.reviewLog.${log.action}`);
   };
 
@@ -185,22 +217,26 @@ export function SubLessonInfoDrawer({
           ) : (
             <div className="space-y-3">
               {reviewLogs.map((log) => {
-                const isReject = log.action === 'reject';
-                const isApprove = log.action === 'approve';
-                const isUpload = log.action === 'upload_document'
-                  || log.action === 'reupload_document';
+                const isReject = log.action === 'reject' || log.action === 'reject_scorm';
+                const isApprove = log.action === 'approve' || log.action === 'approve_scorm';
+                const isUpload = log.action === 'upload_document' || log.action === 'reupload_document';
+                const isScormSubmit = log.action === 'submit_scorm';
+                const isScormApprove = log.action === 'approve_scorm';
+                const isScormReject = log.action === 'reject_scorm';
                 const iconClass = isReject
                   ? 'bg-red-50 text-red-600'
                   : isApprove
                     ? 'bg-green-50 text-green-600'
                     : isUpload
                       ? 'bg-purple-50 text-purple-600'
-                      : 'bg-blue-50 text-blue-600';
+                      : isScormSubmit
+                        ? 'bg-cyan-50 text-cyan-600'
+                        : 'bg-blue-50 text-blue-600';
 
                 return (
                   <div key={log.id} className="flex gap-3">
                     <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
-                      {isReject ? <XCircle size={15} /> : isApprove ? <CheckCircle size={15} /> : isUpload ? <UploadCloud size={15} /> : <Send size={15} />}
+                      {isScormReject ? <PackageX size={15} /> : isScormApprove ? <PackageCheck size={15} /> : isScormSubmit ? <PackageCheck size={15} /> : isReject ? <XCircle size={15} /> : isApprove ? <CheckCircle size={15} /> : isUpload ? <UploadCloud size={15} /> : <Send size={15} />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-slate-800">{getReviewLogLabel(log)}</div>

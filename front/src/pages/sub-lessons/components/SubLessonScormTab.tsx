@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, MessageSquare, Send, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -19,6 +19,8 @@ interface SubLessonScormTabProps {
   subLessonId: string;
   canUpload?: boolean;
   canComment?: boolean;
+  onRefresh?: () => void;
+  onScormPackageChange?: (pkg: ApiScormPackage | null) => void;
 }
 
 function StatusBadge({ status }: { status: ScormPackageStatus }) {
@@ -249,11 +251,17 @@ export function SubLessonScormTab({
   subLessonId,
   canUpload = false,
   canComment = false,
+  onRefresh,
+  onScormPackageChange,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const { scormPackage, versions, loading, uploading, uploadPackage, reuploadPackage } = useSubLessonScorm(subLessonId);
   const reuploadInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    onScormPackageChange?.(scormPackage);
+  }, [scormPackage, onScormPackageChange]);
   const [previewPackage, setPreviewPackage] = useState<ApiScormPackage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
@@ -284,6 +292,7 @@ export function SubLessonScormTab({
     try {
       await uploadPackage(file);
       toast.success(t('scorm.uploadStarted'));
+      onRefresh?.();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.uploadError')));
     }
@@ -299,6 +308,7 @@ export function SubLessonScormTab({
     try {
       await reuploadPackage(scormPackage.id, file);
       toast.success(t('scorm.reuploadStarted'));
+      onRefresh?.();
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('scorm.reuploadError')));
     }

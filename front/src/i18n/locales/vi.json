@@ -253,7 +253,16 @@
       "rejectDesc": "Từ chối bài học con và gửi lại cho giáo viên.",
       "rejectSuccess": "Đã từ chối và gửi lại cho giáo viên.",
       "notFound": "Không tìm thấy bài học con.",
-      "backToList": "Quay lại danh sách"
+      "backToList": "Quay lại danh sách",
+      "titleSubmitScorm": "Gửi SCORM để duyệt",
+      "titleApproveScorm": "Duyệt SCORM",
+      "titleRejectScorm": "Từ chối SCORM",
+      "submitScormDesc": "Gửi file SCORM này để chuyên gia kiểm tra và phê duyệt.",
+      "submitScormSuccess": "Đã gửi SCORM để duyệt.",
+      "approveScormDesc": "Xác nhận duyệt file SCORM này.",
+      "approveScormSuccess": "Đã duyệt SCORM.",
+      "rejectScormDesc": "Từ chối SCORM và gửi lại cho converter để chỉnh sửa.",
+      "rejectScormSuccess": "Đã từ chối SCORM và trả về cho converter."
     },
     "deleteModal": {
       "title": "Xác nhận xóa khóa học",
@@ -416,13 +425,15 @@
       "in_progress": "Đang tiến hành",
       "reviewing": "Đang kiểm duyệt",
       "converting": "Đang chuyển đổi",
-      "approved": "Đã duyệt"
+      "approved": "Đã duyệt",
+      "scorm_reviewing": "Đang duyệt SCORM"
     },
     "workflow": {
       "stepDraft": "Bản nháp",
       "stepInProgress": "Đang làm",
       "stepReviewing": "Kiểm duyệt",
       "stepConverting": "Chuyển đổi",
+      "stepScormReviewing": "Duyệt SCORM",
       "stepApproved": "Đã duyệt"
     },
     "tabs": {
@@ -450,12 +461,18 @@
       "publish": "Xuất bản",
       "unpublish": "Hủy xuất bản",
       "assign_teacher": "Gán giáo viên",
-      "assign_expert": "Gán expert"
+      "assign_expert": "Gán expert",
+      "submit_scorm": "Gửi SCORM để duyệt",
+      "approve_scorm": "Duyệt SCORM",
+      "reject_scorm": "Từ chối SCORM"
     },
     "actions": {
       "submitForReview": "Gửi phê duyệt",
       "approve": "Duyệt",
-      "reject": "Từ chối"
+      "reject": "Từ chối",
+      "submitScorm": "Gửi SCORM",
+      "approveScorm": "Duyệt SCORM",
+      "rejectScorm": "Từ chối SCORM"
     },
     "delete": "Xóa",
     "deleteModal": {
