@@ -21,8 +21,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY backend/ .
 
-# Create non-root user
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
+# Create non-root user and pre-create directories the app needs to write to.
+# The scorm-uploads dir must exist before the Docker volume mounts on top of it;
+# ownership is set here so the volume inherits it on first creation.
+RUN useradd --create-home appuser \
+    && mkdir -p /app/.tmp/scorm-uploads \
+    && chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
