@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     SCORM_MAX_EXTRACTED_FILES: int = 10000
     SCORM_UPLOAD_WORKERS: int = 8
 
-    CORS_ORIGINS: List[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: str = "http://localhost:5173"
 
     QUESTION_DRAW_SIZE: int = 5
 
@@ -46,9 +46,10 @@ class Settings(BaseSettings):
 
     @property
     def parsed_cors_origins(self) -> List[str]:
-        if isinstance(self.CORS_ORIGINS, str):
-            return json.loads(self.CORS_ORIGINS)
-        return self.CORS_ORIGINS
+        v = self.CORS_ORIGINS.strip()
+        if v.startswith("["):
+            return json.loads(v)
+        return [o.strip() for o in v.split(",") if o.strip()]
 
     class Config:
         env_file = ".env"
