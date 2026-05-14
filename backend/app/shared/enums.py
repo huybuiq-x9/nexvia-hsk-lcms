@@ -75,6 +75,8 @@ class ReviewAction(str, enum.Enum):
     UNPUBLISH = "unpublish"
     ASSIGN_TEACHER = "assign_teacher"
     ASSIGN_EXPERT = "assign_expert"
+    UPLOAD_SCORM = "upload_scorm"
+    REUPLOAD_SCORM = "reupload_scorm"
     SUBMIT_SCORM = "submit_scorm"
     APPROVE_SCORM = "approve_scorm"
     REJECT_SCORM = "reject_scorm"

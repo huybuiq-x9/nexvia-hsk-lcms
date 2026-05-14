@@ -28,7 +28,7 @@ from app.modules.scorm.schema import (
     ScormPreviewSessionResponse,
     ScormUploadResponse,
 )
-from app.shared.enums import ScormPackageStatus, SubLessonStatus
+from app.shared.enums import ReviewAction, ScormPackageStatus, SubLessonStatus
 
 
 CHUNK_SIZE = 1024 * 1024
@@ -151,7 +151,9 @@ async def upload_package(
     uploader_id: uuid.UUID,
     file: UploadFile,
 ) -> ScormUploadResponse:
-    await _get_sublesson_orm(db, sub_lesson_id)
+    from app.modules.courses.service import add_review_log
+
+    sublesson = await _get_sublesson_orm(db, sub_lesson_id)
     existing_result = await db.execute(
         select(ScormPackage.id)
         .where(ScormPackage.sub_lesson_id == sub_lesson_id)
@@ -164,12 +166,22 @@ async def upload_package(
             status_code=409,
         )
 
-    return await _create_package_version(
+    result = await _create_package_version(
         db=db,
         sub_lesson_id=sub_lesson_id,
         uploader_id=uploader_id,
         file=file,
     )
+    add_review_log(
+        db,
+        actor_id=uploader_id,
+        sublesson=sublesson,
+        action=ReviewAction.UPLOAD_SCORM,
+        from_status=sublesson.status,
+        to_status=sublesson.status,
+    )
+    await db.commit()
+    return result
 
 
 async def reupload_package(
@@ -178,16 +190,29 @@ async def reupload_package(
     uploader_id: uuid.UUID,
     file: UploadFile,
 ) -> ScormUploadResponse:
+    from app.modules.courses.service import add_review_log
+
     current_package = await _get_package_orm(db, package_id)
     if not current_package.is_current:
         raise LCMSException("Only the current SCORM package can be re-uploaded", status_code=400)
 
-    return await _create_package_version(
+    sublesson = await _get_sublesson_orm(db, current_package.sub_lesson_id)
+    result = await _create_package_version(
         db=db,
         sub_lesson_id=current_package.sub_lesson_id,
         uploader_id=uploader_id,
         file=file,
     )
+    add_review_log(
+        db,
+        actor_id=uploader_id,
+        sublesson=sublesson,
+        action=ReviewAction.REUPLOAD_SCORM,
+        from_status=sublesson.status,
+        to_status=sublesson.status,
+    )
+    await db.commit()
+    return result
 
 
 async def _create_package_version(

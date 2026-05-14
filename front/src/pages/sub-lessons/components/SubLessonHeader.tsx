@@ -129,6 +129,8 @@ export function SubLessonInfoDrawer({
     if (log.action === 'reject') return t('subLessons.reviewLog.rejectContent');
     if (log.action === 'upload_document') return t('subLessons.reviewLog.uploadDocument');
     if (log.action === 'reupload_document') return t('subLessons.reviewLog.reuploadDocument');
+    if (log.action === 'upload_scorm') return t('subLessons.reviewLog.upload_scorm');
+    if (log.action === 'reupload_scorm') return t('subLessons.reviewLog.reupload_scorm');
     if (log.action === 'submit_scorm') return t('subLessons.reviewLog.submit_scorm');
     if (log.action === 'approve_scorm') return t('subLessons.reviewLog.approve_scorm');
     if (log.action === 'reject_scorm') return t('subLessons.reviewLog.reject_scorm');
@@ -219,7 +221,7 @@ export function SubLessonInfoDrawer({
               {reviewLogs.map((log) => {
                 const isReject = log.action === 'reject' || log.action === 'reject_scorm';
                 const isApprove = log.action === 'approve' || log.action === 'approve_scorm';
-                const isUpload = log.action === 'upload_document' || log.action === 'reupload_document';
+                const isUpload = log.action === 'upload_document' || log.action === 'reupload_document' || log.action === 'upload_scorm' || log.action === 'reupload_scorm';
                 const isScormSubmit = log.action === 'submit_scorm';
                 const isScormApprove = log.action === 'approve_scorm';
                 const isScormReject = log.action === 'reject_scorm';

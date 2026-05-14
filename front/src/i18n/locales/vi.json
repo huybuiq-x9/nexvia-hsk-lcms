@@ -462,6 +462,8 @@
       "unpublish": "Hủy xuất bản",
       "assign_teacher": "Gán giáo viên",
       "assign_expert": "Gán expert",
+      "upload_scorm": "Upload SCORM",
+      "reupload_scorm": "Re-upload SCORM",
       "submit_scorm": "Gửi SCORM để duyệt",
       "approve_scorm": "Duyệt SCORM",
       "reject_scorm": "Từ chối SCORM"

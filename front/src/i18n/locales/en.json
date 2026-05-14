@@ -463,6 +463,8 @@
       "unpublish": "Unpublished",
       "assign_teacher": "Assigned teacher",
       "assign_expert": "Assigned expert",
+      "upload_scorm": "Uploaded SCORM",
+      "reupload_scorm": "Re-uploaded SCORM",
       "submit_scorm": "Submitted SCORM for review",
       "approve_scorm": "Approved SCORM",
       "reject_scorm": "Rejected SCORM"
