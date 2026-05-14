@@ -337,6 +337,12 @@
     "launchPath": "Launch path",
     "processingHint": "The task is uploading to S3, extracting, and parsing imsmanifest.xml. Status refreshes automatically.",
     "failedFallback": "SCORM processing failed.",
+    "comments": "Comments",
+    "commentPlaceholder": "Write a comment...",
+    "sendComment": "Send",
+    "noComments": "No comments yet.",
+    "commentsLoadError": "Failed to load comments.",
+    "commentSendError": "Failed to send comment.",
     "status": {
       "processing": "Processing",
       "ready": "Ready",

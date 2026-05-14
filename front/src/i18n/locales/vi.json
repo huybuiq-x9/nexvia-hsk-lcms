@@ -336,6 +336,12 @@
     "launchPath": "Launch path",
     "processingHint": "Task đang upload lên S3, extract và parse imsmanifest.xml. Trạng thái sẽ tự cập nhật.",
     "failedFallback": "Xử lý SCORM thất bại.",
+    "comments": "Bình luận",
+    "commentPlaceholder": "Viết bình luận...",
+    "sendComment": "Gửi",
+    "noComments": "Chưa có bình luận nào.",
+    "commentsLoadError": "Không tải được bình luận.",
+    "commentSendError": "Gửi bình luận thất bại.",
     "status": {
       "processing": "Đang xử lý",
       "ready": "Sẵn sàng",

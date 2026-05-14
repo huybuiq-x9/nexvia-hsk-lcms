@@ -1,9 +1,36 @@
 from datetime import datetime
 import uuid
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.shared.enums import ScormPackageStatus
+
+
+class ScormCommentAuthorInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    full_name: str
+
+
+class ScormCommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    scorm_package_id: uuid.UUID
+    author_id: uuid.UUID
+    content: str
+    created_at: datetime
+    updated_at: datetime
+    author: ScormCommentAuthorInfo
+
+
+class ScormCommentCreate(BaseModel):
+    content: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+class ScormCommentListResponse(BaseModel):
+    total: int
+    items: list[ScormCommentResponse]
 
 
 class ScormPackageResponse(BaseModel):
@@ -33,6 +60,7 @@ class ScormPackageResponse(BaseModel):
     processed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    comments_count: int = 0
 
 
 class ScormUploadResponse(BaseModel):

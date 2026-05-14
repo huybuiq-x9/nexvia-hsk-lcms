@@ -1,12 +1,12 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, Upload } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, MessageSquare, Send, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { FileDropzone } from '../../../components/ui/FileDropzone';
 import { useToast } from '../../../contexts/ToastContext';
 import { scormService } from '../../../services';
 import { formatDate } from '../../../utils/formatters';
-import type { ApiScormPackage, ScormPackageStatus } from '../../../types/api';
+import type { ApiScormComment, ApiScormPackage, ScormPackageStatus } from '../../../types/api';
 import { useSubLessonScorm } from '../hooks/useSubLessonScorm';
 import { ScormPreviewModal } from './ScormPreviewModal';
 
@@ -18,6 +18,7 @@ const getApiErrorMessage = (err: unknown, fallback: string) =>
 interface SubLessonScormTabProps {
   subLessonId: string;
   canUpload?: boolean;
+  canComment?: boolean;
 }
 
 function StatusBadge({ status }: { status: ScormPackageStatus }) {
@@ -42,12 +43,60 @@ function VersionHistory({
   versions,
   onPreview,
   previewLoadingId,
+  canComment,
 }: {
   versions: ApiScormPackage[];
   onPreview: (scormPackage: ApiScormPackage) => void;
   previewLoadingId: string | null;
+  canComment?: boolean;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, ApiScormComment[]>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [sendingComment, setSendingComment] = useState<Record<string, boolean>>({});
+  const commentInputRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  const toggleComments = async (versionId: string) => {
+    if (!canComment) return;
+    const isExpanding = expandedId !== versionId;
+    if (isExpanding) {
+      setExpandedId(versionId);
+      if (!commentsMap[versionId]) {
+        setLoadingComments(prev => ({ ...prev, [versionId]: true }));
+        try {
+          const res = await scormService.listComments(versionId);
+          setCommentsMap(prev => ({ ...prev, [versionId]: res.items }));
+        } catch {
+          toast.error(t('scorm.commentsLoadError'));
+        } finally {
+          setLoadingComments(prev => ({ ...prev, [versionId]: false }));
+        }
+      }
+      setTimeout(() => { commentInputRefs.current[versionId]?.focus(); }, 50);
+    } else {
+      setExpandedId(null);
+    }
+  };
+
+  const sendComment = async (versionId: string) => {
+    if (!canComment) return;
+    const text = commentText[versionId]?.trim();
+    if (!text) return;
+    setSendingComment(prev => ({ ...prev, [versionId]: true }));
+    try {
+      const comment = await scormService.addComment(versionId, text);
+      setCommentsMap(prev => ({ ...prev, [versionId]: [...(prev[versionId] || []), comment] }));
+      setCommentText(prev => ({ ...prev, [versionId]: '' }));
+    } catch {
+      toast.error(t('scorm.commentSendError'));
+    } finally {
+      setSendingComment(prev => ({ ...prev, [versionId]: false }));
+    }
+  };
+
   if (versions.length === 0) return null;
 
   return (
@@ -58,52 +107,138 @@ function VersionHistory({
       <div className="divide-y divide-slate-100">
         {versions.map(version => {
           const isPreviewLoading = previewLoadingId === version.id;
+          const isExpanded = expandedId === version.id;
+          const versionComments = commentsMap[version.id] || [];
+          const isLoadingCmt = loadingComments[version.id];
+          const isSendingCmt = sendingComment[version.id];
+          const versionCommentText = commentText[version.id] || '';
+          const commentCount = isExpanded ? versionComments.length : (version.comments_count ?? 0);
+
           return (
-            <div key={version.id} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 transition-colors">
-              <div className="w-10 h-10 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
-                <FileArchive size={20} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-slate-800">v{version.version}</span>
-                  {version.is_current && (
-                    <span className="text-xs font-medium text-blue-600">{t('scorm.current')}</span>
-                  )}
-                  <StatusBadge status={version.status} />
+            <div key={version.id} className="group">
+              <div className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 transition-colors">
+                <div className="w-10 h-10 rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
+                  <FileArchive size={20} />
                 </div>
-                <div className="font-medium text-slate-900 truncate mt-1">
-                  {version.title || version.original_filename}
-                </div>
-                <div className="text-xs text-slate-400 truncate mt-0.5">
-                  {version.launch_path || version.original_filename}
-                  <span className="mx-1.5">·</span>
-                  {formatDate(version.uploaded_at ?? version.created_at)}
-                </div>
-                {version.status === 'processing' && (
-                  <div className="text-xs text-blue-700 mt-2">
-                    {t('scorm.processingHint')}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-slate-800">v{version.version}</span>
+                    {version.is_current && (
+                      <span className="text-xs font-medium text-blue-600">{t('scorm.current')}</span>
+                    )}
+                    <StatusBadge status={version.status} />
                   </div>
-                )}
-                {version.status === 'failed' && (
-                  <div className="text-xs text-red-700 mt-2">
-                    {version.error_message || t('scorm.failedFallback')}
+                  <div className="font-medium text-slate-900 truncate mt-1">
+                    {version.title || version.original_filename}
                   </div>
-                )}
-              </div>
-              {version.status === 'ready' && (
-                <button
-                  type="button"
-                  className="btn btn-secondary px-3 py-2 shrink-0"
-                  disabled={previewLoadingId !== null}
-                  onClick={() => onPreview(version)}
-                >
-                  {isPreviewLoading ? (
-                    <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Eye size={15} />
+                  <div className="text-xs text-slate-400 truncate mt-0.5">
+                    {version.launch_path || version.original_filename}
+                    <span className="mx-1.5">·</span>
+                    {formatDate(version.uploaded_at ?? version.created_at)}
+                  </div>
+                  {version.status === 'processing' && (
+                    <div className="text-xs text-blue-700 mt-2">{t('scorm.processingHint')}</div>
                   )}
-                  {t('scorm.preview')}
-                </button>
+                  {version.status === 'failed' && (
+                    <div className="text-xs text-red-700 mt-2">
+                      {version.error_message || t('scorm.failedFallback')}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {canComment && (
+                    <button
+                      type="button"
+                      onClick={() => toggleComments(version.id)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors relative"
+                      title={t('scorm.comments')}
+                      style={{
+                        backgroundColor: isExpanded ? 'rgb(239 246 255)' : undefined,
+                        color: isExpanded ? 'rgb(37 99 235)' : 'rgb(148 163 184)',
+                      }}
+                    >
+                      <MessageSquare size={15} />
+                      {commentCount > 0 && !isExpanded && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                          {commentCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  {version.status === 'ready' && (
+                    <button
+                      type="button"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={previewLoadingId !== null}
+                      onClick={() => onPreview(version)}
+                      title={t('scorm.preview')}
+                      aria-label={t('scorm.preview')}
+                    >
+                      {isPreviewLoading ? (
+                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Eye size={15} />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Inline comments panel */}
+              {canComment && isExpanded && (
+                <div className="pl-4 pr-4 pb-4 ml-4 border-l-2 border-blue-200">
+                  <div className="space-y-2 mb-3">
+                    {isLoadingCmt ? (
+                      <div className="flex justify-center py-4">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : versionComments.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-2">{t('scorm.noComments')}</p>
+                    ) : (
+                      versionComments.map(comment => (
+                        <div key={comment.id} className="flex gap-2">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[9px] font-bold text-blue-600">
+                              {comment.author.full_name[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-slate-700">{comment.author.full_name}</span>
+                              <span className="text-[10px] text-slate-400">{formatDate(comment.created_at)}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5 whitespace-pre-wrap break-words">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      ref={el => { commentInputRefs.current[version.id] = el; }}
+                      value={versionCommentText}
+                      onChange={e => setCommentText(prev => ({ ...prev, [version.id]: e.target.value }))}
+                      placeholder={t('scorm.commentPlaceholder')}
+                      className="input resize-none flex-1 text-xs py-2"
+                      rows={2}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendComment(version.id);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => sendComment(version.id)}
+                      disabled={isSendingCmt || !versionCommentText.trim()}
+                      className="btn btn-primary p-2 disabled:opacity-40 shrink-0"
+                      title={t('scorm.sendComment')}
+                    >
+                      <Send size={13} />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           );
@@ -116,6 +251,7 @@ function VersionHistory({
 export function SubLessonScormTab({
   subLessonId,
   canUpload = false,
+  canComment = false,
 }: SubLessonScormTabProps) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -250,6 +386,7 @@ export function SubLessonScormTab({
           versions={versions.length > 0 ? versions : [scormPackage]}
           onPreview={handlePreview}
           previewLoadingId={previewLoadingId}
+          canComment={canComment}
         />
       ) : (
         <EmptyState

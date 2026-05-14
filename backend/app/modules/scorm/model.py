@@ -14,6 +14,33 @@ if TYPE_CHECKING:
     from app.modules.users.model import User
 
 
+class ScormComment(BaseModel):
+    __tablename__ = "scorm_comments"
+
+    scorm_package_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("scorm_packages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+
+    scorm_package: Mapped["ScormPackage"] = relationship(
+        "ScormPackage",
+        back_populates="comments",
+    )
+    author: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[author_id],
+    )
+
+
 class ScormPackage(BaseModel):
     __tablename__ = "scorm_packages"
 
@@ -61,4 +88,10 @@ class ScormPackage(BaseModel):
     uploader: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[uploader_id],
+    )
+    comments: Mapped[list["ScormComment"]] = relationship(
+        "ScormComment",
+        back_populates="scorm_package",
+        cascade="all, delete-orphan",
+        order_by="ScormComment.created_at",
     )

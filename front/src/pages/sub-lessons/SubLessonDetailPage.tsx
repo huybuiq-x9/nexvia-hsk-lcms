@@ -58,6 +58,7 @@ export default function SubLessonDetailPage() {
   const canSubmitForReview = Boolean(subLesson) && (isAdmin || isTeacher) && isDrafting;
   const canViewScorm = Boolean(subLesson) && (isAdmin || isTeacher || isExpert || isConverter);
   const canUploadScorm = Boolean(subLesson) && (isAdmin || (isConverter && isReadyForScorm));
+  const canCommentScorm = canViewScorm;
 
   // Expert / Admin review CONTENT
   const canReview = isContentReviewing && (isAdmin || isExpert);
@@ -152,6 +153,7 @@ export default function SubLessonDetailPage() {
             <SubLessonScormTab
               subLessonId={subLesson.id}
               canUpload={canUploadScorm}
+              canComment={canCommentScorm}
             />
           )}
           {currentTab === 'questions' && <SubLessonQuestionsTab />}

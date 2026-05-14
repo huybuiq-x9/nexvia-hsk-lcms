@@ -9,6 +9,7 @@ from urllib.parse import quote, unquote
 from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
@@ -16,8 +17,12 @@ from app.core.exceptions import LCMSException, NotFoundError
 from app.core.security import create_scorm_preview_token
 from app.core.storage import storage_service
 from app.modules.courses.model import SubLesson
-from app.modules.scorm.model import ScormPackage
+from app.modules.scorm.model import ScormComment, ScormPackage
 from app.modules.scorm.schema import (
+    ScormCommentAuthorInfo,
+    ScormCommentCreate,
+    ScormCommentListResponse,
+    ScormCommentResponse,
     ScormPackageListResponse,
     ScormPackageResponse,
     ScormPreviewSessionResponse,
@@ -51,7 +56,11 @@ async def _get_package_orm(db: AsyncSession, package_id: uuid.UUID) -> ScormPack
 
 
 def _to_response(package: ScormPackage) -> ScormPackageResponse:
-    return ScormPackageResponse.model_validate(package)
+    resp = ScormPackageResponse.model_validate(package)
+    # Only count if already eagerly loaded — avoid async lazy-load errors
+    if "comments" in package.__dict__:
+        return resp.model_copy(update={"comments_count": len(package.__dict__["comments"])})
+    return resp
 
 
 def preview_cookie_name(package_id: uuid.UUID) -> str:
@@ -278,11 +287,17 @@ async def list_packages(
     await _get_sublesson_orm(db, sub_lesson_id)
     query = (
         select(ScormPackage)
+        .options(selectinload(ScormPackage.comments))
         .where(ScormPackage.sub_lesson_id == sub_lesson_id)
         .where(ScormPackage.deleted_at.is_(None))
         .order_by(ScormPackage.created_at.desc())
     )
-    count_q = select(func.count()).select_from(query.subquery())
+    count_q = select(func.count()).select_from(
+        select(ScormPackage)
+        .where(ScormPackage.sub_lesson_id == sub_lesson_id)
+        .where(ScormPackage.deleted_at.is_(None))
+        .subquery()
+    )
     total = (await db.execute(count_q)).scalar() or 0
     result = await db.execute(query.offset(skip).limit(limit))
     packages = list(result.scalars().all())
@@ -324,3 +339,73 @@ async def get_asset_object(
     if not obj.get("ContentType"):
         obj["ContentType"] = storage_service.guess_mime_type(asset_path)
     return obj
+
+
+def _to_comment_response(comment: ScormComment) -> ScormCommentResponse:
+    return ScormCommentResponse(
+        id=comment.id,
+        scorm_package_id=comment.scorm_package_id,
+        author_id=comment.author_id,
+        content=comment.content,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+        author=ScormCommentAuthorInfo(
+            id=comment.author.id,
+            full_name=comment.author.full_name,
+        ) if hasattr(comment, "author") and comment.author else ScormCommentAuthorInfo(
+            id=comment.author_id,
+            full_name="",
+        ),
+    )
+
+
+async def add_comment(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    author_id: uuid.UUID,
+    data: ScormCommentCreate,
+) -> ScormCommentResponse:
+    await _get_package_orm(db, package_id)
+
+    comment = ScormComment(
+        scorm_package_id=package_id,
+        author_id=author_id,
+        content=data.content,
+    )
+    db.add(comment)
+    await db.commit()
+
+    result = await db.execute(
+        select(ScormComment)
+        .options(selectinload(ScormComment.author))
+        .where(ScormComment.id == comment.id)
+    )
+    comment = result.scalar_one()
+    return _to_comment_response(comment)
+
+
+async def list_comments(
+    db: AsyncSession,
+    package_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 50,
+) -> ScormCommentListResponse:
+    await _get_package_orm(db, package_id)
+
+    query = (
+        select(ScormComment)
+        .options(selectinload(ScormComment.author))
+        .where(ScormComment.scorm_package_id == package_id)
+        .order_by(ScormComment.created_at.asc())
+    )
+
+    count_q = select(func.count()).select_from(query.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    result = await db.execute(query.offset(skip).limit(limit))
+    comments = list(result.scalars().all())
+
+    return ScormCommentListResponse(
+        total=total,
+        items=[_to_comment_response(c) for c in comments],
+    )

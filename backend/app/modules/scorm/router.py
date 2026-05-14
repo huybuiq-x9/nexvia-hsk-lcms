@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import (
+    ScormCommentAccessToPackage,
     ScormUploadAccessToSubLesson,
     ScormUploadAccessToPackage,
     ScormViewAccessToPackage,
@@ -28,6 +29,9 @@ from app.core.deps import (
 from app.core.security import decode_scorm_preview_token
 from app.modules.scorm import service
 from app.modules.scorm.schema import (
+    ScormCommentCreate,
+    ScormCommentListResponse,
+    ScormCommentResponse,
     ScormPackageListResponse,
     ScormPackageResponse,
     ScormPreviewSessionResponse,
@@ -179,6 +183,34 @@ async def create_scorm_preview_session(
         path=_preview_cookie_path(request, package_id),
     )
     return payload
+
+
+@router.get(
+    "/packages/{package_id}/comments",
+    response_model=ScormCommentListResponse,
+)
+async def list_scorm_comments(
+    package_id: uuid.UUID,
+    current_user: ScormCommentAccessToPackage,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> ScormCommentListResponse:
+    return await service.list_comments(db, package_id, skip, limit)
+
+
+@router.post(
+    "/packages/{package_id}/comments",
+    response_model=ScormCommentResponse,
+    status_code=201,
+)
+async def add_scorm_comment(
+    package_id: uuid.UUID,
+    data: ScormCommentCreate,
+    current_user: ScormCommentAccessToPackage,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ScormCommentResponse:
+    return await service.add_comment(db, package_id, current_user.id, data)
 
 
 @router.get(

@@ -31,6 +31,8 @@ import type {
   ApiScormPackageListResponse,
   ApiScormPreviewSessionResponse,
   ApiScormUploadResponse,
+  ApiScormComment,
+  ApiScormCommentListResponse,
   ApiRole,
   LessonStatus,
   SubLessonStatus,
@@ -353,6 +355,16 @@ export const scormService = {
       undefined,
       { withCredentials: true }
     );
+    return res.data;
+  },
+
+  async listComments(packageId: string, params?: { skip?: number; limit?: number }): Promise<ApiScormCommentListResponse> {
+    const res = await client.get<ApiScormCommentListResponse>(`/scorm/packages/${packageId}/comments`, { params });
+    return res.data;
+  },
+
+  async addComment(packageId: string, content: string): Promise<ApiScormComment> {
+    const res = await client.post<ApiScormComment>(`/scorm/packages/${packageId}/comments`, { content });
     return res.data;
   },
 };

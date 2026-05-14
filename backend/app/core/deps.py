@@ -504,6 +504,21 @@ async def scorm_upload_access_to_package(
     )
 
 
+async def scorm_comment_access_to_package(
+    package_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    roles = _active_role_values(current_user)
+    sublesson = await _load_scorm_sublesson_for_access(package_id, db)
+    if _can_view_scorm(sublesson, current_user, roles):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You don't have permission to comment on this SCORM package",
+    )
+
+
 async def teacher_submit_access_to_sublesson(
     sublesson_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -525,6 +540,7 @@ ScormViewAccessToSubLesson = Annotated[User, Depends(scorm_view_access_to_subles
 ScormUploadAccessToSubLesson = Annotated[User, Depends(scorm_upload_access_to_sublesson)]
 ScormViewAccessToPackage = Annotated[User, Depends(scorm_view_access_to_package)]
 ScormUploadAccessToPackage = Annotated[User, Depends(scorm_upload_access_to_package)]
+ScormCommentAccessToPackage = Annotated[User, Depends(scorm_comment_access_to_package)]
 TeacherSubmitAccessToSubLesson = Annotated[User, Depends(teacher_submit_access_to_sublesson)]
 
 

@@ -1,5 +1,25 @@
 export type ScormPackageStatus = 'processing' | 'ready' | 'failed';
 
+export interface ApiScormCommentAuthor {
+  id: string;
+  full_name: string;
+}
+
+export interface ApiScormComment {
+  id: string;
+  scorm_package_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author: ApiScormCommentAuthor;
+}
+
+export interface ApiScormCommentListResponse {
+  total: number;
+  items: ApiScormComment[];
+}
+
 export interface ApiScormPackage {
   id: string;
   sub_lesson_id: string;
@@ -25,6 +45,7 @@ export interface ApiScormPackage {
   processed_at: string | null;
   created_at: string;
   updated_at: string;
+  comments_count?: number;
 }
 
 export interface ApiScormUploadResponse {
