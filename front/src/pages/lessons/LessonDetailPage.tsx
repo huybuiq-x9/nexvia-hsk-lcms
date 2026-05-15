@@ -19,12 +19,13 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { CollapsibleDrawer } from '../../components/ui/CollapsibleDrawer';
+import { StatusBadge } from '../../components/ui/StatusBadge';
 import type {
   ApiLessonWithSubLessons,
   ApiSubLessonResponse,
   ApiUserWithRoles,
 } from '../../types/api';
-import { API_ROLE, LESSON_STATUS_COLORS, SUB_LESSON_STATUS_COLORS } from '../../types/api';
+import { API_ROLE } from '../../types/api';
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
@@ -457,9 +458,7 @@ export default function LessonDetailPage() {
       >
         <div className="p-5 space-y-5">
           <div>
-            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${LESSON_STATUS_COLORS[lesson.status] ?? ''}`}>
-              {lesson.status}
-            </span>
+            <StatusBadge status={lesson.status} type="lesson" />
             <h1 className="text-xl font-bold text-slate-900 mt-2 break-words">{lesson.title}</h1>
             {lesson.description && (
               <p className="text-sm text-slate-500 mt-1 break-words">{lesson.description}</p>
@@ -541,76 +540,126 @@ export default function LessonDetailPage() {
       </div>
 
       {/* Sub-lessons */}
-      <div className="card overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-slate-900">{t('courses.lessonDetail.subLessons')}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {lesson.sub_lessons.length} {t('courses.lessons')}
-            </p>
-            {lesson.sub_lessons.length > 0 && (() => {
-              const approved = lesson.sub_lessons.filter(sl => sl.status === 'approved').length;
-              const total = lesson.sub_lessons.length;
-              const pct = Math.round((approved / total) * 100);
-              return (
-                <div className="mt-2">
-                  <div className="flex justify-between text-xs text-slate-400 mb-1">
-                    <span>{approved}/{total} sub-lessons approved</span>
-                    <span>{pct}%</span>
+      {(() => {
+        const total = lesson.sub_lessons.length;
+        const approvedSl = lesson.sub_lessons.filter(sl => sl.status === 'approved').length;
+        const reviewingSl = lesson.sub_lessons.filter(sl => sl.status === 'reviewing').length;
+        const scormReviewingSl = lesson.sub_lessons.filter(sl => sl.status === 'scorm_reviewing').length;
+        const convertingSl = lesson.sub_lessons.filter(sl => sl.status === 'converting').length;
+        const inProgressSl = lesson.sub_lessons.filter(sl => sl.status === 'in_progress').length;
+        const draftSl = lesson.sub_lessons.filter(sl => sl.status === 'draft').length;
+        const pct = total > 0 ? Math.round((approvedSl / total) * 100) : 0;
+
+        function slAccent(status: string) {
+          if (status === 'approved') return 'bg-emerald-500';
+          if (status === 'reviewing') return 'bg-amber-400';
+          if (status === 'converting') return 'bg-violet-500';
+          if (status === 'scorm_reviewing') return 'bg-cyan-500';
+          if (status === 'in_progress') return 'bg-blue-500';
+          return 'bg-slate-400';
+        }
+
+        return (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-slate-100">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="font-semibold text-slate-900">{t('courses.lessonDetail.subLessons')}</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{total} {t('courses.lessonDetail.subLessonCount')}</p>
+                {total > 0 && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                      <span>{approvedSl}/{total} {t('subLessons.status.approved')}</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                )}
+              </div>
+              {total > 0 && (
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                    <span className="text-xs font-bold text-slate-700">{draftSl}</span>
+                    <span className="text-[11px] text-slate-500">{t('subLessons.status.draft')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                    <span className="text-xs font-bold text-blue-700">{inProgressSl}</span>
+                    <span className="text-[11px] text-blue-600">{t('subLessons.status.in_progress')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+                    <span className="text-xs font-bold text-amber-700">{reviewingSl}</span>
+                    <span className="text-[11px] text-amber-600">{t('subLessons.status.reviewing')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
+                    <span className="text-xs font-bold text-violet-700">{convertingSl}</span>
+                    <span className="text-[11px] text-violet-600">{t('subLessons.status.converting')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-cyan-500 shrink-0" />
+                    <span className="text-xs font-bold text-cyan-700">{scormReviewingSl}</span>
+                    <span className="text-[11px] text-cyan-600">{t('subLessons.status.scorm_reviewing')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-700">{approvedSl}</span>
+                    <span className="text-[11px] text-emerald-600">{t('subLessons.status.approved')}</span>
                   </div>
                 </div>
-              );
-            })()}
+              )}
+            </div>
+          </div>
+
+          <div className="p-5">
+            {isEditingSubLessons ? (
+              <SubLessonsEditor
+                lessonId={lesson.id}
+                initialSubLessons={lesson.sub_lessons}
+                onSaved={(updated) => {
+                  setLesson(prev => prev ? { ...prev, sub_lessons: updated } : prev);
+                  setIsEditingSubLessons(false);
+                }}
+                onCancel={() => setIsEditingSubLessons(false)}
+              />
+            ) : lesson.sub_lessons.length === 0 ? (
+              <div className="py-8 text-center text-sm text-slate-400 italic space-y-3">
+                <FileText size={36} className="mx-auto opacity-40" />
+                <p>{t('courses.noSubLessons')}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 -mx-5">
+                {lesson.sub_lessons.map((sl, idx) => (
+                  <Link
+                    key={sl.id}
+                    to={`/sub-lessons/${sl.id}`}
+                    className="relative flex items-center gap-3 pl-8 pr-5 py-3.5 hover:bg-blue-50/50 transition-all group"
+                  >
+                    <span className={`absolute left-0 top-0 h-full w-1 ${slAccent(sl.status)}`} />
+                    <span className="text-xs text-slate-400 w-5 shrink-0">{idx + 1}</span>
+                    <FileText size={15} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                        {sl.title}
+                      </div>
+                      {sl.description && (
+                        <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{sl.description}</div>
+                      )}
+                    </div>
+                    <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                    <StatusBadge status={sl.status} type="subLesson" />
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="p-5">
-          {isEditingSubLessons ? (
-            <SubLessonsEditor
-              lessonId={lesson.id}
-              initialSubLessons={lesson.sub_lessons}
-              onSaved={(updated) => {
-                setLesson(prev => prev ? { ...prev, sub_lessons: updated } : prev);
-                setIsEditingSubLessons(false);
-              }}
-              onCancel={() => setIsEditingSubLessons(false)}
-            />
-          ) : lesson.sub_lessons.length === 0 ? (
-            <div className="py-8 text-center text-sm text-slate-400 italic space-y-3">
-              <FileText size={36} className="mx-auto opacity-40" />
-              <p>{t('courses.noSubLessons')}</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {lesson.sub_lessons.map((sl, idx) => (
-                <Link
-                  key={sl.id}
-                  to={`/sub-lessons/${sl.id}`}
-                  className="flex items-center gap-3 px-3 py-3.5 hover:bg-blue-50/50 transition-all group"
-                >
-                  <span className="text-xs text-slate-400 w-5 shrink-0">{idx + 1}</span>
-                  <FileText size={15} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-800 group-hover:text-blue-600 transition-colors truncate">
-                      {sl.title}
-                    </div>
-                    {sl.description && (
-                      <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{sl.description}</div>
-                    )}
-                  </div>
-                  <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${SUB_LESSON_STATUS_COLORS[sl.status] ?? ''}`}>
-                    {sl.status}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 }

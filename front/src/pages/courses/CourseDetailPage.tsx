@@ -14,6 +14,13 @@ import { formatDateShort } from '../../utils/formatters';
 import type { ApiCourseUpdate, ApiCourseWithLessons, ApiLessonWithSubLessons, ApiSubLessonResponse, ApiUserWithRoles } from '../../types/api';
 import { API_ROLE } from '../../types/api';
 
+function lessonAccent(status: string) {
+  if (status === 'approved') return 'bg-emerald-500';
+  if (status === 'in_progress') return 'bg-blue-500';
+  if (status === 'draft') return 'bg-slate-400';
+  return 'bg-amber-400';
+}
+
 interface CourseLessonDraft {
   _key: string;
   _isDeleted?: boolean;
@@ -556,112 +563,140 @@ export default function CourseDetailPage() {
             });
           }}
         />
-      ) : (
-      <div className="card overflow-hidden">
-        <div className="p-5 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-900">{t('courses.contentTitle')}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{course.lessons.length} {t('courses.lessons')} · {totalSubLessons} {t('courses.subLessons')}</p>
-          {course.lessons.length > 0 && (() => {
-            const approved = course.lessons.filter(l => l.status === 'approved').length;
-            const total = course.lessons.length;
-            const pct = Math.round((approved / total) * 100);
-            return (
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                  <span>{approved}/{total} lessons approved</span>
-                  <span>{pct}%</span>
-                </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+      ) : (() => {
+        const approvedCount = course.lessons.filter(l => l.status === 'approved').length;
+        const inProgressCount = course.lessons.filter(l => l.status === 'in_progress').length;
+        const draftCount = course.lessons.filter(l => l.status === 'draft').length;
+        const totalLessons = course.lessons.length;
+        const pct = totalLessons > 0 ? Math.round((approvedCount / totalLessons) * 100) : 0;
 
-        {course.lessons.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-400 italic">{t('courses.noLessons')}</div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {course.lessons.map(lesson => {
-              const isOpen = openLessons.has(lesson.id);
-              const subLessons = lessonsData[lesson.id]?.sub_lessons ?? [];
-              const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
-              const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
-
-              return (
-                <div key={lesson.id}>
-                  <div
-                    onClick={() => navigate(`/lessons/${lesson.id}`)}
-                    className="flex items-center gap-3 px-5 py-4 hover:bg-blue-50/40 cursor-pointer transition-colors"
-                  >
-                    <button onClick={(e) => { e.stopPropagation(); toggleLesson(lesson.id); }} className="w-6 h-6 flex items-center justify-center rounded hover:bg-blue-100 shrink-0 transition-colors">
-                      {isOpen ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-400" />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-slate-800 hover:text-blue-600 transition-colors">{lesson.title}</span>
-                      {lesson.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{lesson.description}</div>}
+        return (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-slate-100">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="font-semibold text-slate-900">{t('courses.contentTitle')}</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{totalLessons} {t('courses.lessons')} · {totalSubLessons} {t('courses.subLessons')}</p>
+                {totalLessons > 0 && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                      <span>{approvedCount}/{totalLessons} {t('lessons.status.approved')}</span>
+                      <span>{pct}%</span>
                     </div>
-                    {(lesson.sub_lessons_count ?? 0) > 0 && (
-                      <div className="w-20 shrink-0">
-                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${lesson.approved_sub_lessons_count === lesson.sub_lessons_count ? 'bg-green-500' : 'bg-blue-400'}`}
-                            style={{ width: `${Math.round(((lesson.approved_sub_lessons_count ?? 0) / lesson.sub_lessons_count) * 100)}%` }}
-                          />
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {totalLessons > 0 && (
+                <div className="flex gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                    <span className="text-xs font-bold text-slate-700">{draftCount}</span>
+                    <span className="text-[11px] text-slate-500">{t('lessons.status.draft')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                    <span className="text-xs font-bold text-blue-700">{inProgressCount}</span>
+                    <span className="text-[11px] text-blue-600">{t('lessons.status.in_progress')}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-700">{approvedCount}</span>
+                    <span className="text-[11px] text-emerald-600">{t('lessons.status.approved')}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {course.lessons.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-400 italic">{t('courses.noLessons')}</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {course.lessons.map(lesson => {
+                const isOpen = openLessons.has(lesson.id);
+                const subLessons = lessonsData[lesson.id]?.sub_lessons ?? [];
+                const teacher = lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : null;
+                const converter = lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : null;
+                const accent = lessonAccent(lesson.status);
+
+                return (
+                  <div key={lesson.id} className="relative">
+                    <span className={`absolute left-0 top-0 h-full w-1 ${accent}`} />
+                    <div
+                      onClick={() => navigate(`/lessons/${lesson.id}`)}
+                      className="flex items-center gap-3 pl-6 pr-5 py-4 hover:bg-blue-50/40 cursor-pointer transition-colors"
+                    >
+                      <button onClick={(e) => { e.stopPropagation(); toggleLesson(lesson.id); }} className="w-6 h-6 flex items-center justify-center rounded hover:bg-blue-100 shrink-0 transition-colors">
+                        {isOpen ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-400" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-slate-800 hover:text-blue-600 transition-colors">{lesson.title}</span>
+                        {lesson.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{lesson.description}</div>}
+                      </div>
+                      {(lesson.sub_lessons_count ?? 0) > 0 && (
+                        <div className="w-20 shrink-0">
+                          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${lesson.approved_sub_lessons_count === lesson.sub_lessons_count ? 'bg-emerald-500' : 'bg-blue-400'}`}
+                              style={{ width: `${Math.round(((lesson.approved_sub_lessons_count ?? 0) / lesson.sub_lessons_count) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5 text-right">{lesson.approved_sub_lessons_count ?? 0}/{lesson.sub_lessons_count}</div>
                         </div>
-                        <div className="text-xs text-slate-400 mt-0.5 text-right">{lesson.approved_sub_lessons_count ?? 0}/{lesson.sub_lessons_count}</div>
+                      )}
+                      <StatusBadge status={lesson.status} type="lesson" />
+                      <span className="text-xs text-slate-400 shrink-0">{lesson.sub_lessons_count ?? 0} {t('courses.subLessons')}</span>
+                    </div>
+
+                    {isOpen && (
+                      <div className="bg-slate-50 border-t border-slate-100">
+                        {subLessons.length === 0 ? (
+                          <div className="px-12 py-4 text-sm text-slate-400 italic">{t('courses.noSubLessons')}</div>
+                        ) : (
+                          subLessons.map((sl: Pick<ApiSubLessonResponse, 'id' | 'title' | 'description' | 'status'>, slIdx: number) => (
+                            <div
+                              key={sl.id}
+                              onClick={() => navigate(`/sub-lessons/${sl.id}`)}
+                              className="flex items-center gap-3 py-3 pl-14 pr-5 hover:bg-white transition-colors border-b border-slate-100 last:border-0 group cursor-pointer"
+                            >
+                              <span className="text-xs text-slate-400 w-5 shrink-0">{slIdx + 1}</span>
+                              <FileText size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm text-slate-700 group-hover:text-blue-600 font-medium transition-colors truncate">{sl.title}</div>
+                                {sl.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{sl.description}</div>}
+                              </div>
+                              <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                              <StatusBadge status={sl.status} type="subLesson" />
+                            </div>
+                          ))
+                        )}
+                        <div className="px-6 py-3 bg-white border-t border-slate-100 flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <UserCheck size={11} />
+                            {expert ? <><UserAvatar name={expert.full_name} size="sm" /><span>{expert.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <Users size={11} />
+                            {teacher ? <><UserAvatar name={teacher.full_name} size="sm" /><span>{teacher.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            <User size={11} />
+                            {converter ? <><UserAvatar name={converter.full_name} size="sm" /><span>{converter.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
+                          </div>
+                        </div>
                       </div>
                     )}
-                    <StatusBadge status={lesson.status} type="lesson" />
-                    <span className="text-xs text-slate-400 shrink-0">{lesson.sub_lessons_count ?? 0} {t('courses.subLessons')}</span>
                   </div>
-
-                  {isOpen && (
-                    <div className="bg-slate-50 border-t border-slate-100">
-                      {subLessons.length === 0 ? (
-                        <div className="px-12 py-4 text-sm text-slate-400 italic">{t('courses.noSubLessons')}</div>
-                      ) : (
-                        subLessons.map((sl: Pick<ApiSubLessonResponse, 'id' | 'title' | 'description' | 'status'>, slIdx: number) => (
-                          <div
-                            key={sl.id}
-                            onClick={() => navigate(`/sub-lessons/${sl.id}`)}
-                            className="flex items-center gap-3 px-5 py-3 pl-14 hover:bg-white transition-colors border-b border-slate-100 last:border-0 group"
-                          >
-                            <span className="text-xs text-slate-400 w-5 shrink-0">{slIdx + 1}</span>
-                            <FileText size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm text-slate-700 group-hover:text-blue-600 font-medium transition-colors truncate">{sl.title}</div>
-                              {sl.description && <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{sl.description}</div>}
-                            </div>
-                            <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
-                            <StatusBadge status={sl.status} type="subLesson" />
-                          </div>
-                        ))
-                      )}
-                      <div className="px-5 py-3 bg-white border-t border-slate-100 flex items-center gap-4 flex-wrap">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <UserCheck size={11} />
-                          {expert ? <><UserAvatar name={expert.full_name} size="sm" /><span>{expert.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <Users size={11} />
-                          {teacher ? <><UserAvatar name={teacher.full_name} size="sm" /><span>{teacher.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <User size={11} />
-                          {converter ? <><UserAvatar name={converter.full_name} size="sm" /><span>{converter.full_name}</span></> : <span className="text-slate-400 italic">—</span>}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      )}
+                );
+              })}
+            </div>
+          )}
+        </div>
+        );
+      })()}
     </div>
   );
 }
