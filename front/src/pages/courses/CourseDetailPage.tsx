@@ -344,10 +344,16 @@ export default function CourseDetailPage() {
   const [lessonsData, setLessonsData] = useState<Record<string, ApiLessonWithSubLessons>>({});
 
   const loadLesson = useCallback(async (lessonId: string) => {
-    if (lessonsData[lessonId]) return;
+    // Dùng functional updater để đọc state hiện tại thay vì closure cũ
+    let alreadyCached = false;
+    setLessonsData(prev => {
+      if (prev[lessonId]) { alreadyCached = true; }
+      return prev;
+    });
+    if (alreadyCached) return;
     const data = await courseService.getLesson(lessonId);
     setLessonsData(prev => ({ ...prev, [lessonId]: data }));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleLesson = useCallback((lessonId: string) => {
     setOpenLessons(prev => {
