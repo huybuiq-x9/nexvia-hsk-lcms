@@ -22,10 +22,16 @@ const client: AxiosInstance = axios.create({
 
 // Prevent concurrent refresh attempts — only one refresh runs at a time
 let isRefreshing = false;
-let refreshQueue: Array<(token: string) => void> = [];
+type QueueEntry = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let refreshQueue: QueueEntry[] = [];
 
 const processRefreshQueue = (token: string) => {
-  refreshQueue.forEach((cb) => cb(token));
+  refreshQueue.forEach(({ resolve }) => resolve(token));
+  refreshQueue = [];
+};
+
+const rejectRefreshQueue = (err: unknown) => {
+  refreshQueue.forEach(({ reject }) => reject(err));
   refreshQueue = [];
 };
 
@@ -69,21 +75,25 @@ client.interceptors.response.use(
         req.headers.Authorization = `Bearer ${access_token}`;
         processRefreshQueue(access_token);
         return client(req);
-      } catch {
+      } catch (refreshErr) {
+        rejectRefreshQueue(refreshErr);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         window.location.href = '/';
-        return Promise.reject(error);
+        return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
       }
     }
 
     // Another request is already refreshing — queue this one
-    return new Promise((resolve) => {
-      refreshQueue.push((token: string) => {
-        req.headers.Authorization = `Bearer ${token}`;
-        resolve(client(req));
+    return new Promise((resolve, reject) => {
+      refreshQueue.push({
+        resolve: (token: string) => {
+          req.headers.Authorization = `Bearer ${token}`;
+          resolve(client(req));
+        },
+        reject,
       });
     });
   }
