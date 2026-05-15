@@ -1,10 +1,9 @@
 """
-Celery tasks — email sending runs asynchronously via worker.
+Celery tasks — email sending runs synchronously inside the worker process.
 """
-import asyncio
 import logging
 from celery_app import celery_app
-from app.core.email import send_email, build_password_reset_email
+from app.core.email import send_email_sync, build_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 def send_password_reset_email_task(self, to_email: str, reset_url: str, user_name: str) -> bool:
     subject, html_body = build_password_reset_email(reset_url, user_name)
     try:
-        success = asyncio.run(send_email(to_email, subject, html_body))
+        success = send_email_sync(to_email, subject, html_body)
     except Exception as exc:
         logger.error("[Celery] Exception sending email to %s: %s", to_email, exc)
         raise
