@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { scormService } from '../../../services';
 import type { ApiScormPackage } from '../../../types/api';
 
@@ -30,13 +30,48 @@ export function useSubLessonScorm(subLessonId: string) {
     return () => window.clearTimeout(timer);
   }, [loadCurrentPackage]);
 
+  const pollTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
+
   useEffect(() => {
-    if (scormPackage?.status !== 'processing') return;
-    const timer = window.setInterval(() => {
-      void loadCurrentPackage(false);
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [loadCurrentPackage, scormPackage?.status]);
+    if (scormPackage?.status !== 'processing') {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
+
+    // Tính thời gian đã trôi qua kể từ lúc upload
+    const uploadedAt = scormPackage.uploaded_at ? new Date(scormPackage.uploaded_at).getTime() : Date.now();
+
+    const scheduleNext = () => {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+      }
+      const elapsed = Date.now() - uploadedAt;
+
+      if (elapsed >= 120_000) {
+        // Đã quá 120s — dừng polling, Celery task thực sự bị lỗi
+        pollTimerRef.current = null;
+        return;
+      }
+
+      // 0–30s: poll nhanh mỗi 2s; 30s+: poll chậm mỗi 5s
+      const interval = elapsed < 30_000 ? 2_000 : 5_000;
+      pollTimerRef.current = window.setInterval(() => {
+        void loadCurrentPackage(false);
+        scheduleNext();
+      }, interval);
+    };
+
+    scheduleNext();
+    return () => {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [loadCurrentPackage, scormPackage?.status, scormPackage?.uploaded_at]);
 
   const uploadPackage = async (file: File) => {
     setUploading(true);
