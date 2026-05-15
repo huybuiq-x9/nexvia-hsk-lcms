@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote
 
+import aiofiles
+import aiofiles.os
 from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,12 +115,12 @@ def _launch_url(package: ScormPackage) -> str:
 
 async def _write_upload_to_staging(file: UploadFile, package_id: uuid.UUID) -> tuple[str, int]:
     staging_dir = Path(settings.SCORM_UPLOAD_TMP_DIR)
-    staging_dir.mkdir(parents=True, exist_ok=True)
+    await aiofiles.os.makedirs(staging_dir, exist_ok=True)
     staging_path = staging_dir / f"{package_id}.zip"
 
     total_size = 0
     try:
-        with open(staging_path, "wb") as out:
+        async with aiofiles.open(staging_path, "wb") as out:
             while True:
                 chunk = await file.read(CHUNK_SIZE)
                 if not chunk:
@@ -129,17 +131,18 @@ async def _write_upload_to_staging(file: UploadFile, package_id: uuid.UUID) -> t
                         f"SCORM package exceeds maximum size of {settings.SCORM_MAX_ZIP_SIZE // (1024 * 1024)} MB",
                         status_code=400,
                     )
-                out.write(chunk)
+                await out.write(chunk)
     except Exception:
-        if staging_path.exists():
-            staging_path.unlink()
+        if await aiofiles.os.path.exists(staging_path):
+            await aiofiles.os.remove(staging_path)
         raise
 
     if total_size == 0:
-        staging_path.unlink(missing_ok=True)
+        await aiofiles.os.remove(staging_path)
         raise LCMSException("SCORM package is empty", status_code=400)
-    if not zipfile.is_zipfile(staging_path):
-        staging_path.unlink(missing_ok=True)
+    is_zip = await run_in_threadpool(zipfile.is_zipfile, str(staging_path))
+    if not is_zip:
+        await aiofiles.os.remove(staging_path)
         raise LCMSException("Uploaded file is not a valid ZIP archive", status_code=400)
 
     return str(staging_path), total_size
