@@ -513,7 +513,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         <Header />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 overflow-auto bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_50%,#f7fbf8_100%)] p-6">
           {children}
         </main>
       </div>
