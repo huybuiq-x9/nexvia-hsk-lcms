@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   BookOpen,
+  FileText,
   HelpCircle,
   Users,
   Bell,
@@ -16,17 +17,21 @@ import {
   X,
   Eye,
   EyeOff,
+  Shield,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
-import { API_ROLE } from '../../types/api';
+import { API_ROLE, type ApiRole } from '../../types/api';
 import { userService } from '../../services';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 
 interface NavSubItem {
   labelKey: string;
   to: string;
+  icon: React.ReactNode;
   adminOnly?: boolean;
   expertOnly?: boolean;
 }
@@ -39,6 +44,13 @@ interface NavItem {
   children?: NavSubItem[];
 }
 
+const ROLE_ICON_COLOR: Record<ApiRole, string> = {
+  [API_ROLE.ADMIN]:     'bg-blue-600',
+  [API_ROLE.EXPERT]:    'bg-purple-600',
+  [API_ROLE.TEACHER]:   'bg-emerald-600',
+  [API_ROLE.CONVERTER]: 'bg-cyan-600',
+};
+
 function Sidebar({
   collapsed,
   onToggle,
@@ -49,17 +61,15 @@ function Sidebar({
   sidebarWidth: number;
 }) {
   const { t } = useTranslation();
-  const { user, selectedRole, isAdmin, isExpert } = useAuth();
+  const { user, selectedRole, isAdmin, isExpert, selectRole } = useAuth();
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['/courses']));
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
   const toggleGroup = (key: string) => {
     setOpenGroups(prev => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -71,9 +81,9 @@ function Sidebar({
       icon: <BookOpen size={18} />,
       labelKey: 'nav.content',
       children: [
-        { labelKey: 'nav.courses', to: '/courses', expertOnly: true },
-        { labelKey: 'nav.lessons', to: '/lessons' },
-        { labelKey: 'nav.subLessons', to: '/sub-lessons' },
+        { labelKey: 'nav.courses', to: '/courses', icon: <BookOpen size={14} />, expertOnly: true },
+        { labelKey: 'nav.lessons', to: '/lessons', icon: <FileText size={14} /> },
+        { labelKey: 'nav.subLessons', to: '/sub-lessons', icon: <Layers size={14} /> },
       ],
     },
     { to: '/question-bank', icon: <HelpCircle size={18} />, labelKey: 'nav.questionBank' },
@@ -85,45 +95,42 @@ function Sidebar({
     selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
   const navItems = baseNavItems.filter(item => {
     if (item.adminOnly) return isAdmin && selectedRole === API_ROLE.ADMIN;
-    // Teacher/Converter: show dashboard, courses (children), lessons, sub-lessons
     if (isTeacherConverter) return item.to === '/dashboard' || item.to === '/courses';
     return true;
   });
 
-  const isActive = (to: string) => {
-    return window.location.pathname === to || window.location.pathname.startsWith(to + '/');
-  };
+  const isActive = (to: string) =>
+    window.location.pathname === to || window.location.pathname.startsWith(to + '/');
+
+  const userRoles = (user?.roles ?? []) as ApiRole[];
+  const canSwitchRole = userRoles.length > 1;
 
   return (
     <aside
-      className="fixed top-0 left-0 h-full z-30 flex flex-col border-r border-slate-200/60 transition-all duration-200"
+      className="fixed top-0 left-0 h-full z-30 flex flex-col border-r border-blue-200/60 transition-all duration-200"
       style={{
         width: collapsed ? '4rem' : `${sidebarWidth}px`,
-        background: 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 60%, #bfdbfe 100%)',
+        background: 'linear-gradient(180deg, #dbeafe 0%, #bfdbfe 60%, #93c5fd 100%)',
       }}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center justify-between px-3 border-b border-slate-100 shrink-0">
+      <div className="h-14 flex items-center justify-between px-3 border-b border-blue-200/60 shrink-0">
         {!collapsed && (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm shadow-blue-200">
               <span className="text-white font-bold text-xs">NX</span>
             </div>
-            <div>
-              <div className="text-xs font-bold text-slate-800 leading-tight">{t('app.brand')}</div>
-            </div>
+            <div className="text-sm font-bold text-blue-900 leading-tight">{t('app.brand')}</div>
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center mx-auto shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center mx-auto shadow-sm shadow-blue-200">
             <span className="text-white font-bold text-xs">NX</span>
           </div>
         )}
         <button
           onClick={onToggle}
-          className={`w-6 h-6 rounded flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors ${
-            collapsed ? 'mx-auto mt-1' : ''
-          }`}
+          className={`w-6 h-6 rounded flex items-center justify-center hover:bg-blue-200/50 text-blue-400 hover:text-blue-700 transition-colors ${collapsed ? 'mx-auto mt-1' : ''}`}
           title={collapsed ? t('nav.expand') : t('nav.collapse')}
         >
           <ChevronLeft size={14} className={collapsed ? 'rotate-180' : ''} />
@@ -140,15 +147,22 @@ function Sidebar({
                 to={item.to}
                 end
                 className={({ isActive: active }) =>
-                  `flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  `relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                     active
-                      ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      ? 'bg-white/70 text-blue-700 shadow-sm shadow-blue-100'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                   } ${collapsed ? 'justify-center' : ''}`
                 }
               >
-                <span className="shrink-0">{item.icon}</span>
-                {!collapsed && <span>{t(item.labelKey)}</span>}
+                {({ isActive: active }) => (
+                  <>
+                    {active && !collapsed && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-500" />
+                    )}
+                    <span className="shrink-0">{item.icon}</span>
+                    {!collapsed && <span>{t(item.labelKey)}</span>}
+                  </>
+                )}
               </NavLink>
             );
           }
@@ -164,53 +178,53 @@ function Sidebar({
           const hasActiveChild = visibleChildren.some(c => isActive(c.to));
 
           return (
-            <div
-              key={groupKey}
-              onMouseEnter={() => setOpenGroups(prev => new Set([...prev, groupKey]))}
-              onMouseLeave={() => {
-                if (!hasActiveChild) {
-                  setOpenGroups(prev => { const next = new Set(prev); next.delete(groupKey); return next; });
-                }
-              }}
-            >
+            <div key={groupKey}>
               <button
                 onClick={() => toggleGroup(groupKey)}
-                className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                className={`relative w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                   hasActiveChild
-                    ? 'bg-blue-50 text-blue-700 shadow-sm shadow-blue-100'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                    ? 'bg-white/70 text-blue-700 shadow-sm shadow-blue-100'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                 } ${collapsed ? 'justify-center' : ''}`}
               >
+                {hasActiveChild && !collapsed && (
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-500" />
+                )}
                 <span className="shrink-0">{item.icon}</span>
                 {!collapsed && (
                   <>
                     <span className="flex-1 text-left">{t(item.labelKey)}</span>
-                    {isOpen ? (
-                      <ChevronDown size={14} className="shrink-0" />
-                    ) : (
-                      <ChevronRight size={14} className="shrink-0" />
-                    )}
+                    <ChevronDown
+                      size={14}
+                      className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+                    />
                   </>
                 )}
               </button>
 
               {!collapsed && isOpen && (
-                <div className="ml-3 mt-1 space-y-0.5 pl-3">
+                <div className="mt-0.5 ml-3 pl-3 border-l-2 border-blue-200 space-y-0.5">
                   {visibleChildren.map(child => (
                     <NavLink
                       key={child.to}
                       to={child.to}
                       end
                       className={({ isActive: active }) =>
-                        `flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                        `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                           active
-                            ? 'text-blue-700 bg-blue-50'
-                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                            ? 'text-blue-700 bg-white/70'
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
                         }`
                       }
                     >
-                      <Layers size={13} className="shrink-0 opacity-60" />
-                      <span>{t(child.labelKey)}</span>
+                      {({ isActive: active }) => (
+                        <>
+                          <span className={`shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+                            {child.icon}
+                          </span>
+                          <span>{t(child.labelKey)}</span>
+                        </>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -220,23 +234,74 @@ function Sidebar({
         })}
       </nav>
 
-      {/* User section */}
+      {/* Role switcher + User section */}
       {user && (
-        <div className={`border-t border-slate-100 p-3 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
+        <div className="border-t border-blue-200/60 p-3 shrink-0 space-y-2">
+          {/* Role switcher */}
+          {!collapsed && canSwitchRole && (
+            <div className="relative">
+              <button
+                onClick={() => setRoleDropdownOpen(v => !v)}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/50 hover:bg-white/70 border border-blue-200/60 transition-colors text-sm"
+              >
+                <Shield size={13} className="shrink-0 text-blue-500" />
+                <span className="flex-1 text-left text-xs font-medium text-slate-700 truncate">
+                  {selectedRole ? t(`roles.${selectedRole}`) : '—'}
+                </span>
+                <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
+              </button>
+
+              {roleDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
+                  <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-slate-50">
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Vai trò</p>
+                    </div>
+                    {userRoles.map(role => (
+                      <button
+                        key={role}
+                        onClick={() => { selectRole(role); setRoleDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${ROLE_ICON_COLOR[role]}`} />
+                        <span className="flex-1 text-left text-slate-700">{t(`roles.${role}`)}</span>
+                        {selectedRole === role && <Check size={13} className="text-blue-600 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* User info */}
           {collapsed ? (
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
+            <div className="flex justify-center">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+                style={{ background: selectedRole ? undefined : '#dbeafe' }}
+                title={user.full_name}
+              >
+                {selectedRole ? (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${ROLE_ICON_COLOR[selectedRole]}`}>
+                    <span className="text-xs font-bold text-white">{user.full_name[0]?.toUpperCase()}</span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 px-1">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
+                <span className="text-xs font-bold text-blue-600">
+                  {user.full_name[0]?.toUpperCase()}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-slate-800 truncate leading-tight">{user.full_name}</p>
-                <p className="text-[10px] text-slate-400 truncate leading-tight">
-                  {selectedRole ? t(`roles.${selectedRole}`) : ''}
-                </p>
+                <p className="text-[10px] text-slate-500 truncate leading-tight">{user.email}</p>
               </div>
             </div>
           )}
@@ -513,7 +578,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         <Header />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 overflow-auto bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_50%,#f7fbf8_100%)] p-6">
           {children}
         </main>
       </div>

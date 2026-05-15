@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { CourseStatus, LessonStatus, SubLessonStatus } from '../../types/api';
 import {
   COURSE_STATUS_COLORS,
@@ -19,15 +20,22 @@ const COLOR_MAP: Record<StatusType, Record<string, string>> = {
   subLesson: SUB_LESSON_STATUS_COLORS as Record<string, string>,
 };
 
+const LABEL_KEY_MAP: Record<StatusType, string> = {
+  course: 'courses.status',
+  lesson: 'lessons.status',
+  subLesson: 'subLessons.status',
+};
+
 export function StatusBadge({ status, type }: StatusBadgeProps) {
+  const { t } = useTranslation();
   const colors = COLOR_MAP[type] ?? {};
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
         colors[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'
       }`}
     >
-      {status}
+      {t(`${LABEL_KEY_MAP[type]}.${status}`, { defaultValue: status })}
     </span>
   );
 }

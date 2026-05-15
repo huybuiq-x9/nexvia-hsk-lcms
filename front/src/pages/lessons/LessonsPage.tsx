@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, FileText } from 'lucide-react';
 import { courseService, userService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
@@ -11,7 +11,7 @@ import FilterBar from '../../components/FilterBar';
 import RoleFilterDropdown from '../../components/RoleFilterDropdown';
 import type { ApiLessonListItem, ApiCourseWithLessons, ApiUserWithRoles } from '../../types/api';
 import type { LessonStatus } from '../../types/api';
-import { LESSON_STATUSES, API_ROLE } from '../../types/api';
+import { LESSON_STATUS, LESSON_STATUSES, API_ROLE } from '../../types/api';
 
 const PER_PAGE = 20;
 
@@ -67,18 +67,31 @@ export default function LessonsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    courseService.listLessons({
-      skip: (page - 1) * PER_PAGE, limit: PER_PAGE,
-      search: debouncedSearch || undefined,
-      course_id: selectedCourseId || undefined,
-      status: (selectedStatus as LessonStatus) || undefined,
-      expert_ids: selectedExpertIds.length > 0 ? selectedExpertIds : undefined,
-      teacher_ids: selectedTeacherIds.length > 0 ? selectedTeacherIds : undefined,
-      converter_ids: selectedConverterIds.length > 0 ? selectedConverterIds : undefined,
-    }).then(res => { if (!cancelled) { setLessons(res.items); setTotal(res.total); } })
-      .catch(() => { if (!cancelled) setLessons([]); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
+
+    Promise.resolve().then(async () => {
+      if (cancelled) return;
+      setIsLoading(true);
+      try {
+        const res = await courseService.listLessons({
+          skip: (page - 1) * PER_PAGE, limit: PER_PAGE,
+          search: debouncedSearch || undefined,
+          course_id: selectedCourseId || undefined,
+          status: (selectedStatus as LessonStatus) || undefined,
+          expert_ids: selectedExpertIds.length > 0 ? selectedExpertIds : undefined,
+          teacher_ids: selectedTeacherIds.length > 0 ? selectedTeacherIds : undefined,
+          converter_ids: selectedConverterIds.length > 0 ? selectedConverterIds : undefined,
+        });
+        if (!cancelled) {
+          setLessons(res.items);
+          setTotal(res.total);
+        }
+      } catch {
+        if (!cancelled) setLessons([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    });
+
     return () => { cancelled = true; };
   }, [page, debouncedSearch, selectedCourseId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
@@ -91,6 +104,9 @@ export default function LessonsPage() {
   }, [lessons, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
+  const approvedCount = lessons.filter(l => l.status === LESSON_STATUS.APPROVED).length;
+  const inProgressCount = lessons.filter(l => l.status === LESSON_STATUS.IN_PROGRESS).length;
+  const draftCount = lessons.filter(l => l.status === LESSON_STATUS.DRAFT).length;
 
   const courseOptions = [
     { value: '', label: t('lessons.filter.allCourses') },
@@ -112,12 +128,43 @@ export default function LessonsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('lessons.title')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            {isLoading ? '...' : `${total} ${t('lessons.totalLessons')}`}
-          </p>
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
+              <BookOpen size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('lessons.title')}</h1>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                {isLoading ? '...' : `${total} ${t('lessons.totalLessons')}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('lessons.status.approved')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <Clock size={15} className="shrink-0 text-blue-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('lessons.status.in_progress')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+              <FileText size={15} className="shrink-0 text-amber-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-amber-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-amber-700">{t('lessons.status.draft')}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -157,8 +204,10 @@ export default function LessonsPage() {
 
       <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
-          <div className="card p-12 flex justify-center">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="card border-blue-100 p-10">
+            <div className="flex items-center justify-center">
+              <div className="h-6 w-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+            </div>
           </div>
         ) : lessons.length === 0 ? (
           <div className="card p-12">

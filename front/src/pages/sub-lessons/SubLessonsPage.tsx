@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { FileText, BookOpen, Layers, User, UserCheck, Users, Trash2 } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, FileText, Layers, Trash2, User, UserCheck, Users } from 'lucide-react';
 import { courseService, userService } from '../../services';
 import RoleFilterDropdown from '../../components/RoleFilterDropdown';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,7 +15,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import FilterBar from '../../components/FilterBar';
 import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem, ApiUserWithRoles } from '../../types/api';
 import type { SubLessonStatus } from '../../types/api';
-import { SUB_LESSON_STATUSES, API_ROLE } from '../../types/api';
+import { SUB_LESSON_STATUS, SUB_LESSON_STATUSES, API_ROLE } from '../../types/api';
 
 const PER_PAGE = 20;
 
@@ -30,22 +30,63 @@ const ManagerRow = ({
   user?: ApiUserWithRoles;
   isAssigned: boolean;
 }) => (
-  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-    <span className="text-slate-400">{icon}</span>
+  <div className="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600 ring-1 ring-slate-100">
+    <span className="shrink-0">{icon}</span>
     {user ? (
       <>
         <UserAvatar name={user.full_name} size="sm" />
-        <span className="truncate max-w-[110px]" title={`${label}: ${user.full_name}`}>
+        <span className="truncate" title={`${label}: ${user.full_name}`}>
           {user.full_name}
         </span>
       </>
     ) : (
-      <span className="truncate max-w-[110px] text-slate-400 italic">
+      <span className="truncate text-slate-400 italic">
         {isAssigned ? '...' : '—'}
       </span>
     )}
   </div>
 );
+
+function getSubLessonTone(status: ApiSubLessonListItem['status']) {
+  switch (status) {
+    case 'approved':
+      return {
+        accent: 'bg-emerald-500',
+        icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+        hover: 'hover:border-emerald-200 hover:shadow-emerald-100/70',
+      };
+    case 'reviewing':
+      return {
+        accent: 'bg-amber-400',
+        icon: 'bg-amber-50 text-amber-700 ring-amber-100',
+        hover: 'hover:border-amber-200 hover:shadow-amber-100/70',
+      };
+    case 'converting':
+      return {
+        accent: 'bg-violet-500',
+        icon: 'bg-violet-50 text-violet-700 ring-violet-100',
+        hover: 'hover:border-violet-200 hover:shadow-violet-100/70',
+      };
+    case 'scorm_reviewing':
+      return {
+        accent: 'bg-cyan-500',
+        icon: 'bg-cyan-50 text-cyan-700 ring-cyan-100',
+        hover: 'hover:border-cyan-200 hover:shadow-cyan-100/70',
+      };
+    case 'in_progress':
+      return {
+        accent: 'bg-blue-500',
+        icon: 'bg-blue-50 text-blue-700 ring-blue-100',
+        hover: 'hover:border-blue-200 hover:shadow-blue-100/80',
+      };
+    default:
+      return {
+        accent: 'bg-slate-400',
+        icon: 'bg-slate-50 text-slate-700 ring-slate-100',
+        hover: 'hover:border-slate-300 hover:shadow-slate-200/70',
+      };
+  }
+}
 
 export default function SubLessonsPage() {
   const { t } = useTranslation();
@@ -117,7 +158,10 @@ export default function SubLessonsPage() {
   }, [debouncedSearch, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
-    async function fetchSubLessons() {
+    let cancelled = false;
+
+    Promise.resolve().then(async () => {
+      if (cancelled) return;
       setIsLoading(true);
       try {
         const res = await courseService.listSubLessons({
@@ -130,12 +174,18 @@ export default function SubLessonsPage() {
           teacher_ids: selectedTeacherIds.length > 0 ? selectedTeacherIds : undefined,
           converter_ids: selectedConverterIds.length > 0 ? selectedConverterIds : undefined,
         });
-        setSubLessons(res.items);
-        setTotal(res.total);
-      } catch { setSubLessons([]); }
-      finally { setIsLoading(false); }
-    }
-    void fetchSubLessons();
+        if (!cancelled) {
+          setSubLessons(res.items);
+          setTotal(res.total);
+        }
+      } catch {
+        if (!cancelled) setSubLessons([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    });
+
+    return () => { cancelled = true; };
   }, [page, debouncedSearch, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
@@ -147,6 +197,12 @@ export default function SubLessonsPage() {
   }, [subLessons, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
+  const draftCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.DRAFT).length;
+  const inProgressCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.IN_PROGRESS).length;
+  const reviewingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.REVIEWING).length;
+  const convertingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.CONVERTING).length;
+  const scormReviewingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.SCORM_REVIEWING).length;
+  const approvedCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.APPROVED).length;
 
   const courseOptions = [
     { value: '', label: t('subLessons.filter.allCourses') },
@@ -173,12 +229,64 @@ export default function SubLessonsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('subLessons.title')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            {isLoading ? '...' : `${total} ${t('subLessons.totalSubLessons')}`}
-          </p>
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
+              <FileText size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('subLessons.title')}</h1>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                {isLoading ? '...' : `${total} ${t('subLessons.totalSubLessons')}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <FileText size={15} className="shrink-0 text-slate-500" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-slate-600">{t('subLessons.status.draft')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <Layers size={15} className="shrink-0 text-blue-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('subLessons.status.in_progress')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+              <Clock size={15} className="shrink-0 text-amber-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-amber-700">{isLoading ? '—' : reviewingCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-amber-700">{t('subLessons.status.reviewing')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50 px-3 py-2">
+              <Layers size={15} className="shrink-0 text-violet-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-violet-700">{isLoading ? '—' : convertingCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-violet-700">{t('subLessons.status.converting')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-2">
+              <Clock size={15} className="shrink-0 text-cyan-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-cyan-700">{isLoading ? '—' : scormReviewingCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-cyan-700">{t('subLessons.status.scorm_reviewing')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('subLessons.status.approved')}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -219,79 +327,98 @@ export default function SubLessonsPage() {
 
       <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
-          <div className="card p-12 flex justify-center">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="card border-blue-100 p-10">
+            <div className="flex items-center justify-center">
+              <div className="h-6 w-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+            </div>
           </div>
         ) : subLessons.length === 0 ? (
           <div className="card p-12">
             <EmptyState icon={<FileText size={40} />} message={t('subLessons.noResults')} />
           </div>
         ) : (
-          subLessons.map(sl => (
-            <Link
-              key={sl.id}
-              to={`/sub-lessons/${sl.id}`}
-              className="card p-5 pr-10 flex items-start gap-4 hover:shadow-md transition-all group relative"
-            >
-              {isAdmin && selectedRole === API_ROLE.ADMIN && (
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirm({ id: sl.id, title: sl.title }); }}
-                  disabled={deletingId === sl.id}
-                  className="absolute top-3 right-3 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
-                  title={t('subLessons.delete')}
-                >
-                  {deletingId === sl.id ? (
-                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 size={16} />
-                  )}
-                </button>
-              )}
-              <div
-                className="w-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: 'var(--color-primary, #3B82F6)', minHeight: '50px' }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-3 flex-wrap">
-                  <StatusBadge status={sl.status} type="subLesson" />
-                </div>
-                <h3 className="font-semibold text-slate-900 mt-2 group-hover:text-blue-600 transition-colors">
-                  {sl.title}
-                </h3>
-                {sl.description && (
-                  <p className="text-sm text-slate-500 mt-1 line-clamp-1">{sl.description}</p>
+          subLessons.map(sl => {
+            const tone = getSubLessonTone(sl.status);
+            const showDelete = isAdmin && selectedRole === API_ROLE.ADMIN;
+
+            return (
+              <Link
+                key={sl.id}
+                to={`/sub-lessons/${sl.id}`}
+                className={`card group relative block overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${tone.hover}`}
+              >
+                <span className={`absolute left-0 top-0 h-full w-1.5 ${tone.accent}`} />
+                {showDelete && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirm({ id: sl.id, title: sl.title }); }}
+                    disabled={deletingId === sl.id}
+                    className="absolute right-3 top-3 z-10 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={t('subLessons.delete')}
+                  >
+                    {deletingId === sl.id ? (
+                      <div className="h-4 w-4 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
                 )}
-                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400 flex-wrap">
-                  {sl.lesson_title && (
-                    <span className="flex items-center gap-1"><Layers size={11} />{sl.lesson_title}</span>
-                  )}
-                  {sl.course_title && (
-                    <span className="flex items-center gap-1"><BookOpen size={11} />{sl.course_title}</span>
-                  )}
+
+                <div className={`grid gap-4 p-5 pl-7 ${showDelete ? 'pr-12' : 'pr-5'} lg:grid-cols-[minmax(0,1fr)_minmax(230px,300px)]`}>
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ring-1 ${tone.icon}`}>
+                        <FileText size={18} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StatusBadge status={sl.status} type="subLesson" />
+                          {sl.lesson_title && (
+                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
+                              <Layers size={12} className="shrink-0 text-slate-400" />
+                              <span className="truncate">{sl.lesson_title}</span>
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="mt-2 text-base font-semibold text-slate-900 transition-colors group-hover:text-blue-700">
+                          {sl.title}
+                        </h3>
+                        {sl.description && (
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-500">{sl.description}</p>
+                        )}
+                        {sl.course_title && (
+                          <div className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-blue-100">
+                            <BookOpen size={13} className="shrink-0" />
+                            <span className="truncate">{sl.course_title}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 lg:border-l lg:border-slate-100 lg:pl-5">
+                    <ManagerRow
+                      icon={<UserCheck size={13} className="text-emerald-500" />}
+                      label={t('roles.expert')}
+                      user={sl.assigned_expert_id ? userCache[sl.assigned_expert_id] : undefined}
+                      isAssigned={Boolean(sl.assigned_expert_id)}
+                    />
+                    <ManagerRow
+                      icon={<Users size={13} className="text-blue-500" />}
+                      label={t('roles.teacher')}
+                      user={sl.assigned_teacher_id ? userCache[sl.assigned_teacher_id] : undefined}
+                      isAssigned={Boolean(sl.assigned_teacher_id)}
+                    />
+                    <ManagerRow
+                      icon={<User size={13} className="text-amber-500" />}
+                      label={t('roles.converter')}
+                      user={sl.assigned_converter_id ? userCache[sl.assigned_converter_id] : undefined}
+                      isAssigned={Boolean(sl.assigned_converter_id)}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <ManagerRow
-                  icon={<UserCheck size={12} />}
-                  label={t('roles.expert')}
-                  user={sl.assigned_expert_id ? userCache[sl.assigned_expert_id] : undefined}
-                  isAssigned={Boolean(sl.assigned_expert_id)}
-                />
-                <ManagerRow
-                  icon={<Users size={12} />}
-                  label={t('roles.teacher')}
-                  user={sl.assigned_teacher_id ? userCache[sl.assigned_teacher_id] : undefined}
-                  isAssigned={Boolean(sl.assigned_teacher_id)}
-                />
-                <ManagerRow
-                  icon={<User size={12} />}
-                  label={t('roles.converter')}
-                  user={sl.assigned_converter_id ? userCache[sl.assigned_converter_id] : undefined}
-                  isAssigned={Boolean(sl.assigned_converter_id)}
-                />
-              </div>
-            </Link>
-          ))
+              </Link>
+            );
+          })
         )}
       </div>
 

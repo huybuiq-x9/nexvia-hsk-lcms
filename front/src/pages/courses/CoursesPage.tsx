@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, BookOpen, Trash2 } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, FileText, Plus, Trash2 } from 'lucide-react';
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
@@ -9,8 +9,9 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { CourseCard } from './components/CourseCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import FilterBar from '../../components/FilterBar';
 import type { ApiCourseWithLessons } from '../../types/api';
-import { API_ROLE } from '../../types/api';
+import { API_ROLE, COURSE_STATUS } from '../../types/api';
 
 const PER_PAGE = 20;
 
@@ -52,11 +53,23 @@ export default function CoursesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    courseService.listCourses({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: debouncedSearch || undefined })
-      .then(res => { if (!cancelled) { setCourses(res.items); setTotal(res.total); } })
-      .catch(() => { if (!cancelled) setCourses([]); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
+
+    Promise.resolve().then(async () => {
+      if (cancelled) return;
+      setIsLoading(true);
+      try {
+        const res = await courseService.listCourses({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: debouncedSearch || undefined });
+        if (!cancelled) {
+          setCourses(res.items);
+          setTotal(res.total);
+        }
+      } catch {
+        if (!cancelled) setCourses([]);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    });
+
     return () => { cancelled = true; };
   }, [page, debouncedSearch]);
 
@@ -65,40 +78,75 @@ export default function CoursesPage() {
   }, [courses, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
+  const publishedCount = courses.filter(c => c.status === COURSE_STATUS.PUBLISHED).length;
+  const inProgressCount = courses.filter(c => c.status === COURSE_STATUS.IN_PROGRESS).length;
+  const draftCount = courses.filter(c => c.status === COURSE_STATUS.DRAFT).length;
+  const hasActiveFilters = search !== '';
+  const clearAllFilters = () => setSearch('');
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('courses.title')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            {isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}
-          </p>
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
+              <BookOpen size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('courses.title')}</h1>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                {isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : publishedCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('courses.status.published')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <Clock size={15} className="shrink-0 text-blue-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('courses.status.in_progress')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <FileText size={15} className="shrink-0 text-slate-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-[11px] font-medium text-slate-700">{t('courses.status.draft')}</div>
+              </div>
+            </div>
+          </div>
         </div>
-        {isAdmin && selectedRole === API_ROLE.ADMIN && (
-          <button onClick={() => navigate('/courses/create')} className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5">
-            <Plus size={15} /><span>{t('courses.add')}</span>
-          </button>
-        )}
       </div>
 
-      <div className="card p-4 flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t('courses.search')}
-            className="input pl-9"
-          />
-        </div>
-      </div>
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={t('courses.search')}
+        hasActiveFilters={hasActiveFilters}
+        onClearAll={clearAllFilters}
+        layout="inline"
+        filters={[]}
+        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+          <button onClick={() => navigate('/courses/create')} className="btn btn-primary h-11 w-full justify-center gap-1.5 sm:w-auto">
+            <Plus size={15} /><span>{t('courses.add')}</span>
+          </button>
+        ) : undefined}
+      />
 
       <div className="grid grid-cols-1 gap-4">
         {isLoading ? (
-          <div className="card p-12 flex justify-center">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="card border-blue-100 p-10">
+            <div className="flex items-center justify-center">
+              <div className="h-6 w-6 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+            </div>
           </div>
         ) : courses.length === 0 ? (
           <div className="card p-12">
