@@ -183,12 +183,12 @@ function Sidebar({
                 onClick={() => toggleGroup(groupKey)}
                 className={`relative w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                   hasActiveChild
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-blue-100/80 hover:text-white hover:bg-white/10'
+                    ? 'bg-white/70 text-blue-700 shadow-sm shadow-blue-100'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
                 } ${collapsed ? 'justify-center' : ''}`}
               >
                 {hasActiveChild && !collapsed && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-300" />
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-blue-500" />
                 )}
                 <span className="shrink-0">{item.icon}</span>
                 {!collapsed && (
