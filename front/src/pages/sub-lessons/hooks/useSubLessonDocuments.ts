@@ -30,8 +30,8 @@ export function useSubLessonDocuments(subLessonId: string, onRefresh?: () => voi
     setUploading(true);
     try {
       await documentService.uploadDocuments(subLessonId, files);
-      loadDocuments();
-      onRefresh?.();
+      await loadDocuments();
+      onRefresh?.(); // cập nhật status sublesson (DRAFT → IN_PROGRESS)
     } finally {
       setUploading(false);
     }
@@ -39,8 +39,7 @@ export function useSubLessonDocuments(subLessonId: string, onRefresh?: () => voi
 
   const deleteDocument = async (documentId: string) => {
     await documentService.deleteDocument(documentId);
-    loadDocuments();
-    onRefresh?.();
+    await loadDocuments(); // xóa file không đổi status → không cần onRefresh
   };
 
   const getDownloadUrl = async (documentId: string) => {

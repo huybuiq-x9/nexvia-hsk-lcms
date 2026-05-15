@@ -124,8 +124,7 @@ export function SubLessonDocumentsTab({
     setReuploadingDocId(doc.id);
     try {
       await documentService.reuploadDocument(doc.id, file);
-      await reload();
-      onRefresh();
+      await reload(); // reupload không đổi status → chỉ reload documents
       toast.success(t('documents.reuploadSuccess'));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('documents.reuploadError')));
