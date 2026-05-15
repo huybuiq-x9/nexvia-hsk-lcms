@@ -5,6 +5,7 @@ import { Search, Plus, BookOpen, Trash2 } from 'lucide-react';
 import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
+import { useDebounce } from '../../hooks/useDebounce';
 import { CourseCard } from './components/CourseCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -22,6 +23,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -46,17 +48,17 @@ export default function CoursesPage() {
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
     setPage(1);
-  }, [search]);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    courseService.listCourses({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: search || undefined })
+    courseService.listCourses({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE, search: debouncedSearch || undefined })
       .then(res => { if (!cancelled) { setCourses(res.items); setTotal(res.total); } })
       .catch(() => { if (!cancelled) setCourses([]); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     courses.forEach(c => loadUser(c.assigned_expert_id));

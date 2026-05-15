@@ -4,6 +4,7 @@ import { BookOpen } from 'lucide-react';
 import { courseService, userService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
+import { useDebounce } from '../../hooks/useDebounce';
 import { LessonCard } from './components/LessonCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import FilterBar from '../../components/FilterBar';
@@ -22,6 +23,7 @@ export default function LessonsPage() {
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
@@ -61,14 +63,14 @@ export default function LessonsPage() {
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
     setPage(1);
-  }, [search, selectedCourseId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
+  }, [debouncedSearch, selectedCourseId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     courseService.listLessons({
       skip: (page - 1) * PER_PAGE, limit: PER_PAGE,
-      search: search || undefined,
+      search: debouncedSearch || undefined,
       course_id: selectedCourseId || undefined,
       status: (selectedStatus as LessonStatus) || undefined,
       expert_ids: selectedExpertIds.length > 0 ? selectedExpertIds : undefined,
@@ -78,7 +80,7 @@ export default function LessonsPage() {
       .catch(() => { if (!cancelled) setLessons([]); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [page, search, selectedCourseId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
+  }, [page, debouncedSearch, selectedCourseId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     lessons.forEach(l => {

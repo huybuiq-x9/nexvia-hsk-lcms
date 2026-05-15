@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { UserAvatar } from '../../components/ui/UserAvatar';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useUserCache } from '../../hooks/useUserCache';
+import { useDebounce } from '../../hooks/useDebounce';
 import FilterBar from '../../components/FilterBar';
 import type { ApiSubLessonListItem, ApiCourseWithLessons, ApiLessonListItem, ApiUserWithRoles } from '../../types/api';
 import type { SubLessonStatus } from '../../types/api';
@@ -54,6 +55,7 @@ export default function SubLessonsPage() {
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
@@ -112,7 +114,7 @@ export default function SubLessonsPage() {
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
     setPage(1);
-  }, [search, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
+  }, [debouncedSearch, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     async function fetchSubLessons() {
@@ -120,7 +122,7 @@ export default function SubLessonsPage() {
       try {
         const res = await courseService.listSubLessons({
           skip: (page - 1) * PER_PAGE, limit: PER_PAGE,
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           course_id: selectedCourseId || undefined,
           lesson_id: selectedLessonId || undefined,
           status: (selectedStatus as SubLessonStatus) || undefined,
@@ -134,7 +136,7 @@ export default function SubLessonsPage() {
       finally { setIsLoading(false); }
     }
     void fetchSubLessons();
-  }, [page, search, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
+  }, [page, debouncedSearch, selectedCourseId, selectedLessonId, selectedStatus, selectedExpertIds, selectedTeacherIds, selectedConverterIds]);
 
   useEffect(() => {
     subLessons.forEach(sl => {
