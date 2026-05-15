@@ -163,6 +163,15 @@ class CourseService:
             raise NotFoundError("User", str(user_id))
         return user
 
+    async def _validate_users(self, user_ids: set[uuid.UUID]) -> None:
+        if not user_ids:
+            return
+        result = await self._db.execute(select(User.id).where(User.id.in_(user_ids)))
+        found = {row[0] for row in result.all()}
+        for uid in user_ids:
+            if uid not in found:
+                raise NotFoundError("User", str(uid))
+
     async def list(
         self,
         current_user,
@@ -249,7 +258,14 @@ class CourseService:
         data: course_schema.CourseCreate,
         current_user_id: uuid.UUID,
     ) -> course_schema.CourseWithLessonsResponse:
-        await self._get_user(data.assigned_expert_id)
+        # Batch-validate all referenced users in one query
+        user_ids: set[uuid.UUID] = {data.assigned_expert_id}
+        for ld in data.lessons:
+            if ld.teacher_id:
+                user_ids.add(ld.teacher_id)
+            if ld.converter_id:
+                user_ids.add(ld.converter_id)
+        await self._validate_users(user_ids)
 
         course = Course(
             created_by=current_user_id,
@@ -261,10 +277,6 @@ class CourseService:
         await self._db.flush()
 
         for lesson_data in data.lessons:
-            if lesson_data.teacher_id:
-                await self._get_user(lesson_data.teacher_id)
-            if lesson_data.converter_id:
-                await self._get_user(lesson_data.converter_id)
             lesson = Lesson(
                 course_id=course.id,
                 title=lesson_data.title,
@@ -285,7 +297,12 @@ class CourseService:
         course_id: uuid.UUID,
         data: course_schema.CourseUpdate,
     ) -> course_schema.CourseResponse:
-        course = await self._get_course_orm(course_id)
+        # Fetch course only (no eager loading of lessons)
+        result = await self._db.execute(select(Course).where(Course.id == course_id))
+        course = result.scalar_one_or_none()
+        if not course:
+            raise NotFoundError("Course", str(course_id))
+
         if data.title is not None:
             course.title = data.title
         if data.description is not None:
@@ -296,53 +313,74 @@ class CourseService:
             await self._get_user(data.assigned_expert_id)
             course.assigned_expert_id = data.assigned_expert_id
 
+        # Bulk soft-delete lessons in a single UPDATE
         if data.delete_lesson_ids:
-            for lid in data.delete_lesson_ids:
-                result = await self._db.execute(select(Lesson).where(Lesson.id == lid, Lesson.course_id == course_id))
-                lesson = result.scalar_one_or_none()
-                if lesson:
-                    lesson.deleted_at = datetime.now(timezone.utc)
+            await self._db.execute(
+                update(Lesson)
+                .where(Lesson.id.in_(data.delete_lesson_ids), Lesson.course_id == course_id)
+                .values(deleted_at=datetime.now(timezone.utc))
+            )
 
         if data.lessons is not None:
+            # Batch-validate all referenced users in one query
+            user_ids: set[uuid.UUID] = set()
+            for ld in data.lessons:
+                if ld.teacher_id:
+                    user_ids.add(ld.teacher_id)
+                if ld.converter_id:
+                    user_ids.add(ld.converter_id)
+            if user_ids:
+                await self._validate_users(user_ids)
+
+            # Batch-fetch all existing lessons to update
+            existing_ids = {ld.id for ld in data.lessons if ld.id}
+            existing_lessons: dict[uuid.UUID, Lesson] = {}
+            if existing_ids:
+                res = await self._db.execute(
+                    select(Lesson).where(Lesson.id.in_(existing_ids), Lesson.course_id == course_id)
+                )
+                existing_lessons = {l.id: l for l in res.scalars().all()}
+
             for lesson_data in data.lessons:
-                if lesson_data.teacher_id:
-                    await self._get_user(lesson_data.teacher_id)
-                if lesson_data.converter_id:
-                    await self._get_user(lesson_data.converter_id)
-                if lesson_data.id:
-                    result = await self._db.execute(select(Lesson).where(Lesson.id == lesson_data.id, Lesson.course_id == course_id))
-                    lesson = result.scalar_one_or_none()
-                    if lesson:
-                        lesson.title = lesson_data.title
-                        lesson.description = lesson_data.description
-                        lesson.order_index = lesson_data.order_index
-                        lesson.assigned_teacher_id = lesson_data.teacher_id
-                        lesson.assigned_converter_id = lesson_data.converter_id
-                else:
-                    lesson = Lesson(
+                if lesson_data.id and lesson_data.id in existing_lessons:
+                    lesson = existing_lessons[lesson_data.id]
+                    lesson.title = lesson_data.title
+                    lesson.description = lesson_data.description
+                    lesson.order_index = lesson_data.order_index
+                    lesson.assigned_teacher_id = lesson_data.teacher_id
+                    lesson.assigned_converter_id = lesson_data.converter_id
+                elif not lesson_data.id:
+                    self._db.add(Lesson(
                         course_id=course.id,
                         title=lesson_data.title,
                         description=lesson_data.description,
                         order_index=lesson_data.order_index,
                         assigned_teacher_id=lesson_data.teacher_id,
                         assigned_converter_id=lesson_data.converter_id,
-                    )
-                    self._db.add(lesson)
+                    ))
 
         await self._db.commit()
         await self._db.refresh(course)
         return _to_course_response(course)
 
     async def delete(self, course_id: uuid.UUID) -> None:
-        course = await self._get_course_orm(course_id)
+        result = await self._db.execute(select(Course).where(Course.id == course_id))
+        course = result.scalar_one_or_none()
+        if not course:
+            raise NotFoundError("Course", str(course_id))
         now = datetime.now(timezone.utc)
         course.deleted_at = now
-
-        for lesson in course.lessons:
-            lesson.deleted_at = now
-            for sublesson in lesson.sub_lessons:
-                sublesson.deleted_at = now
-
+        lesson_id_subq = select(Lesson.id).where(Lesson.course_id == course_id)
+        await self._db.execute(
+            update(SubLesson)
+            .where(SubLesson.lesson_id.in_(lesson_id_subq), SubLesson.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
+        await self._db.execute(
+            update(Lesson)
+            .where(Lesson.course_id == course_id, Lesson.deleted_at.is_(None))
+            .values(deleted_at=now)
+        )
         await self._db.commit()
 
 
@@ -653,22 +691,24 @@ class SubLessonService:
     async def list_review_logs(
         self,
         sublesson_id: uuid.UUID,
+        skip: int = 0,
+        limit: int = 50,
     ) -> course_schema.ReviewLogListResponse:
         await self._get_sublesson_orm(sublesson_id)
 
-        count_result = await self._db.execute(
-            select(func.count(ReviewLog.id))
+        base = (
+            select(ReviewLog)
             .where(ReviewLog.entity_type == "sub_lesson")
             .where(ReviewLog.entity_id == sublesson_id)
         )
-        total = count_result.scalar() or 0
+        total = (await self._db.execute(select(func.count()).select_from(base.subquery()))).scalar() or 0
 
         result = await self._db.execute(
-            select(ReviewLog)
+            base
             .options(selectinload(ReviewLog.actor))
-            .where(ReviewLog.entity_type == "sub_lesson")
-            .where(ReviewLog.entity_id == sublesson_id)
             .order_by(ReviewLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return course_schema.ReviewLogListResponse(total=total, items=list(result.scalars().all()))
 
