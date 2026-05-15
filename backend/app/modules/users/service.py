@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.modules.users.model import User, UserRoleAssignment
 from app.modules.courses.model import Course, Lesson
 from app.modules.users import schema as user_schema
-from app.core.security import get_password_hash, verify_password
+from app.core.security import async_get_password_hash, async_verify_password
 from app.core.exceptions import NotFoundError, AlreadyExistsError, ForbiddenDeletionError
 from fastapi import HTTPException, status
 from app.shared.enums import UserRole
@@ -75,9 +75,10 @@ class UserService:
         if existing:
             raise AlreadyExistsError("User", data.email)
 
+        hashed_pw = await async_get_password_hash(data.password)
         user = User(
             email=data.email,
-            hashed_password=get_password_hash(data.password),
+            hashed_password=hashed_pw,
             full_name=data.full_name,
         )
         self._db.add(user)
@@ -178,12 +179,12 @@ class UserService:
         current_password: str,
         new_password: str,
     ) -> None:
-        if not verify_password(current_password, user.hashed_password):
+        if not await async_verify_password(current_password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Current password is incorrect",
             )
-        user.hashed_password = get_password_hash(new_password)
+        user.hashed_password = await async_get_password_hash(new_password)
         await self._db.commit()
 
     async def delete(self, user_id: uuid.UUID) -> None:

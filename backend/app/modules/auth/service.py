@@ -13,8 +13,8 @@ from app.core.security import (
     decode_refresh_token,
     create_password_reset_token,
     decode_password_reset_token,
-    verify_password,
-    get_password_hash,
+    async_verify_password,
+    async_get_password_hash,
 )
 from app.core.exceptions import InvalidCredentialsError, InvalidTokenError
 from app.core.config import settings
@@ -30,7 +30,7 @@ async def authenticate(
 ) -> tuple[User, auth_schema.TokenResponse]:
     user_svc = UserService(db)
     user = await user_svc.get_by_email(email)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not await async_verify_password(password, user.hashed_password):
         raise InvalidCredentialsError()
 
     if not user.is_active:
@@ -159,6 +159,6 @@ async def reset_password(db: AsyncSession, token: str, new_password: str) -> Non
     if not user or not user.is_active:
         raise InvalidTokenError("User not found or inactive")
 
-    user.hashed_password = get_password_hash(new_password)
+    user.hashed_password = await async_get_password_hash(new_password)
     await db.commit()
     await revoke_all_user_tokens(db, user.id)

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Any
@@ -23,6 +24,16 @@ def get_password_hash(password: str) -> str:
     if len(password_bytes) > BCRYPT_MAX_PASSWORD_BYTES:
         raise ValueError("Password must not exceed 72 bytes when encoded as UTF-8")
     return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
+
+
+async def async_verify_password(plain_password: str, hashed_password: str) -> bool:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, verify_password, plain_password, hashed_password)
+
+
+async def async_get_password_hash(password: str) -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, get_password_hash, password)
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:

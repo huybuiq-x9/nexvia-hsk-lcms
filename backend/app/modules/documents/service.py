@@ -198,17 +198,25 @@ async def upload_documents(
         *[_upload_one(name, content, mime) for name, content, _ext, mime in file_data]
     )
 
+    # Batch-fetch all existing document versions for these filenames in one query
+    filenames = [name for name, _, _, _ in file_data]
+    existing_result = await db.execute(
+        select(Document)
+        .where(
+            Document.sub_lesson_id == sub_lesson_id,
+            Document.original_name.in_(filenames),
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.original_name, Document.version.desc())
+    )
+    existing_by_name: dict[str, list[Document]] = {}
+    for doc in existing_result.scalars().all():
+        existing_by_name.setdefault(doc.original_name, []).append(doc)
+
     # DB operations (sequential, single session)
     results = []
     for (filename, content, ext, mime_type), (stored_name, download_url) in zip(file_data, upload_results):
-        existing_result = await db.execute(
-            select(Document)
-            .where(Document.sub_lesson_id == sub_lesson_id)
-            .where(Document.original_name == filename)
-            .where(Document.deleted_at.is_(None))
-            .order_by(Document.version.desc())
-        )
-        existing_versions = list(existing_result.scalars().all())
+        existing_versions = existing_by_name.get(filename, [])
         previous_version = existing_versions[0] if existing_versions else None
         version_group_id = (
             previous_version.version_group_id

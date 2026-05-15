@@ -204,8 +204,10 @@ async def list_sublesson_review_logs(
     sublesson_id: uuid.UUID,
     service: Annotated[SubLessonService, Depends(get_sublesson_service)],
     current_user: TeacherAssignedToSubLesson,
+    skip: int = 0,
+    limit: int = 50,
 ):
-    return await service.list_review_logs(sublesson_id)
+    return await service.list_review_logs(sublesson_id, skip=skip, limit=limit)
 
 
 @router.post(

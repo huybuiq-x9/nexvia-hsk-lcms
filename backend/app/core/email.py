@@ -1,14 +1,14 @@
 import logging
-from email.message import EmailMessage
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import aiosmtplib
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-async def send_email(
+
+def send_email_sync(
     to_email: str,
     subject: str,
     html_body: str,
@@ -26,15 +26,11 @@ async def send_email(
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            start_tls=settings.SMTP_USE_TLS,
-            timeout=15,
-        )
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as smtp:
+            if settings.SMTP_USE_TLS:
+                smtp.starttls()
+            smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            smtp.sendmail(settings.SMTP_FROM_EMAIL, to_email, msg.as_string())
         logger.info("[Email] Sent to %s: %s", to_email, subject)
         return True
     except Exception as exc:
