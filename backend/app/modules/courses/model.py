@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.modules.users.model import User
     from app.modules.documents.model import Document
     from app.modules.scorm.model import ScormPackage
+    from app.modules.questions.model import Question
 
 
 class Course(BaseModel):
@@ -120,6 +121,12 @@ class SubLesson(BaseModel):
         back_populates="sub_lesson",
         cascade="all, delete-orphan",
         order_by="ScormPackage.created_at",
+    )
+    questions: Mapped[list["Question"]] = relationship(
+        "Question",
+        back_populates="sub_lesson",
+        cascade="all, delete-orphan",
+        order_by="Question.order_index",
     )
 
 

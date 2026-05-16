@@ -171,7 +171,13 @@ export default function SubLessonDetailPage() {
               onPreviewOpen={() => setIsInfoDrawerOpen(false)}
             />
           )}
-          {currentTab === 'questions' && <SubLessonQuestionsTab />}
+          {currentTab === 'questions' && (
+            <SubLessonQuestionsTab
+              subLessonId={subLesson.id}
+              canEdit={Boolean(isAdmin || isTeacher) && isDrafting}
+              canReview={canReview}
+            />
+          )}
         </div>
       </div>
 

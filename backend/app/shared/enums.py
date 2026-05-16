@@ -48,20 +48,35 @@ class ExamStatus(str, enum.Enum):
 
 
 class QuestionType(str, enum.Enum):
-    SINGLE_CHOICE = "single_choice"
-    MULTI_CHOICE = "multi_choice"
-    FILL_BLANK = "fill_blank"
-    TRUE_FALSE = "true_false"
-    MATCHING = "matching"
-    PICTURE_MATCHING = "picture_matching"
-    FORM_DIALOGUE = "form_dialogue"
-    SENTENCE_ORDERING = "sentence_ordering"
+    TF         = "tf"
+    SC         = "sc"
+    MC         = "mc"
+    FIT        = "fit"
+    FITS       = "fits"
+    FIB        = "fib"
+    SQ         = "sq"
+    MAT        = "mat"
+    PAIR_MATCH = "pair_match"
+
+
+class QuestionStatus(str, enum.Enum):
+    DRAFT     = "draft"
+    PUBLISHED = "published"
+    ARCHIVED  = "archived"
+
+
+class ContentMediaType(str, enum.Enum):
+    TEXT       = "text"
+    IMAGE      = "image"
+    AUDIO      = "audio"
+    TEXT_IMAGE = "text_image"
+    TEXT_AUDIO = "text_audio"
 
 
 class DifficultyLevel(str, enum.Enum):
-    EASY = "easy"
+    EASY   = "easy"
     MEDIUM = "medium"
-    HARD = "hard"
+    HARD   = "hard"
 
 
 class ReviewAction(str, enum.Enum):
