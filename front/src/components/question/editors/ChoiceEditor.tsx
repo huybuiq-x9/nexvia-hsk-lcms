@@ -1,4 +1,5 @@
 import { Image, Mic, Type, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ApiQuestionChoiceCreate, ContentBlock, ContentMediaType } from '../../../types/question';
 import { CONTENT_MEDIA_TYPE } from '../../../types/question';
@@ -21,15 +22,6 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   text_image_audio: <><Type size={14} /><span className="text-xs">+</span><Image size={14} /><span className="text-xs">+</span><Mic size={14} /></>,
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  text:             'Text',
-  image:            'Ảnh',
-  audio:            'Audio',
-  text_image:       'Text + Ảnh',
-  text_audio:       'Text + Audio',
-  text_image_audio: 'Text + Ảnh + Audio',
-};
-
 interface Props {
   stem: ContentBlock;
   choices: ApiQuestionChoiceCreate[];
@@ -38,9 +30,7 @@ interface Props {
   onChoicesChange: (choices: ApiQuestionChoiceCreate[]) => void;
   onUploadFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
   onPendingFile?: (file: File) => void;
-  /** Called when question already has an id and we can upload immediately */
   onUploadChoice?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  /** Called when question not yet saved — store the file for later upload */
   onPendingChoice?: (idx: number, file: File, localUrl: string) => void;
 }
 
@@ -50,8 +40,18 @@ export default function ChoiceEditor({
   onUploadFile, onPendingFile,
   onUploadChoice, onPendingChoice,
 }: Props) {
-  // Shared type for all choices — derived from first choice
+  const { t } = useTranslation();
+
   const sharedType: ContentMediaType = choices[0]?.content.type ?? CONTENT_MEDIA_TYPE.TEXT;
+
+  const TYPE_LABELS: Record<string, string> = {
+    text:             t('questions.type.text', 'Text'),
+    image:            t('questions.type.image', 'Image'),
+    audio:            t('questions.type.audio', 'Audio'),
+    text_image:       t('questions.type.text_image', 'Text + Image'),
+    text_audio:       t('questions.type.text_audio', 'Text + Audio'),
+    text_image_audio: t('questions.type.text_image_audio', 'Text + Image + Audio'),
+  };
 
   function handleSharedTypeChange(t: ContentMediaType) {
     onChoicesChange(choices.map(c => {
@@ -107,34 +107,33 @@ export default function ChoiceEditor({
   return (
     <div className="flex flex-col gap-4">
       <ContentBlockEditor
-        label="Câu hỏi"
+        label={t('questions.stem')}
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
         onPendingFile={onPendingFile}
-        placeholder="Nhập nội dung câu hỏi..."
+        placeholder={t('questions.stemPlaceholder')}
       />
 
       <div className="flex flex-col gap-2">
-        {/* Label + shared type selector */}
         <div className="flex items-center justify-between gap-2">
           <label className="text-xs font-medium text-slate-600">
-            Đáp án {multiple ? '(chọn nhiều đáp án đúng)' : '(chọn 1 đáp án đúng)'}
+            {multiple ? t('questions.choicesMultiple') : t('questions.choicesSingle')}
           </label>
           <div className="flex gap-1">
-            {CHOICE_TYPES.map(t => (
+            {CHOICE_TYPES.map(tp => (
               <button
-                key={t}
+                key={tp}
                 type="button"
-                title={TYPE_LABELS[t]}
-                onClick={() => handleSharedTypeChange(t)}
+                title={TYPE_LABELS[tp]}
+                onClick={() => handleSharedTypeChange(tp)}
                 className={`flex items-center gap-0.5 px-2 py-1 rounded text-xs border transition-colors ${
-                  sharedType === t
+                  sharedType === tp
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
                 }`}
               >
-                {TYPE_ICONS[t]}
+                {TYPE_ICONS[tp]}
               </button>
             ))}
           </div>
@@ -145,7 +144,7 @@ export default function ChoiceEditor({
             <button
               type="button"
               onClick={() => toggleCorrect(idx)}
-              title={choice.is_correct ? 'Đáp án đúng' : 'Chọn làm đáp án đúng'}
+              title={choice.is_correct ? t('questions.isCorrect') : t('questions.markCorrect')}
               className={`mt-1 shrink-0 w-5 h-5 flex items-center justify-center rounded-full border-2 transition-colors ${
                 choice.is_correct
                   ? 'bg-green-500 border-green-500 text-white'
@@ -161,7 +160,7 @@ export default function ChoiceEditor({
                 onChange={b => updateChoice(idx, { content: b })}
                 hideTypeSelector
                 {...choiceUploadProps(idx)}
-                placeholder={`Đáp án ${String.fromCharCode(65 + idx)}...`}
+                placeholder={t('questions.choicePlaceholder', { letter: String.fromCharCode(65 + idx) })}
               />
             </div>
 
@@ -180,7 +179,7 @@ export default function ChoiceEditor({
           onClick={addChoice}
           className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 mt-1"
         >
-          <Plus size={14} /> Thêm đáp án
+          <Plus size={14} /> {t('questions.addChoice')}
         </button>
       </div>
     </div>

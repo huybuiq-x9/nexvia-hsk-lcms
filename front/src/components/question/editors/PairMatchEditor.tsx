@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ApiQuestionChoiceCreate, ContentBlock } from '../../../types/question';
 import { CONTENT_MEDIA_TYPE } from '../../../types/question';
@@ -17,11 +18,9 @@ interface Props {
   onPendingFile?: (file: File) => void;
 }
 
-/**
- * PAIR_MATCH editor — same layout as MAT but with group_name = "left"/"right".
- * Supports image choices for "vẽ đường nối ảnh với từ" use-cases.
- */
 export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChange, onUploadFile, onPendingFile }: Props) {
+  const { t } = useTranslation();
+
   function addPair() {
     onPairsChange([
       ...pairs,
@@ -43,18 +42,18 @@ export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChan
   return (
     <div className="flex flex-col gap-4">
       <ContentBlockEditor
-        label="Câu hỏi"
+        label={t('questions.stem')}
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
         onPendingFile={onPendingFile}
-        placeholder="Nhập yêu cầu vẽ đường nối..."
+        placeholder={t('questions.stemPlaceholderPAIR')}
       />
 
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-[1fr_1fr_32px] gap-2">
-          <span className="text-xs font-medium text-slate-500">Cột trái</span>
-          <span className="text-xs font-medium text-slate-500">Cột phải</span>
+          <span className="text-xs font-medium text-slate-500">{t('questions.leftCol')}</span>
+          <span className="text-xs font-medium text-slate-500">{t('questions.rightCol')}</span>
           <span />
         </div>
         {pairs.map((pair, idx) => (
@@ -62,12 +61,12 @@ export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChan
             <ContentBlockEditor
               value={pair.left.content}
               onChange={b => updateSide(idx, 'left', b)}
-              placeholder="Mục cột trái..."
+              placeholder={t('questions.leftPlaceholder')}
             />
             <ContentBlockEditor
               value={pair.right.content}
               onChange={b => updateSide(idx, 'right', b)}
-              placeholder="Mục cột phải..."
+              placeholder={t('questions.rightPlaceholder')}
             />
             <button type="button" onClick={() => removePair(idx)} className="mt-1 text-slate-400 hover:text-red-500">
               <Trash2 size={14} />
@@ -75,7 +74,7 @@ export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChan
           </div>
         ))}
         <button type="button" onClick={addPair} className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 mt-1">
-          <Plus size={14} /> Thêm cặp
+          <Plus size={14} /> {t('questions.addPair')}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ApiQuestionChoiceCreate, ContentBlock } from '../../../types/question';
 import { CONTENT_MEDIA_TYPE } from '../../../types/question';
@@ -17,11 +18,9 @@ interface Props {
   onPendingFile?: (file: File) => void;
 }
 
-/**
- * MAT editor — edit pairs side by side.
- * Caller flattens pairs → choices array (with group_name + match_id) before submitting.
- */
 export default function MatchingEditor({ stem, pairs, onStemChange, onPairsChange, onUploadFile, onPendingFile }: Props) {
+  const { t } = useTranslation();
+
   function addPair() {
     onPairsChange([
       ...pairs,
@@ -43,18 +42,18 @@ export default function MatchingEditor({ stem, pairs, onStemChange, onPairsChang
   return (
     <div className="flex flex-col gap-4">
       <ContentBlockEditor
-        label="Câu hỏi"
+        label={t('questions.stem')}
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
         onPendingFile={onPendingFile}
-        placeholder="Nhập yêu cầu kéo thả..."
+        placeholder={t('questions.stemPlaceholderMAT')}
       />
 
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-[1fr_1fr_32px] gap-2">
-          <span className="text-xs font-medium text-slate-500">Nguồn (trái)</span>
-          <span className="text-xs font-medium text-slate-500">Đích (phải)</span>
+          <span className="text-xs font-medium text-slate-500">{t('questions.sourceCol')}</span>
+          <span className="text-xs font-medium text-slate-500">{t('questions.targetCol')}</span>
           <span />
         </div>
         {pairs.map((pair, idx) => (
@@ -62,12 +61,12 @@ export default function MatchingEditor({ stem, pairs, onStemChange, onPairsChang
             <ContentBlockEditor
               value={pair.source.content}
               onChange={b => updateSide(idx, 'source', b)}
-              placeholder="Mục nguồn..."
+              placeholder={t('questions.sourcePlaceholder')}
             />
             <ContentBlockEditor
               value={pair.target.content}
               onChange={b => updateSide(idx, 'target', b)}
-              placeholder="Mục đích..."
+              placeholder={t('questions.targetPlaceholder')}
             />
             <button type="button" onClick={() => removePair(idx)} className="mt-1 text-slate-400 hover:text-red-500">
               <Trash2 size={14} />
@@ -75,14 +74,13 @@ export default function MatchingEditor({ stem, pairs, onStemChange, onPairsChang
           </div>
         ))}
         <button type="button" onClick={addPair} className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 mt-1">
-          <Plus size={14} /> Thêm cặp
+          <Plus size={14} /> {t('questions.addPair')}
         </button>
       </div>
     </div>
   );
 }
 
-/** Flatten pairs → choices array with group_name + temporary match_id placeholders */
 export function flattenMatchingPairs(pairs: Pair[]): ApiQuestionChoiceCreate[] {
   const result: ApiQuestionChoiceCreate[] = [];
   for (const p of pairs) {

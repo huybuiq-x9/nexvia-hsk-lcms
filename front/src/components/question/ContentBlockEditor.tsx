@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Mic, Type, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ContentBlock, ContentMediaType } from '../../types/question';
 import { CONTENT_MEDIA_TYPE } from '../../types/question';
 
@@ -22,7 +23,7 @@ interface Props {
   onPendingImageFile?: (file: File, localUrl: string) => void;
   onPendingAudioFile?: (file: File, localUrl: string) => void;
   onRemoveMedia?: () => void;
-  placeholder?: string;
+  placeholder?: string;   // defaults to t('questions.contentPlaceholder')
   label?: string;
   /** Hide the type selector (used when a shared selector is rendered externally) */
   hideTypeSelector?: boolean;
@@ -66,10 +67,12 @@ export default function ContentBlockEditor({
   onPendingImageFile,
   onPendingAudioFile,
   onRemoveMedia,
-  placeholder = 'Nhập nội dung...',
+  placeholder,
   label,
   hideTypeSelector = false,
 }: Props) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('questions.contentPlaceholder');
   const [uploading,      setUploading]      = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
@@ -251,7 +254,7 @@ export default function ContentBlockEditor({
           rows={2}
           value={value.text ?? ''}
           onChange={e => onChange({ ...value, text: e.target.value })}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       )}
@@ -269,7 +272,7 @@ export default function ContentBlockEditor({
                 </div>
               )}
               {isPendingSingle && (
-                <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">Chờ lưu</div>
+                <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">{t('questions.pendingSave')}</div>
               )}
               <button type="button" onClick={handleRemoveSingle}
                 className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow border border-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-500">
@@ -280,7 +283,7 @@ export default function ContentBlockEditor({
             <button type="button" onClick={() => fileRef.current?.click()}
               disabled={uploading || (!onUploadFile && !onPendingFile)}
               className="w-full border-2 border-dashed border-slate-200 rounded-lg py-4 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-400 transition-colors disabled:opacity-50">
-              {uploading ? 'Đang tải...' : isImage ? 'Chọn ảnh' : 'Chọn file audio'}
+              {uploading ? t('questions.uploading') : isImage ? t('questions.selectImage') : t('questions.selectAudio')}
             </button>
           )}
           <input ref={fileRef} type="file" className="hidden"
@@ -298,7 +301,7 @@ export default function ContentBlockEditor({
               <div className="relative rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
                 <img src={displayImageUrl} alt={value.image_filename} className="max-h-48 w-full object-contain" />
                 {isPendingImage && (
-                  <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">Chờ lưu</div>
+                  <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">{t('questions.pendingSave')}</div>
                 )}
                 <button type="button" onClick={handleRemoveImage}
                   className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow border border-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-500">
@@ -309,7 +312,7 @@ export default function ContentBlockEditor({
               <button type="button" onClick={() => imageFileRef.current?.click()}
                 disabled={uploadingImage || (!onUploadImageFile && !onPendingImageFile)}
                 className="w-full border-2 border-dashed border-slate-200 rounded-lg py-3 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-400 transition-colors disabled:opacity-50">
-                {uploadingImage ? 'Đang tải...' : 'Chọn ảnh'}
+                {uploadingImage ? t('questions.uploading') : t('questions.selectImage')}
               </button>
             )}
             <input ref={imageFileRef} type="file" className="hidden"
@@ -326,7 +329,7 @@ export default function ContentBlockEditor({
                   <span className="text-xs text-slate-500 truncate max-w-[120px]">{value.audio_filename}</span>
                 </div>
                 {isPendingAudio && (
-                  <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">Chờ lưu</div>
+                  <div className="absolute top-1 left-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded">{t('questions.pendingSave')}</div>
                 )}
                 <button type="button" onClick={handleRemoveAudio}
                   className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow border border-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-500">
@@ -337,7 +340,7 @@ export default function ContentBlockEditor({
               <button type="button" onClick={() => audioFileRef.current?.click()}
                 disabled={uploadingAudio || (!onUploadAudioFile && !onPendingAudioFile)}
                 className="w-full border-2 border-dashed border-slate-200 rounded-lg py-3 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-400 transition-colors disabled:opacity-50">
-                {uploadingAudio ? 'Đang tải...' : 'Chọn file audio'}
+                {uploadingAudio ? t('questions.uploading') : t('questions.selectAudio')}
               </button>
             )}
             <input ref={audioFileRef} type="file" className="hidden"

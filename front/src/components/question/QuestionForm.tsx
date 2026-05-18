@@ -96,7 +96,7 @@ export default function QuestionForm({
       : defaultBlank
   );
   const [tfCorrect, setTfCorrect] = useState<boolean>(
-    initialData?.choices.find(c => c.content.text === 'Đúng')?.is_correct ?? true
+    initialData?.choices.find(c => c.content.text === 'true' || c.content.text === 'Đúng' || c.content.text === 'True')?.is_correct ?? true
   );
   const [matchingPairs, setMatchingPairs] = useState<MatchingPair[]>(() => {
     const srcs = initialData?.choices.filter(c => c.group_name === 'source') ?? [];

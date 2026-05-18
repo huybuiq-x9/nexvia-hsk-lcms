@@ -1,4 +1,5 @@
 import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ApiQuestionChoiceCreate, ContentBlock } from '../../../types/question';
 import { CONTENT_MEDIA_TYPE } from '../../../types/question';
@@ -12,20 +13,13 @@ interface Props {
   onPendingFile?: (file: File) => void;
 }
 
-/**
- * SQ editor — items listed in correct order, displayed shuffled.
- * correct_order = position in this list (0-based).
- * order_index = display order (shuffled) — set randomly at save time.
- */
 export default function SequenceEditor({ stem, choices, onStemChange, onChoicesChange, onUploadFile, onPendingFile }: Props) {
+  const { t } = useTranslation();
+
   function addItem() {
     onChoicesChange([
       ...choices,
-      {
-        content: { type: CONTENT_MEDIA_TYPE.TEXT, text: '' },
-        correct_order: choices.length,
-        order_index: choices.length,
-      },
+      { content: { type: CONTENT_MEDIA_TYPE.TEXT, text: '' }, correct_order: choices.length, order_index: choices.length },
     ]);
   }
 
@@ -49,16 +43,16 @@ export default function SequenceEditor({ stem, choices, onStemChange, onChoicesC
   return (
     <div className="flex flex-col gap-4">
       <ContentBlockEditor
-        label="Câu hỏi"
+        label={t('questions.stem')}
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
         onPendingFile={onPendingFile}
-        placeholder="Nhập yêu cầu xếp thứ tự..."
+        placeholder={t('questions.stemPlaceholderSQ')}
       />
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium text-slate-600">Các mục (xếp theo thứ tự đúng)</label>
+        <label className="text-xs font-medium text-slate-600">{t('questions.itemsInOrder')}</label>
         {choices.map((choice, idx) => (
           <div key={idx} className="flex items-start gap-2">
             <div className="flex flex-col gap-0.5 mt-2 shrink-0">
@@ -75,7 +69,7 @@ export default function SequenceEditor({ stem, choices, onStemChange, onChoicesC
               <ContentBlockEditor
                 value={choice.content}
                 onChange={b => updateItem(idx, b)}
-                placeholder={`Mục ${idx + 1}...`}
+                placeholder={t('questions.itemPlaceholder', { n: idx + 1 })}
               />
             </div>
             <button type="button" onClick={() => removeItem(idx)} className="mt-2 text-slate-400 hover:text-red-500 shrink-0">
@@ -84,7 +78,7 @@ export default function SequenceEditor({ stem, choices, onStemChange, onChoicesC
           </div>
         ))}
         <button type="button" onClick={addItem} className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 mt-1">
-          <Plus size={14} /> Thêm mục
+          <Plus size={14} /> {t('questions.addItem')}
         </button>
       </div>
     </div>

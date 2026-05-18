@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ContentBlock } from '../../../types/question';
 
@@ -11,18 +12,19 @@ interface Props {
 }
 
 export default function TrueFalseEditor({ stem, onStemChange, tfCorrect, onTfCorrectChange, onUploadFile, onPendingFile }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
       <ContentBlockEditor
-        label="Câu hỏi"
+        label={t('questions.stem')}
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
         onPendingFile={onPendingFile}
-        placeholder="Nhập nội dung câu hỏi Đúng/Sai..."
+        placeholder={t('questions.stemPlaceholderTF')}
       />
       <div>
-        <label className="text-xs font-medium text-slate-600 block mb-2">Đáp án</label>
+        <label className="text-xs font-medium text-slate-600 block mb-2">{t('questions.correctAnswer')}</label>
         <div className="flex gap-3">
           {([true, false] as const).map(val => (
             <button
@@ -40,7 +42,7 @@ export default function TrueFalseEditor({ stem, onStemChange, tfCorrect, onTfCor
               }`}>
                 {tfCorrect === val && <span className="w-2 h-2 rounded-full bg-green-500" />}
               </span>
-              {val ? 'Đúng' : 'Sai'}
+              {val ? t('questions.answerTrue') : t('questions.answerFalse')}
             </button>
           ))}
         </div>
@@ -49,10 +51,10 @@ export default function TrueFalseEditor({ stem, onStemChange, tfCorrect, onTfCor
   );
 }
 
-/** Build choices payload for TF — always 2 fixed choices */
+/** Build choices payload for TF — always 2 fixed choices (values are intentionally language-neutral keys) */
 export function buildTFChoices(correctIsTrue: boolean) {
   return [
-    { content: { type: 'text' as const, text: 'Đúng' }, is_correct: correctIsTrue,  order_index: 0 },
-    { content: { type: 'text' as const, text: 'Sai'  }, is_correct: !correctIsTrue, order_index: 1 },
+    { content: { type: 'text' as const, text: 'true'  }, is_correct: correctIsTrue,  order_index: 0 },
+    { content: { type: 'text' as const, text: 'false' }, is_correct: !correctIsTrue, order_index: 1 },
   ];
 }

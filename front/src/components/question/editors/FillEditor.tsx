@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ContentBlockEditor from '../ContentBlockEditor';
 import type { ApiQuestionBlankCreate, ContentBlock } from '../../../types/question';
 
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function FillEditor({ questionType, stem, blanks, onStemChange, onBlanksChange, onUploadFile, onPendingFile }: Props) {
+  const { t } = useTranslation();
+
   function addAnswer(blankIdx: number, answer: string) {
     onBlanksChange(blanks.map(b =>
       b.blank_index === blankIdx
@@ -47,15 +50,15 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
   }
 
   const stemHint =
-    questionType === 'fit'  ? 'Dùng __ hoặc ___ để đánh dấu chỗ trống. Ví dụ: "Hà Nội là ___ của Việt Nam."' :
-    questionType === 'fits' ? 'Dùng {{1}}, {{2}}... để đánh dấu. Ví dụ: "{{1}} là thủ đô của {{2}}."' :
-    'Nhập câu hỏi. Người học sẽ điền câu trả lời vào ô trống bên dưới.';
+    questionType === 'fit'  ? t('questions.stemPlaceholderFIT') :
+    questionType === 'fits' ? t('questions.stemPlaceholderFITS') :
+    t('questions.stemPlaceholderFIB');
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <ContentBlockEditor
-          label="Câu hỏi"
+          label={t('questions.stem')}
           value={stem}
           onChange={onStemChange}
           onUploadFile={onUploadFile}
@@ -67,10 +70,10 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-slate-600">Đáp án chấp nhận</label>
+          <label className="text-xs font-medium text-slate-600">{t('questions.acceptedAnswers')}</label>
           {questionType === 'fits' && (
             <button type="button" onClick={addBlank} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
-              <Plus size={12} /> Thêm ô trống
+              <Plus size={12} /> {t('questions.addBlank')}
             </button>
           )}
         </div>
@@ -79,7 +82,9 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
           <div key={blank.blank_index} className="rounded-lg border border-slate-200 p-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-600">
-                {questionType === 'fits' ? `Ô trống {{${blank.blank_index}}}` : 'Ô trống'}
+                {questionType === 'fits'
+                  ? t('questions.blankN', { n: `{{${blank.blank_index}}}` })
+                  : t('questions.blank')}
               </span>
               {questionType === 'fits' && blanks.length > 1 && (
                 <button type="button" onClick={() => removeBlank(blank.blank_index)} className="text-slate-400 hover:text-red-500">
@@ -94,7 +99,7 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
                   type="text"
                   value={ans}
                   onChange={e => updateAnswer(blank.blank_index, i, e.target.value)}
-                  placeholder={i === 0 ? 'Đáp án chính...' : 'Đáp án thay thế...'}
+                  placeholder={i === 0 ? t('questions.mainAnswer') : t('questions.altAnswer')}
                   className="flex-1 text-sm border border-slate-200 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {blank.accepted_answers.length > 1 && (
@@ -110,7 +115,7 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
               onClick={() => addAnswer(blank.blank_index, '')}
               className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-600 self-start"
             >
-              <Plus size={12} /> Thêm đáp án thay thế
+              <Plus size={12} /> {t('questions.addAlternative')}
             </button>
 
             <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
@@ -122,7 +127,7 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
                 ))}
                 className="rounded"
               />
-              Phân biệt hoa/thường
+              {t('questions.caseSensitive')}
             </label>
           </div>
         ))}
