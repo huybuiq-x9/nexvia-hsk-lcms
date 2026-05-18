@@ -187,6 +187,7 @@ export function SubLessonDocumentsTab({
         ...prev,
         [docId]: [...(prev[docId] || []), comment],
       }));
+
       setCommentText(prev => ({ ...prev, [docId]: '' }));
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, t('courses.modal.errorGeneric')));
@@ -288,11 +289,16 @@ export function SubLessonDocumentsTab({
                         }}
                       >
                         <MessageSquare size={15} />
-                        {(doc.comments_count ?? 0) > 0 && !isExpanded && (
-                          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                            {doc.comments_count}
-                          </span>
-                        )}
+                        {(() => {
+                          const count = commentsMap[doc.id] != null
+                            ? commentsMap[doc.id].length
+                            : (doc.comments_count ?? 0);
+                          return count > 0 ? (
+                            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                              {count}
+                            </span>
+                          ) : null;
+                        })()}
                       </button>
                     )}
                     {canDownload && (
@@ -421,6 +427,21 @@ export function SubLessonDocumentsTab({
           onClose={() => { setPreviewDoc(null); setPreviewUrl(null); }}
           onDownload={() => handleDownload(previewDoc)}
           canComment={canComment}
+          initialCommentCount={
+            commentsMap[previewDoc.id] != null
+              ? commentsMap[previewDoc.id].length
+              : (previewDoc.comments_count ?? 0)
+          }
+          onCommentsLoaded={(loaded) => {
+            setCommentsMap(prev => ({ ...prev, [previewDoc.id]: loaded }));
+          }}
+          onCommentAdded={(comment) => {
+            const docId = previewDoc.id;
+            setCommentsMap(prev => ({
+              ...prev,
+              [docId]: [...(prev[docId] ?? []), comment],
+            }));
+          }}
         />
       )}
     </div>

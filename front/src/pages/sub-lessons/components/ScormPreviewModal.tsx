@@ -19,6 +19,9 @@ interface ScormPreviewModalProps {
   launchUrl: string;
   onClose: () => void;
   canComment?: boolean;
+  initialCommentCount?: number;
+  onCommentAdded?: (comment: ApiScormComment) => void;
+  onCommentsLoaded?: (comments: ApiScormComment[]) => void;
 }
 
 export function ScormPreviewModal({
@@ -26,6 +29,9 @@ export function ScormPreviewModal({
   launchUrl,
   onClose,
   canComment = false,
+  initialCommentCount,
+  onCommentAdded,
+  onCommentsLoaded,
 }: ScormPreviewModalProps) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -33,6 +39,7 @@ export function ScormPreviewModal({
   const [frameKey, setFrameKey] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<ApiScormComment[]>([]);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -77,11 +84,13 @@ export function ScormPreviewModal({
     if (!canComment) return;
     const opening = !showComments;
     setShowComments(opening);
-    if (opening && comments.length === 0) {
+    if (opening && !commentsLoaded) {
       setLoadingComments(true);
       try {
         const res = await scormService.listComments(scormPackage.id);
         setComments(res.items);
+        setCommentsLoaded(true);
+        onCommentsLoaded?.(res.items);
       } catch {
         toast.error(t('scorm.commentsLoadError'));
       } finally {
@@ -101,6 +110,7 @@ export function ScormPreviewModal({
       const comment = await scormService.addComment(scormPackage.id, text);
       setComments(prev => [...prev, comment]);
       setCommentText('');
+      onCommentAdded?.(comment);
     } catch {
       toast.error(t('scorm.commentSendError'));
     } finally {
@@ -137,11 +147,14 @@ export function ScormPreviewModal({
                 }}
               >
                 <MessageSquare size={15} />
-                {(scormPackage.comments_count ?? 0) > 0 && !showComments && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
-                    {scormPackage.comments_count}
-                  </span>
-                )}
+                {(() => {
+                  const count = commentsLoaded ? comments.length : (initialCommentCount ?? scormPackage.comments_count ?? 0);
+                  return count > 0 ? (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
               </button>
             )}
             <button

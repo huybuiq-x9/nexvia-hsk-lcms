@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import React, { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { AlertCircle, CheckCircle2, Eye, FileArchive, Loader2, MessageSquare, Send, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -47,16 +47,19 @@ function VersionHistory({
   onPreview,
   previewLoadingId,
   canComment,
+  commentsMap,
+  setCommentsMap,
 }: {
   versions: ApiScormPackage[];
   onPreview: (scormPackage: ApiScormPackage) => void;
   previewLoadingId: string | null;
   canComment?: boolean;
+  commentsMap: Record<string, ApiScormComment[]>;
+  setCommentsMap: React.Dispatch<React.SetStateAction<Record<string, ApiScormComment[]>>>;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [commentsMap, setCommentsMap] = useState<Record<string, ApiScormComment[]>>({});
   const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [sendingComment, setSendingComment] = useState<Record<string, boolean>>({});
@@ -115,7 +118,9 @@ function VersionHistory({
           const isLoadingCmt = loadingComments[version.id];
           const isSendingCmt = sendingComment[version.id];
           const versionCommentText = commentText[version.id] || '';
-          const commentCount = isExpanded ? versionComments.length : (version.comments_count ?? 0);
+          const commentCount = commentsMap[version.id] != null
+            ? commentsMap[version.id].length
+            : (version.comments_count ?? 0);
 
           return (
             <div key={version.id} className="group">
@@ -153,7 +158,7 @@ function VersionHistory({
                       }}
                     >
                       <MessageSquare size={15} />
-                      {commentCount > 0 && !isExpanded && (
+                      {commentCount > 0 && (
                         <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
                           {commentCount}
                         </span>
@@ -267,6 +272,7 @@ export function SubLessonScormTab({
   const [previewPackage, setPreviewPackage] = useState<ApiScormPackage | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, ApiScormComment[]>>({});
 
   const validateFile = (files: File[]) => {
     if (files.length > 1) {
@@ -397,6 +403,8 @@ export function SubLessonScormTab({
           onPreview={handlePreview}
           previewLoadingId={previewLoadingId}
           canComment={canComment}
+          commentsMap={commentsMap}
+          setCommentsMap={setCommentsMap}
         />
       ) : (
         <EmptyState
@@ -411,6 +419,20 @@ export function SubLessonScormTab({
           scormPackage={previewPackage}
           launchUrl={previewUrl}
           canComment={canComment}
+          initialCommentCount={
+            commentsMap[previewPackage.id] != null
+              ? commentsMap[previewPackage.id].length
+              : (previewPackage.comments_count ?? 0)
+          }
+          onCommentsLoaded={(loaded) => {
+            setCommentsMap(prev => ({ ...prev, [previewPackage.id]: loaded }));
+          }}
+          onCommentAdded={(comment) => {
+            setCommentsMap(prev => ({
+              ...prev,
+              [previewPackage.id]: [...(prev[previewPackage.id] ?? []), comment],
+            }));
+          }}
           onClose={() => {
             setPreviewPackage(null);
             setPreviewUrl(null);

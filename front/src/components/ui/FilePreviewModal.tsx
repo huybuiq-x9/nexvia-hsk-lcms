@@ -13,13 +13,17 @@ interface FilePreviewModalProps {
   onClose: () => void;
   onDownload: () => void;
   canComment?: boolean;
+  initialCommentCount?: number;
+  onCommentAdded?: (comment: ApiDocumentComment) => void;
+  onCommentsLoaded?: (comments: ApiDocumentComment[]) => void;
 }
 
-export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = false }: FilePreviewModalProps) {
+export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = false, initialCommentCount, onCommentAdded, onCommentsLoaded }: FilePreviewModalProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<ApiDocumentComment[]>([]);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -29,11 +33,13 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
     if (!canComment) return;
     const opening = !showComments;
     setShowComments(opening);
-    if (opening && comments.length === 0) {
+    if (opening && !commentsLoaded) {
       setLoadingComments(true);
       try {
         const res = await documentService.listComments(doc.id);
         setComments(res.items);
+        setCommentsLoaded(true);
+        onCommentsLoaded?.(res.items);
       } catch {
         toast.error(t('documents.noComments'));
       } finally {
@@ -53,6 +59,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
       const comment = await documentService.addComment(doc.id, text);
       setComments(prev => [...prev, comment]);
       setCommentText('');
+      onCommentAdded?.(comment);
     } catch {
       toast.error(t('documents.sendComment'));
     } finally {
@@ -61,7 +68,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
   };
 
   const isPdf = doc.file_extension === 'pdf';
-  const commentCount = (doc.comments_count ?? 0);
+  const commentCount = commentsLoaded ? comments.length : (initialCommentCount ?? doc.comments_count ?? 0);
 
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -89,7 +96,7 @@ export function FilePreviewModal({ doc, url, onClose, onDownload, canComment = f
                 }}
               >
                 <MessageSquare size={15} />
-                {commentCount > 0 && !showComments && (
+                {commentCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center">
                     {commentCount}
                   </span>
