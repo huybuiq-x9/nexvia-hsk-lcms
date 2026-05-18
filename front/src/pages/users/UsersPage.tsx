@@ -450,15 +450,6 @@ export default function UsersPage() {
       {/* Filters */}
       <div className="card p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          {isAdmin && (
-            <button
-              onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
-              className="btn btn-primary sm:w-auto flex justify-center gap-1.5"
-            >
-              <UserPlus size={15} />
-              <span>{t('users.add')}</span>
-            </button>
-          )}
           <div className="relative flex-1 min-w-0">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -510,6 +501,15 @@ export default function UsersPage() {
               </>
             )}
           </div>
+          {isAdmin && (
+            <button
+              onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
+              className="btn btn-primary sm:w-auto flex justify-center gap-1.5"
+            >
+              <UserPlus size={15} />
+              <span>{t('users.add')}</span>
+            </button>
+          )}
         </div>
       </div>
 
