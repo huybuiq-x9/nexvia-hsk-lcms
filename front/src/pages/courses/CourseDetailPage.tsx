@@ -400,9 +400,9 @@ export default function CourseDetailPage() {
       setIsLoadingUsers(true);
       try {
         const [expertRes, teacherRes, converterRes] = await Promise.all([
-          userService.listUsers({ limit: 100, role: API_ROLE.EXPERT }),
-          userService.listUsers({ limit: 100, role: API_ROLE.TEACHER }),
-          userService.listUsers({ limit: 100, role: API_ROLE.CONVERTER }),
+          userService.listUsers({ limit: 100, roles: [API_ROLE.EXPERT] }),
+          userService.listUsers({ limit: 100, roles: [API_ROLE.TEACHER] }),
+          userService.listUsers({ limit: 100, roles: [API_ROLE.CONVERTER] }),
         ]);
         if (!cancelled) {
           setExperts(expertRes.items);

@@ -49,15 +49,15 @@ export default function LessonsPage() {
 
   const loadExperts = () => {
     if (experts.length > 0) return;
-    userService.listUsers({ role: API_ROLE.EXPERT, limit: 100 }).then(res => setExperts(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.EXPERT], limit: 100 }).then(res => setExperts(res.items)).catch(() => {});
   };
   const loadTeachers = () => {
     if (teachers.length > 0) return;
-    userService.listUsers({ role: API_ROLE.TEACHER, limit: 100 }).then(res => setTeachers(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.TEACHER], limit: 100 }).then(res => setTeachers(res.items)).catch(() => {});
   };
   const loadConverters = () => {
     if (converters.length > 0) return;
-    userService.listUsers({ role: API_ROLE.CONVERTER, limit: 100 }).then(res => setConverters(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.CONVERTER], limit: 100 }).then(res => setConverters(res.items)).catch(() => {});
   };
 
   useEffect(() => {

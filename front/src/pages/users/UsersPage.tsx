@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Copy,
   Check,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
@@ -392,7 +393,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<ApiRole | ''>('');
+  const [roleFilter, setRoleFilter] = useState<ApiRole[]>([]);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
@@ -420,7 +422,7 @@ export default function UsersPage() {
         skip: (page - 1) * PER_PAGE,
         limit: PER_PAGE,
         search: search || undefined,
-        role: roleFilter || undefined,
+        roles: roleFilter.length > 0 ? roleFilter : undefined,
       })
       .then(res => {
         if (!cancelled && currentRefresh === refreshRef.current) {
@@ -471,16 +473,47 @@ export default function UsersPage() {
               className="input pl-8 pr-3"
             />
           </div>
-          <select
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
-            className="input sm:w-auto w-full"
-          >
-            <option value="">{t('users.allRoles')}</option>
-            {API_ROLES.map(r => (
-              <option key={r} value={r}>{t(`roles.${r}`)}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setRoleDropdownOpen(v => !v)}
+              className={`h-9 w-9 flex items-center justify-center rounded-lg border transition-colors ${roleDropdownOpen || roleFilter.length > 0 ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+              title={t('users.filterByRole')}
+            >
+              <SlidersHorizontal size={16} />
+              {roleFilter.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {roleFilter.length}
+                </span>
+              )}
+            </button>
+
+            {roleDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setRoleDropdownOpen(false)} />
+                <div className="absolute top-full right-0 mt-1 z-20 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden w-44">
+                  <div className="p-1">
+                    {API_ROLES.map(r => {
+                      const checked = roleFilter.includes(r);
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRoleFilter(prev => checked ? prev.filter(x => x !== r) : [...prev, r])}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${checked ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                            {checked && <Check size={11} className="text-white" />}
+                          </span>
+                          {t(`roles.${r}`)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

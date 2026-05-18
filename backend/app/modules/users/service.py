@@ -135,7 +135,7 @@ class UserService:
         skip: int = 0,
         limit: int = 20,
         search: str | None = None,
-        role: UserRole | None = None,
+        roles: list[UserRole] | None = None,
     ) -> user_schema.UserListResponse:
         query = (
             select(User)
@@ -146,13 +146,13 @@ class UserService:
         if search:
             query = query.where(User.full_name.ilike(f"%{search}%"))
 
-        if role:
+        if roles:
             role_subq = (
                 select(UserRoleAssignment.user_id)
                 .where(
                     and_(
                         UserRoleAssignment.user_id == User.id,
-                        UserRoleAssignment.role == role.value,
+                        UserRoleAssignment.role.in_([r.value for r in roles]),
                         UserRoleAssignment.revoked_at.is_(None),
                     )
                 )

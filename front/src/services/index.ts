@@ -80,9 +80,19 @@ export const userService = {
     skip?: number;
     limit?: number;
     search?: string;
-    role?: ApiRole;
+    roles?: ApiRole[];
   }): Promise<ApiUserListResponse> {
-    const res = await client.get<ApiUserListResponse>('/users/', { params });
+    const res = await client.get<ApiUserListResponse>('/users/', {
+      params,
+      paramsSerializer: p => {
+        const sp = new URLSearchParams();
+        Object.entries(p).forEach(([k, v]) => {
+          if (Array.isArray(v)) v.forEach(item => sp.append(k, item));
+          else if (v !== undefined) sp.append(k, String(v));
+        });
+        return sp.toString();
+      },
+    });
     return res.data;
   },
 

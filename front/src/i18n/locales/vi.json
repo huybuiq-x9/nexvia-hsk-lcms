@@ -83,6 +83,7 @@
     "add": "Thêm người dùng",
     "search": "Tìm theo tên hoặc email...",
     "allRoles": "Tất cả vai trò",
+    "filterByRole": "Lọc theo vai trò",
     "columnUser": "Người dùng",
     "columnRoles": "Vai trò",
     "columnStatus": "Trạng thái",

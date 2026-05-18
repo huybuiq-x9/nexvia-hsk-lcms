@@ -83,6 +83,7 @@
     "add": "Add User",
     "search": "Search by name or email...",
     "allRoles": "All roles",
+    "filterByRole": "Filter by role",
     "columnUser": "User",
     "columnRoles": "Roles",
     "columnStatus": "Status",

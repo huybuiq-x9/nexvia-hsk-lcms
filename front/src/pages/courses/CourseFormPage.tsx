@@ -35,9 +35,9 @@ export default function CourseFormPage() {
 
   useEffect(() => {
     Promise.all([
-      userService.listUsers({ limit: 100, role: API_ROLE.EXPERT }),
-      userService.listUsers({ limit: 100, role: API_ROLE.TEACHER }),
-      userService.listUsers({ limit: 100, role: API_ROLE.CONVERTER }),
+      userService.listUsers({ limit: 100, roles: [API_ROLE.EXPERT] }),
+      userService.listUsers({ limit: 100, roles: [API_ROLE.TEACHER] }),
+      userService.listUsers({ limit: 100, roles: [API_ROLE.CONVERTER] }),
     ]).then(([eRes, tRes, cRes]) => {
       setExperts(eRes.items); setTeachers(tRes.items); setConverters(cRes.items);
     }).catch(() => {}).finally(() => setIsLoadingUsers(false));
