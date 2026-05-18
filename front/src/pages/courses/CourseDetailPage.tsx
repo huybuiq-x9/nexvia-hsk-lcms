@@ -335,7 +335,7 @@ export default function CourseDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
   const { setBreadcrumbs } = useBreadcrumbs();
 
@@ -345,7 +345,7 @@ export default function CourseDetailPage() {
   const [experts, setExperts] = useState<ApiUserWithRoles[]>([]);
   const [teachers, setTeachers] = useState<ApiUserWithRoles[]>([]);
   const [converters, setConverters] = useState<ApiUserWithRoles[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(isAdmin && selectedRole === API_ROLE.ADMIN);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(isAdmin);
   const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
   const [openLessons, setOpenLessons] = useState<Set<string>>(new Set());
   const [lessonsData, setLessonsData] = useState<Record<string, ApiLessonWithSubLessons>>({});
@@ -392,7 +392,7 @@ export default function CourseDetailPage() {
   }, [courseId, loadUser]);
 
   useEffect(() => {
-    if (!isAdmin || selectedRole !== API_ROLE.ADMIN) return;
+    if (!isAdmin) return;
     let cancelled = false;
 
     Promise.resolve().then(async () => {
@@ -417,7 +417,7 @@ export default function CourseDetailPage() {
     });
 
     return () => { cancelled = true; };
-  }, [isAdmin, selectedRole]);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (course) {
@@ -536,7 +536,7 @@ export default function CourseDetailPage() {
             <StatusBadge status={course.status} type="course" />
           </div>
         </div>
-        {isAdmin && selectedRole === API_ROLE.ADMIN && !isEditingCourse && (
+        {isAdmin && !isEditingCourse && (
           <button onClick={() => setIsEditingCourse(true)} className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0">
             <Pencil size={14} />{t('courses.edit')}
           </button>

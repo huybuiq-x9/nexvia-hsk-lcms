@@ -358,10 +358,9 @@ export default function LessonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { lessonId } = useParams<{ lessonId: string }>();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin, isTeacher, isConverter } = useAuth();
   const { setBreadcrumbs } = useBreadcrumbs();
-  const canManageSubLessons =
-    isAdmin || selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+  const canManageSubLessons = isAdmin || isTeacher || isConverter;
 
   const [lesson, setLesson] = useState<ApiLessonWithSubLessons | null>(null);
   const [courseTitle, setCourseTitle] = useState<string>('');

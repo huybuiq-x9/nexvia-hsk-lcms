@@ -17,9 +17,6 @@ import {
   X,
   Eye,
   EyeOff,
-  Shield,
-  ChevronsUpDown,
-  Check,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -61,9 +58,8 @@ function Sidebar({
   sidebarWidth: number;
 }) {
   const { t } = useTranslation();
-  const { user, selectedRole, isAdmin, isExpert, selectRole } = useAuth();
+  const { user, isAdmin, isExpert } = useAuth();
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set(['/courses']));
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
   const toggleGroup = (key: string) => {
     setOpenGroups(prev => {
@@ -91,11 +87,12 @@ function Sidebar({
     { to: '/notifications', icon: <Bell size={18} />, labelKey: 'nav.notifications' },
   ];
 
-  const isTeacherConverter =
-    selectedRole === API_ROLE.TEACHER || selectedRole === API_ROLE.CONVERTER;
+  const { isTeacher, isConverter } = useAuth();
+  const isOnlyTeacherConverter =
+    !isAdmin && !isExpert && (isTeacher || isConverter);
   const navItems = baseNavItems.filter(item => {
-    if (item.adminOnly) return isAdmin && selectedRole === API_ROLE.ADMIN;
-    if (isTeacherConverter) return item.to === '/dashboard' || item.to === '/courses';
+    if (item.adminOnly) return isAdmin;
+    if (isOnlyTeacherConverter) return item.to === '/dashboard' || item.to === '/courses';
     return true;
   });
 
@@ -103,7 +100,6 @@ function Sidebar({
     window.location.pathname === to || window.location.pathname.startsWith(to + '/');
 
   const userRoles = (user?.roles ?? []) as ApiRole[];
-  const canSwitchRole = userRoles.length > 1;
 
   return (
     <aside
@@ -234,44 +230,20 @@ function Sidebar({
         })}
       </nav>
 
-      {/* Role switcher + User section */}
+      {/* User section */}
       {user && (
         <div className="border-t border-blue-200/60 p-3 shrink-0 space-y-2">
-          {/* Role switcher */}
-          {!collapsed && canSwitchRole && (
-            <div className="relative">
-              <button
-                onClick={() => setRoleDropdownOpen(v => !v)}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/50 hover:bg-white/70 border border-blue-200/60 transition-colors text-sm"
-              >
-                <Shield size={13} className="shrink-0 text-blue-500" />
-                <span className="flex-1 text-left text-xs font-medium text-slate-700 truncate">
-                  {selectedRole ? t(`roles.${selectedRole}`) : '—'}
+          {/* Roles display */}
+          {!collapsed && userRoles.length > 0 && (
+            <div className="flex flex-wrap gap-1 px-1">
+              {userRoles.map(role => (
+                <span
+                  key={role}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-white ${ROLE_ICON_COLOR[role]}`}
+                >
+                  {t(`roles.${role}`)}
                 </span>
-                <ChevronsUpDown size={13} className="shrink-0 text-slate-400" />
-              </button>
-
-              {roleDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
-                  <div className="absolute bottom-full left-0 right-0 mb-1 z-50 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-slate-50">
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Vai trò</p>
-                    </div>
-                    {userRoles.map(role => (
-                      <button
-                        key={role}
-                        onClick={() => { selectRole(role); setRoleDropdownOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
-                      >
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${ROLE_ICON_COLOR[role]}`} />
-                        <span className="flex-1 text-left text-slate-700">{t(`roles.${role}`)}</span>
-                        {selectedRole === role && <Check size={13} className="text-blue-600 shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+              ))}
             </div>
           )}
 
@@ -279,17 +251,10 @@ function Sidebar({
           {collapsed ? (
             <div className="flex justify-center">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
-                style={{ background: selectedRole ? undefined : '#dbeafe' }}
+                className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shadow-sm"
                 title={user.full_name}
               >
-                {selectedRole ? (
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${ROLE_ICON_COLOR[selectedRole]}`}>
-                    <span className="text-xs font-bold text-white">{user.full_name[0]?.toUpperCase()}</span>
-                  </div>
-                ) : (
-                  <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
-                )}
+                <span className="text-xs font-bold text-blue-600">{user.full_name[0]?.toUpperCase()}</span>
               </div>
             </div>
           ) : (

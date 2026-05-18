@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authService, userService } from '../services';
-import { API_ROLE, type ApiRole, type ApiUserWithRoles } from '../types/api';
+import { API_ROLE, type ApiUserWithRoles } from '../types/api';
 
 interface AuthState {
   user: ApiUserWithRoles | null;
@@ -12,10 +12,10 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  selectRole: (role: ApiRole) => void;
-  selectedRole: ApiRole | null;
   isAdmin: boolean;
   isExpert: boolean;
+  isTeacher: boolean;
+  isConverter: boolean;
   error: string | null;
   clearError: () => void;
 }
@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
   });
-  const [selectedRole, setSelectedRole] = useState<ApiRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,9 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     userService.getMe()
       .then(user => {
-        const primary = (user.roles[0] as ApiRole) || null;
         setState({ user, isAuthenticated: true, isLoading: false });
-        setSelectedRole(primary);
       })
       .catch(() => {
         localStorage.removeItem('access_token');
@@ -57,9 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { user, tokens } = await authService.login(email, password);
       localStorage.setItem('access_token', tokens.access_token);
       localStorage.setItem('refresh_token', tokens.refresh_token);
-      const primary = (user.roles[0] as ApiRole) || null;
       setState({ user, isAuthenticated: true, isLoading: false });
-      setSelectedRole(primary);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -79,26 +74,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setState({ user: null, isAuthenticated: false, isLoading: false });
-      setSelectedRole(null);
     }
   }, []);
 
-  const selectRole = useCallback((role: ApiRole) => setSelectedRole(role), []);
   const clearError = useCallback(() => setError(null), []);
 
   const isAdmin = state.user?.roles.includes(API_ROLE.ADMIN) ?? false;
   const isExpert = state.user?.roles.includes(API_ROLE.EXPERT) ?? false;
+  const isTeacher = state.user?.roles.includes(API_ROLE.TEACHER) ?? false;
+  const isConverter = state.user?.roles.includes(API_ROLE.CONVERTER) ?? false;
 
   return (
     <AuthContext.Provider
       value={{
         ...state,
-        selectedRole,
         login,
         logout,
-        selectRole,
         isAdmin,
         isExpert,
+        isTeacher,
+        isConverter,
         error,
         clearError,
       }}

@@ -17,7 +17,7 @@ const PER_PAGE = 20;
 
 export default function LessonsPage() {
   const { t } = useTranslation();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
@@ -179,7 +179,7 @@ export default function LessonsPage() {
           { key: 'course', label: t('lessons.filter.course'), value: selectedCourseId, options: courseOptions, onChange: setSelectedCourseId },
           { key: 'status', label: t('lessons.filter.status'), value: selectedStatus, options: statusOptions, onChange: setSelectedStatus },
         ]}
-        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+        extra={isAdmin ? (
           <RoleFilterDropdown
             experts={experts}
             teachers={teachers}
@@ -221,7 +221,7 @@ export default function LessonsPage() {
               expert={lesson.assigned_expert_id ? userCache[lesson.assigned_expert_id] : undefined}
               teacher={lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : undefined}
               converter={lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : undefined}
-              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? handleDeleteLesson : undefined}
+              onDelete={isAdmin ? handleDeleteLesson : undefined}
             />
           ))
         )}

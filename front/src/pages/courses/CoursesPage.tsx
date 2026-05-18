@@ -11,14 +11,14 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import FilterBar from '../../components/FilterBar';
 import type { ApiCourseWithLessons } from '../../types/api';
-import { API_ROLE, COURSE_STATUS } from '../../types/api';
+import { COURSE_STATUS } from '../../types/api';
 
 const PER_PAGE = 20;
 
 export default function CoursesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
@@ -134,7 +134,7 @@ export default function CoursesPage() {
         onClearAll={clearAllFilters}
         layout="inline"
         filters={[]}
-        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+        extra={isAdmin ? (
           <button onClick={() => navigate('/courses/create')} className="btn btn-primary h-11 w-full justify-center gap-1.5 sm:w-auto">
             <Plus size={15} /><span>{t('courses.add')}</span>
           </button>
@@ -161,7 +161,7 @@ export default function CoursesPage() {
               key={course.id}
               course={course}
               expert={userCache[course.assigned_expert_id]}
-              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? (id) => setDeleteConfirm({ id, title: course.title }) : undefined}
+              onDelete={isAdmin ? (id) => setDeleteConfirm({ id, title: course.title }) : undefined}
               isDeleting={deletingId === course.id}
             />
           ))

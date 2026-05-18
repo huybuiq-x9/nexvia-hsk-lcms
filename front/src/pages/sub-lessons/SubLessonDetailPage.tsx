@@ -12,7 +12,7 @@ import { SubLessonDocumentsTab } from './components/SubLessonDocumentsTab';
 import { SubLessonScormTab } from './components/SubLessonScormTab';
 import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
-import { API_ROLE, SUB_LESSON_STATUS, type ApiScormPackage } from '../../types/api';
+import { SUB_LESSON_STATUS, type ApiScormPackage } from '../../types/api';
 
 type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
 
@@ -20,7 +20,7 @@ export default function SubLessonDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { subLessonId } = useParams<{ subLessonId: string }>();
-  const { isAdmin, isExpert, selectedRole } = useAuth();
+  const { isAdmin, isExpert, isTeacher, isConverter } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
   const { subLesson, reviewLogs, lessonInfo, courseInfo, isLoading, reload } = useSubLesson(subLessonId);
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -31,8 +31,6 @@ export default function SubLessonDetailPage() {
   const [currentScormPackage, setCurrentScormPackage] = useState<ApiScormPackage | null>(null);
   const [documentCount, setDocumentCount] = useState(0);
 
-  const isTeacher = selectedRole === API_ROLE.TEACHER;
-  const isConverter = selectedRole === API_ROLE.CONVERTER;
   const isDrafting = subLesson ? (
     subLesson.status === SUB_LESSON_STATUS.DRAFT ||
     subLesson.status === SUB_LESSON_STATUS.IN_PROGRESS

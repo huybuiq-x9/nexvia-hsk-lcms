@@ -90,7 +90,7 @@ function getSubLessonTone(status: ApiSubLessonListItem['status']) {
 
 export default function SubLessonsPage() {
   const { t } = useTranslation();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
@@ -302,7 +302,7 @@ export default function SubLessonsPage() {
           { key: 'lesson', label: t('subLessons.filter.lesson'), value: selectedLessonId, options: lessonOptions, onChange: setSelectedLessonId },
           { key: 'status', label: t('subLessons.filter.status'), value: selectedStatus, options: statusOptions, onChange: setSelectedStatus },
         ]}
-        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+        extra={isAdmin ? (
           <RoleFilterDropdown
             experts={experts}
             teachers={teachers}
@@ -339,7 +339,7 @@ export default function SubLessonsPage() {
         ) : (
           subLessons.map(sl => {
             const tone = getSubLessonTone(sl.status);
-            const showDelete = isAdmin && selectedRole === API_ROLE.ADMIN;
+            const showDelete = isAdmin;
 
             return (
               <Link
