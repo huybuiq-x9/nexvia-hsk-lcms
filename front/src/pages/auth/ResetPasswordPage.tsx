@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Check } from 'lucide-react';
 import client from '../../services/apiClient';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
@@ -19,10 +19,19 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
+  const passwordRules = [
+    { key: 'upper',   test: (p: string) => /[A-Z]/.test(p) },
+    { key: 'lower',   test: (p: string) => /[a-z]/.test(p) },
+    { key: 'digit',   test: (p: string) => /[0-9]/.test(p) },
+    { key: 'special', test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+    { key: 'length',  test: (p: string) => p.length >= 8 },
+  ];
+  const passwordValid = passwordRules.every(r => r.test(password));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password.length < 8) { setError(t('auth.reset.passwordTooShort')); return; }
+    if (!passwordValid) { setError(t('auth.reset.passwordWeak')); return; }
     if (password !== confirm) { setError(t('auth.reset.passwordMismatch')); return; }
     if (!token) { setError(t('auth.reset.invalidToken')); return; }
     setLoading(true);
@@ -109,6 +118,21 @@ export default function ResetPasswordPage() {
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+              {password && (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {passwordRules.map(rule => {
+                    const ok = rule.test(password);
+                    return (
+                      <span key={rule.key} className={`flex items-center gap-1 text-xs ${ok ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${ok ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                          {ok ? <Check size={9} className="text-emerald-600" /> : <span className="w-1 h-1 rounded-full bg-slate-400 inline-block" />}
+                        </span>
+                        {t(`users.modal.pwRule_${rule.key}`)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div>
               <label className="label">{t('auth.reset.confirmPassword')}</label>

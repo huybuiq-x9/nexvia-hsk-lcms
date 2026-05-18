@@ -41,6 +41,15 @@ const UserModal = ({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
 
+  const passwordRules = [
+    { key: 'upper',   test: (p: string) => /[A-Z]/.test(p) },
+    { key: 'lower',   test: (p: string) => /[a-z]/.test(p) },
+    { key: 'digit',   test: (p: string) => /[0-9]/.test(p) },
+    { key: 'special', test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+    { key: 'length',  test: (p: string) => p.length >= 8 },
+  ];
+  const passwordValid = (p: string) => passwordRules.every(r => r.test(p));
+
   const generatePassword = () => {
     const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lower = 'abcdefghjkmnpqrstuvwxyz';
@@ -80,6 +89,10 @@ const UserModal = ({
     e.preventDefault();
     if (!form.email || !form.full_name || (!user && !form.password)) {
       setError(t('users.modal.validationRequired'));
+      return;
+    }
+    if (!user && !passwordValid(form.password)) {
+      setError(t('users.modal.validationPassword'));
       return;
     }
     setError('');
@@ -185,7 +198,6 @@ const UserModal = ({
                   placeholder={t('users.modal.passwordPlaceholder')}
                   className="input pr-16"
                   autoComplete="new-password"
-                  minLength={8}
                   required
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -210,6 +222,21 @@ const UserModal = ({
                   </button>
                 </div>
               </div>
+              {form.password && (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {passwordRules.map(rule => {
+                    const ok = rule.test(form.password);
+                    return (
+                      <span key={rule.key} className={`flex items-center gap-1 text-xs ${ok ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${ok ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                          {ok ? <Check size={9} className="text-emerald-600" /> : <span className="w-1 h-1 rounded-full bg-slate-400 inline-block" />}
+                        </span>
+                        {t(`users.modal.pwRule_${rule.key}`)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
