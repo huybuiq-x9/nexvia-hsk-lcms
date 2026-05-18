@@ -158,6 +158,26 @@ async def list_documents(
     )
 
 
+async def list_document_versions(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+) -> DocumentListResponse:
+    current_doc = await _get_document_orm(db, document_id)
+    query = (
+        select(Document)
+        .options(selectinload(Document.uploader), selectinload(Document.comments))
+        .where(Document.version_group_id == current_doc.version_group_id)
+        .where(Document.deleted_at.is_(None))
+        .order_by(Document.version.desc())
+    )
+    result = await db.execute(query)
+    docs = list(result.scalars().all())
+    return DocumentListResponse(
+        total=len(docs),
+        items=[_to_document_with_uploader(d) for d in docs],
+    )
+
+
 async def upload_documents(
     db: AsyncSession,
     sub_lesson_id: uuid.UUID,
@@ -312,7 +332,7 @@ async def reupload_document(
     doc = Document(
         sub_lesson_id=current_doc.sub_lesson_id,
         uploader_id=uploader_id,
-        original_name=current_doc.original_name,
+        original_name=file.filename or current_doc.original_name,
         stored_name=stored_name,
         file_extension=current_doc.file_extension,
         file_size=len(content),
@@ -342,8 +362,20 @@ async def delete_document(
     document_id: uuid.UUID,
 ) -> None:
     doc = await _get_document_orm(db, document_id)
-    await run_in_threadpool(storage_service.delete_file, doc.stored_name)
-    doc.deleted_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+
+    # Soft-delete all versions in the same group so re-uploading the same
+    # filename starts fresh at v1 instead of continuing the old sequence.
+    all_versions_result = await db.execute(
+        select(Document)
+        .where(Document.version_group_id == doc.version_group_id)
+        .where(Document.deleted_at.is_(None))
+    )
+    all_versions = list(all_versions_result.scalars().all())
+    for v in all_versions:
+        await run_in_threadpool(storage_service.delete_file, v.stored_name)
+        v.deleted_at = now
+
     await db.commit()
 
 

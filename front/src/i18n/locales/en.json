@@ -443,7 +443,10 @@
     "commentPlaceholder": "Write a comment...",
     "sendComment": "Send",
     "noComments": "No comments yet.",
-    "lockedAfterSubmit": "This sub-lesson has been submitted for review. Document uploads are locked until the expert reviews it."
+    "lockedAfterSubmit": "This sub-lesson has been submitted for review. Document uploads are locked until the expert reviews it.",
+    "versionHistory": "Version History",
+    "noOldVersions": "No previous versions.",
+    "versionsLoadError": "Failed to load version history."
   },
   "scorm": {
     "title": "SCORM",

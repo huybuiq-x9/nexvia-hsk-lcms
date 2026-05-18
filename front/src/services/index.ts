@@ -336,6 +336,11 @@ export const documentService = {
     return res.data.url;
   },
 
+  async listVersions(documentId: string): Promise<ApiDocumentListResponse> {
+    const res = await client.get<ApiDocumentListResponse>(`/documents/${documentId}/versions`);
+    return res.data;
+  },
+
   async listComments(documentId: string, params?: { skip?: number; limit?: number }): Promise<ApiDocumentCommentListResponse> {
     const res = await client.get<ApiDocumentCommentListResponse>(`/documents/${documentId}/comments`, { params });
     return res.data;

@@ -73,6 +73,15 @@ async def reupload_document(
     )
 
 
+@router.get("/{document_id}/versions", response_model=DocumentListResponse)
+async def list_document_versions(
+    document_id: uuid.UUID,
+    current_user: DocumentViewAccessToDocument,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DocumentListResponse:
+    return await service.list_document_versions(db, document_id)
+
+
 @router.get("/{document_id}/download")
 async def get_download_url(
     document_id: uuid.UUID,

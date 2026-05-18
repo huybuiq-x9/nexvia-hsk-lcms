@@ -443,7 +443,10 @@
     "commentPlaceholder": "Viết bình luận...",
     "sendComment": "Gửi",
     "noComments": "Chưa có bình luận nào.",
-    "lockedAfterSubmit": "Bài học con đã được gửi phê duyệt. Không thể tải tài liệu cho đến khi chuyên gia duyệt."
+    "lockedAfterSubmit": "Bài học con đã được gửi phê duyệt. Không thể tải tài liệu cho đến khi chuyên gia duyệt.",
+    "versionHistory": "Lịch sử phiên bản",
+    "noOldVersions": "Không có phiên bản cũ.",
+    "versionsLoadError": "Không thể tải lịch sử phiên bản."
   },
   "scorm": {
     "title": "SCORM",
