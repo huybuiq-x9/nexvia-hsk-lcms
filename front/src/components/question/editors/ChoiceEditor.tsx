@@ -1,0 +1,209 @@
+import { Image, Mic, Type, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import ContentBlockEditor from '../ContentBlockEditor';
+import type { ApiQuestionChoiceCreate, ContentBlock, ContentMediaType } from '../../../types/question';
+import { CONTENT_MEDIA_TYPE } from '../../../types/question';
+
+const CHOICE_TYPES: ContentMediaType[] = [
+  CONTENT_MEDIA_TYPE.TEXT,
+  CONTENT_MEDIA_TYPE.IMAGE,
+  CONTENT_MEDIA_TYPE.AUDIO,
+  CONTENT_MEDIA_TYPE.TEXT_IMAGE,
+  CONTENT_MEDIA_TYPE.TEXT_AUDIO,
+  CONTENT_MEDIA_TYPE.TEXT_IMAGE_AUDIO,
+];
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  text:             <Type size={14} />,
+  image:            <Image size={14} />,
+  audio:            <Mic size={14} />,
+  text_image:       <><Type size={14} /><span className="text-xs">+</span><Image size={14} /></>,
+  text_audio:       <><Type size={14} /><span className="text-xs">+</span><Mic size={14} /></>,
+  text_image_audio: <><Type size={14} /><span className="text-xs">+</span><Image size={14} /><span className="text-xs">+</span><Mic size={14} /></>,
+};
+
+interface Props {
+  stem: ContentBlock;
+  choices: ApiQuestionChoiceCreate[];
+  multiple: boolean;
+  onStemChange: (b: ContentBlock) => void;
+  onChoicesChange: (choices: ApiQuestionChoiceCreate[]) => void;
+  onUploadFile?:      (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadImageFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadAudioFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingFile?:      (file: File, localUrl: string) => void;
+  onPendingImageFile?: (file: File, localUrl: string) => void;
+  onPendingAudioFile?: (file: File, localUrl: string) => void;
+  onUploadChoice?:      (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadChoiceImage?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadChoiceAudio?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingChoice?:      (idx: number, file: File, localUrl: string) => void;
+  onPendingChoiceImage?: (idx: number, file: File, localUrl: string) => void;
+  onPendingChoiceAudio?: (idx: number, file: File, localUrl: string) => void;
+}
+
+export default function ChoiceEditor({
+  stem, choices, multiple,
+  onStemChange, onChoicesChange,
+  onUploadFile, onUploadImageFile, onUploadAudioFile,
+  onPendingFile, onPendingImageFile, onPendingAudioFile,
+  onUploadChoice, onUploadChoiceImage, onUploadChoiceAudio,
+  onPendingChoice, onPendingChoiceImage, onPendingChoiceAudio,
+}: Props) {
+  const { t } = useTranslation();
+
+  const sharedType: ContentMediaType = choices[0]?.content.type ?? CONTENT_MEDIA_TYPE.TEXT;
+
+  const TYPE_LABELS: Record<string, string> = {
+    text:             t('questions.type.text', 'Text'),
+    image:            t('questions.type.image', 'Image'),
+    audio:            t('questions.type.audio', 'Audio'),
+    text_image:       t('questions.type.text_image', 'Text + Image'),
+    text_audio:       t('questions.type.text_audio', 'Text + Audio'),
+    text_image_audio: t('questions.type.text_image_audio', 'Text + Image + Audio'),
+  };
+
+  function handleSharedTypeChange(t: ContentMediaType) {
+    onChoicesChange(choices.map(c => {
+      const next: ContentBlock = { type: t };
+      if (['text', 'text_image', 'text_audio', 'text_image_audio'].includes(t)) next.text = c.content.text ?? '';
+      if (['image', 'audio', 'text_image', 'text_audio'].includes(t) && c.content.media_key) {
+        next.media_key = c.content.media_key;
+        next.media_url = c.content.media_url;
+        next.original_filename = c.content.original_filename;
+      }
+      if (t === 'text_image_audio') {
+        if (c.content.image_key) { next.image_key = c.content.image_key; next.image_url = c.content.image_url; next.image_filename = c.content.image_filename; }
+        if (c.content.audio_key) { next.audio_key = c.content.audio_key; next.audio_url = c.content.audio_url; next.audio_filename = c.content.audio_filename; }
+      }
+      return { ...c, content: next };
+    }));
+  }
+
+  function addChoice() {
+    const needsText = ['text', 'text_image', 'text_audio', 'text_image_audio'].includes(sharedType);
+    onChoicesChange([
+      ...choices,
+      { content: { type: sharedType, text: needsText ? '' : undefined }, is_correct: false, order_index: choices.length },
+    ]);
+  }
+
+  function removeChoice(idx: number) {
+    onChoicesChange(choices.filter((_, i) => i !== idx));
+  }
+
+  function updateChoice(idx: number, patch: Partial<ApiQuestionChoiceCreate>) {
+    onChoicesChange(choices.map((c, i) => i === idx ? { ...c, ...patch } : c));
+  }
+
+  function toggleCorrect(idx: number) {
+    if (multiple) {
+      updateChoice(idx, { is_correct: !choices[idx].is_correct });
+    } else {
+      onChoicesChange(choices.map((c, i) => ({ ...c, is_correct: i === idx })));
+    }
+  }
+
+  function choiceUploadProps(idx: number) {
+    if (onUploadChoice) {
+      return {
+        onUploadFile:      (f: File) => onUploadChoice(idx, f),
+        onUploadImageFile: onUploadChoiceImage ? (f: File) => onUploadChoiceImage(idx, f) : undefined,
+        onUploadAudioFile: onUploadChoiceAudio ? (f: File) => onUploadChoiceAudio(idx, f) : undefined,
+      };
+    }
+    if (onPendingChoice) {
+      return {
+        onPendingFile:      (f: File, url: string) => onPendingChoice(idx, f, url),
+        onPendingImageFile: onPendingChoiceImage ? (f: File, url: string) => onPendingChoiceImage(idx, f, url) : undefined,
+        onPendingAudioFile: onPendingChoiceAudio ? (f: File, url: string) => onPendingChoiceAudio(idx, f, url) : undefined,
+      };
+    }
+    return {};
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ContentBlockEditor
+        label={t('questions.stem')}
+        value={stem}
+        onChange={onStemChange}
+        onUploadFile={onUploadFile}
+        onUploadImageFile={onUploadImageFile}
+        onUploadAudioFile={onUploadAudioFile}
+        onPendingFile={onPendingFile}
+        onPendingImageFile={onPendingImageFile}
+        onPendingAudioFile={onPendingAudioFile}
+        placeholder={t('questions.stemPlaceholder')}
+      />
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-xs font-medium text-slate-600">
+            {multiple ? t('questions.choicesMultiple') : t('questions.choicesSingle')}
+          </label>
+          <div className="flex gap-1">
+            {CHOICE_TYPES.map(tp => (
+              <button
+                key={tp}
+                type="button"
+                title={TYPE_LABELS[tp]}
+                onClick={() => handleSharedTypeChange(tp)}
+                className={`flex items-center gap-0.5 px-2 py-1 rounded text-xs border transition-colors ${
+                  sharedType === tp
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                }`}
+              >
+                {TYPE_ICONS[tp]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {choices.map((choice, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <button
+              type="button"
+              onClick={() => toggleCorrect(idx)}
+              title={choice.is_correct ? t('questions.isCorrect') : t('questions.markCorrect')}
+              className={`mt-1 shrink-0 w-5 h-5 flex items-center justify-center rounded-full border-2 transition-colors ${
+                choice.is_correct
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'border-slate-300 hover:border-green-400'
+              }`}
+            >
+              {choice.is_correct && <span className="text-xs">✓</span>}
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <ContentBlockEditor
+                value={choice.content}
+                onChange={b => updateChoice(idx, { content: b })}
+                hideTypeSelector
+                {...choiceUploadProps(idx)}
+                placeholder={t('questions.choicePlaceholder', { letter: String.fromCharCode(65 + idx) })}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => removeChoice(idx)}
+              className="mt-1 shrink-0 text-slate-400 hover:text-red-500 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addChoice}
+          className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 mt-1"
+        >
+          <Plus size={14} /> {t('questions.addChoice')}
+        </button>
+      </div>
+    </div>
+  );
+}

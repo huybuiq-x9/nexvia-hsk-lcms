@@ -37,6 +37,18 @@ import type {
   LessonStatus,
   SubLessonStatus,
 } from '../types/api';
+import type {
+  ApiQuestionCreate,
+  ApiQuestionUpdate,
+  ApiQuestionResponse,
+  ApiQuestionListResponse,
+  ApiMediaUploadResponse,
+  QuestionType,
+  QuestionCategory,
+  QuestionStatus,
+  Difficulty,
+  MediaUploadTarget,
+} from '../types/question';
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
@@ -381,6 +393,74 @@ export const scormService = {
 
   async addComment(packageId: string, content: string): Promise<ApiScormComment> {
     const res = await client.post<ApiScormComment>(`/scorm/packages/${packageId}/comments`, { content });
+    return res.data;
+  },
+};
+
+// ─── Questions ───────────────────────────────────────────────────────────────
+
+export const questionService = {
+  async list(params?: {
+    sub_lesson_id?: string;
+    question_type?: QuestionType;
+    category?: QuestionCategory;
+    status?: QuestionStatus;
+    difficulty?: Difficulty;
+    skip?: number;
+    limit?: number;
+  }): Promise<ApiQuestionListResponse> {
+    const res = await client.get<ApiQuestionListResponse>('/questions/', { params });
+    return res.data;
+  },
+
+  async get(id: string): Promise<ApiQuestionResponse> {
+    const res = await client.get<ApiQuestionResponse>(`/questions/${id}`);
+    return res.data;
+  },
+
+  async create(data: ApiQuestionCreate): Promise<ApiQuestionResponse> {
+    const res = await client.post<ApiQuestionResponse>('/questions/', data);
+    return res.data;
+  },
+
+  async update(id: string, data: ApiQuestionUpdate): Promise<ApiQuestionResponse> {
+    const res = await client.put<ApiQuestionResponse>(`/questions/${id}`, data);
+    return res.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await client.delete(`/questions/${id}`);
+  },
+
+  async uploadMedia(
+    questionId: string,
+    target: MediaUploadTarget,
+    file: File,
+    choiceId?: string,
+  ): Promise<ApiMediaUploadResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('target', target);
+    if (choiceId) form.append('choice_id', choiceId);
+    const res = await client.post<ApiMediaUploadResponse>(
+      `/questions/${questionId}/media`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return res.data;
+  },
+
+  async deleteMedia(questionId: string, mediaKey: string): Promise<void> {
+    await client.delete(`/questions/${questionId}/media`, { params: { media_key: mediaKey } });
+  },
+
+  async publish(questionId: string, comment?: string): Promise<ApiQuestionResponse> {
+    const res = await client.post<ApiQuestionResponse>(`/questions/${questionId}/publish`, { comment });
+    return res.data;
+  },
+
+  async reject(questionId: string, comment?: string): Promise<ApiQuestionResponse> {
+    const res = await client.post<ApiQuestionResponse>(`/questions/${questionId}/reject`, { comment });
     return res.data;
   },
 };
