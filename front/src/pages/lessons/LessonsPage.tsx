@@ -24,6 +24,7 @@ export default function LessonsPage() {
 
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
@@ -91,6 +92,7 @@ export default function LessonsPage() {
         if (!cancelled) {
           setLessons(res.items);
           setTotal(res.total);
+          setStatusCounts(res.status_counts ?? {});
         }
       } catch {
         if (!cancelled) setLessons([]);
@@ -111,9 +113,9 @@ export default function LessonsPage() {
   }, [lessons, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
-  const approvedCount = lessons.filter(l => l.status === LESSON_STATUS.APPROVED).length;
-  const inProgressCount = lessons.filter(l => l.status === LESSON_STATUS.IN_PROGRESS).length;
-  const draftCount = lessons.filter(l => l.status === LESSON_STATUS.DRAFT).length;
+  const approvedCount = statusCounts[LESSON_STATUS.APPROVED] ?? 0;
+  const inProgressCount = statusCounts[LESSON_STATUS.IN_PROGRESS] ?? 0;
+  const draftCount = statusCounts[LESSON_STATUS.DRAFT] ?? 0;
 
   const courseOptions = [
     { value: '', label: t('lessons.filter.allCourses') },
@@ -139,27 +141,33 @@ export default function LessonsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-500">{isLoading ? '...' : `${total} ${t('lessons.totalLessons')}`}</p>
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
-              <CheckCircle size={18} className="shrink-0 text-emerald-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('lessons.status.approved')}</div>
+            {(!selectedStatus || selectedStatus === LESSON_STATUS.APPROVED) && (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                <CheckCircle size={18} className="shrink-0 text-emerald-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('lessons.status.approved')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
-              <Clock size={18} className="shrink-0 text-blue-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('lessons.status.in_progress')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === LESSON_STATUS.IN_PROGRESS) && (
+              <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
+                <Clock size={18} className="shrink-0 text-blue-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('lessons.status.in_progress')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
-              <FileText size={18} className="shrink-0 text-amber-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : draftCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('lessons.status.draft')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === LESSON_STATUS.DRAFT) && (
+              <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
+                <FileText size={18} className="shrink-0 text-amber-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : draftCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('lessons.status.draft')}</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

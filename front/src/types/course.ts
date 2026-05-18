@@ -106,6 +106,7 @@ export interface ApiSubLessonListItem {
 export interface ApiSubLessonListResponse {
   total: number;
   items: ApiSubLessonListItem[];
+  status_counts: Record<string, number>;
 }
 
 export interface ApiSubLessonUpdate {
@@ -193,6 +194,7 @@ export interface ApiLessonListItem extends ApiLessonBrief {
 export interface ApiLessonListResponse {
   total: number;
   items: ApiLessonListItem[];
+  status_counts: Record<string, number>;
 }
 
 export interface ApiLessonWithSubLessons extends ApiLessonResponse {

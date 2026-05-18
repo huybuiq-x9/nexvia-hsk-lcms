@@ -580,6 +580,13 @@ class LessonService:
         count_q = select(func.count()).select_from(query.subquery())
         total = (await self._db.execute(count_q)).scalar() or 0
 
+        base_subq = query.subquery()
+        status_counts_rows = await self._db.execute(
+            select(base_subq.c.status, func.count().label("cnt"))
+            .group_by(base_subq.c.status)
+        )
+        status_counts: dict[str, int] = {row.status: row.cnt for row in status_counts_rows}
+
         query = query.offset(skip).limit(limit).order_by(Lesson.created_at.desc())
         result = await self._db.execute(query)
         lessons = list(result.scalars().all())
@@ -600,7 +607,7 @@ class LessonService:
                 course_title=lesson.course.title if lesson.course else None,
             ))
 
-        return course_schema.LessonListResponse(total=total, items=items)
+        return course_schema.LessonListResponse(total=total, items=items, status_counts=status_counts)
 
 
 class SubLessonService:
@@ -960,6 +967,13 @@ class SubLessonService:
         count_q = select(func.count()).select_from(query.subquery())
         total = (await self._db.execute(count_q)).scalar() or 0
 
+        base_subq = query.subquery()
+        status_counts_rows = await self._db.execute(
+            select(base_subq.c.status, func.count().label("cnt"))
+            .group_by(base_subq.c.status)
+        )
+        status_counts: dict[str, int] = {row.status: row.cnt for row in status_counts_rows}
+
         query = query.offset(skip).limit(limit).order_by(SubLesson.created_at.desc())
         result = await self._db.execute(query)
         sublessons = list(result.scalars().all())
@@ -987,7 +1001,7 @@ class SubLessonService:
                 course_title=course.title if course else None,
             ))
 
-        return course_schema.SubLessonListResponse(total=total, items=items)
+        return course_schema.SubLessonListResponse(total=total, items=items, status_counts=status_counts)
 
 
 # Alias for backward compatibility with other modules

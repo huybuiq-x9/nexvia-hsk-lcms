@@ -97,6 +97,7 @@ export default function SubLessonsPage() {
 
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
@@ -184,6 +185,7 @@ export default function SubLessonsPage() {
         if (!cancelled) {
           setSubLessons(res.items);
           setTotal(res.total);
+          setStatusCounts(res.status_counts ?? {});
         }
       } catch {
         if (!cancelled) setSubLessons([]);
@@ -204,12 +206,12 @@ export default function SubLessonsPage() {
   }, [subLessons, loadUser]);
 
   const totalPages = Math.ceil(total / PER_PAGE);
-  const draftCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.DRAFT).length;
-  const inProgressCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.IN_PROGRESS).length;
-  const reviewingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.REVIEWING).length;
-  const convertingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.CONVERTING).length;
-  const scormReviewingCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.SCORM_REVIEWING).length;
-  const approvedCount = subLessons.filter(sl => sl.status === SUB_LESSON_STATUS.APPROVED).length;
+  const draftCount = statusCounts[SUB_LESSON_STATUS.DRAFT] ?? 0;
+  const inProgressCount = statusCounts[SUB_LESSON_STATUS.IN_PROGRESS] ?? 0;
+  const reviewingCount = statusCounts[SUB_LESSON_STATUS.REVIEWING] ?? 0;
+  const convertingCount = statusCounts[SUB_LESSON_STATUS.CONVERTING] ?? 0;
+  const scormReviewingCount = statusCounts[SUB_LESSON_STATUS.SCORM_REVIEWING] ?? 0;
+  const approvedCount = statusCounts[SUB_LESSON_STATUS.APPROVED] ?? 0;
 
   const courseOptions = [
     { value: '', label: t('subLessons.filter.allCourses') },
@@ -240,48 +242,60 @@ export default function SubLessonsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-500">{isLoading ? '...' : `${total} ${t('subLessons.totalSubLessons')}`}</p>
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
-              <FileText size={18} className="shrink-0 text-slate-500" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-slate-600">{t('subLessons.status.draft')}</div>
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.DRAFT) && (
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+                <FileText size={18} className="shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-slate-600">{t('subLessons.status.draft')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
-              <Layers size={18} className="shrink-0 text-blue-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('subLessons.status.in_progress')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.IN_PROGRESS) && (
+              <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
+                <Layers size={18} className="shrink-0 text-blue-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('subLessons.status.in_progress')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
-              <Clock size={18} className="shrink-0 text-amber-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : reviewingCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('subLessons.status.reviewing')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.REVIEWING) && (
+              <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
+                <Clock size={18} className="shrink-0 text-amber-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : reviewingCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('subLessons.status.reviewing')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-2.5">
-              <Layers size={18} className="shrink-0 text-violet-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-violet-700">{isLoading ? '—' : convertingCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-violet-700">{t('subLessons.status.converting')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.CONVERTING) && (
+              <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-2.5">
+                <Layers size={18} className="shrink-0 text-violet-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-violet-700">{isLoading ? '—' : convertingCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-violet-700">{t('subLessons.status.converting')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-2.5">
-              <Clock size={18} className="shrink-0 text-cyan-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-cyan-700">{isLoading ? '—' : scormReviewingCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-cyan-700">{t('subLessons.status.scorm_reviewing')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.SCORM_REVIEWING) && (
+              <div className="flex items-center gap-3 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-2.5">
+                <Clock size={18} className="shrink-0 text-cyan-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-cyan-700">{isLoading ? '—' : scormReviewingCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-cyan-700">{t('subLessons.status.scorm_reviewing')}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
-              <CheckCircle size={18} className="shrink-0 text-emerald-600" />
-              <div className="min-w-0">
-                <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
-                <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('subLessons.status.approved')}</div>
+            )}
+            {(!selectedStatus || selectedStatus === SUB_LESSON_STATUS.APPROVED) && (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                <CheckCircle size={18} className="shrink-0 text-emerald-600" />
+                <div className="min-w-0">
+                  <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                  <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('subLessons.status.approved')}</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

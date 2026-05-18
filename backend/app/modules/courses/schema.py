@@ -137,6 +137,7 @@ class LessonListItem(LessonBrief):
 class LessonListResponse(BaseModel):
     total: int
     items: list[LessonListItem]
+    status_counts: dict[str, int] = {}
 
 
 # ─── Standalone SubLessons Page ───────────────────────────────────────────────
@@ -173,6 +174,7 @@ class ScormReviewRequest(BaseModel):
 class SubLessonListResponse(BaseModel):
     total: int
     items: list[SubLessonListItem]
+    status_counts: dict[str, int] = {}
 
 
 class ReviewLogActor(BaseModel):
