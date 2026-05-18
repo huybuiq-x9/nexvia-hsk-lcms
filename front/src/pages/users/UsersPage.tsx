@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
@@ -112,8 +113,8 @@ const UserModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
 
@@ -290,7 +291,8 @@ const UserModal = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -351,8 +353,8 @@ const DeleteModal = ({
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
         <div className="p-6 text-center">
@@ -379,7 +381,8 @@ const DeleteModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
