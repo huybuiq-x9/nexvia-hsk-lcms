@@ -47,3 +47,7 @@ class ForbiddenError(LCMSException):
 class ForbiddenDeletionError(LCMSException):
     def __init__(self, message: str):
         super().__init__(message=message, status_code=403)
+
+
+class ScormValidationError(ValueError):
+    """Raised when the uploaded ZIP is invalid (user error, not a system fault)."""

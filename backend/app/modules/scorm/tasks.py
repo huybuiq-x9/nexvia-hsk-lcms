@@ -16,6 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 import app.db.models  # noqa: F401
 from app.core.config import settings
+from app.core.exceptions import ScormValidationError
 from app.core.storage import storage_service
 from app.modules.scorm.model import ScormPackage
 from app.shared.enums import ScormPackageStatus
@@ -23,6 +24,7 @@ from app.shared.enums import ScormPackageStatus
 logger = logging.getLogger(__name__)
 _sync_engine = None
 _sync_session_local = None
+
 
 
 @dataclass
@@ -96,7 +98,7 @@ def _normalize_relative_path(path: str) -> str:
     clean = clean.split("#", 1)[0].split("?", 1)[0].lstrip("/")
     normalized = posixpath.normpath(clean)
     if normalized in ("", ".") or normalized.startswith("../") or normalized == "..":
-        raise ValueError(f"Invalid SCORM launch path: {path}")
+        raise ScormValidationError(f"Invalid SCORM launch path: {path}")
     return normalized
 
 
@@ -106,18 +108,18 @@ def _safe_zip_members(zip_file: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
     for info in zip_file.infolist():
         name = info.filename.replace("\\", "/")
         if not name or name.startswith("/") or name.startswith("../") or "/../" in name:
-            raise ValueError(f"Unsafe path in ZIP archive: {info.filename}")
+            raise ScormValidationError(f"Unsafe path in ZIP archive: {info.filename}")
         if info.is_dir():
             continue
         files.append(info)
         total_size += info.file_size
         if len(files) > settings.SCORM_MAX_EXTRACTED_FILES:
-            raise ValueError(
+            raise ScormValidationError(
                 f"SCORM package contains more than {settings.SCORM_MAX_EXTRACTED_FILES} files"
             )
         if total_size > settings.SCORM_MAX_EXTRACTED_SIZE:
             max_mb = settings.SCORM_MAX_EXTRACTED_SIZE // (1024 * 1024)
-            raise ValueError(f"SCORM package expands beyond {max_mb} MB")
+            raise ScormValidationError(f"SCORM package expands beyond {max_mb} MB")
     return files
 
 
@@ -128,7 +130,7 @@ def _extract_zip_safely(zip_path: str, extract_dir: str) -> list[zipfile.ZipInfo
         for info in files:
             target = (root / info.filename).resolve()
             if root not in target.parents and target != root:
-                raise ValueError(f"Unsafe path in ZIP archive: {info.filename}")
+                raise ScormValidationError(f"Unsafe path in ZIP archive: {info.filename}")
         zf.extractall(extract_dir)
         return files
 
@@ -149,26 +151,26 @@ def _parse_manifest(manifest_path: Path, extract_dir: Path) -> ManifestInfo:
     try:
         tree = ET.parse(manifest_path)
     except ET.ParseError as exc:
-        raise ValueError(f"Invalid imsmanifest.xml: {exc}") from exc
+        raise ScormValidationError(f"Invalid imsmanifest.xml: {exc}") from exc
 
     root = tree.getroot()
     if _local_name(root.tag) != "manifest":
-        raise ValueError("imsmanifest.xml root element must be <manifest>")
+        raise ScormValidationError("imsmanifest.xml root element must be <manifest>")
 
     metadata = _direct_child(root, "metadata")
     schema_name = _child_text(metadata, "schema")
     schema_version = _child_text(metadata, "schemaversion")
     version_text = (schema_version or "").lower()
     if "2004" not in version_text and "1.3" not in version_text:
-        raise ValueError("Only SCORM 2004 packages are supported")
+        raise ScormValidationError("Only SCORM 2004 packages are supported")
 
     organizations = _direct_child(root, "organizations")
     if organizations is None:
-        raise ValueError("SCORM manifest does not contain organizations")
+        raise ScormValidationError("SCORM manifest does not contain organizations")
 
     resources_root = _direct_child(root, "resources")
     if resources_root is None:
-        raise ValueError("SCORM manifest does not contain resources")
+        raise ScormValidationError("SCORM manifest does not contain resources")
 
     resources_by_id = {
         resource.attrib.get("identifier"): resource
@@ -176,7 +178,7 @@ def _parse_manifest(manifest_path: Path, extract_dir: Path) -> ManifestInfo:
         if resource.attrib.get("identifier")
     }
     if not resources_by_id:
-        raise ValueError("SCORM manifest does not define launch resources")
+        raise ScormValidationError("SCORM manifest does not define launch resources")
 
     organization = None
     default_org_id = organizations.attrib.get("default")
@@ -189,7 +191,7 @@ def _parse_manifest(manifest_path: Path, extract_dir: Path) -> ManifestInfo:
     if organization is None and orgs:
         organization = orgs[0]
     if organization is None:
-        raise ValueError("SCORM manifest does not contain an organization")
+        raise ScormValidationError("SCORM manifest does not contain an organization")
 
     title = _child_text(organization, "title")
     launch_resource = None
@@ -217,14 +219,14 @@ def _parse_manifest(manifest_path: Path, extract_dir: Path) -> ManifestInfo:
             None,
         )
     if launch_resource is None:
-        raise ValueError("SCORM manifest does not contain a launchable SCO resource")
+        raise ScormValidationError("SCORM manifest does not contain a launchable SCO resource")
 
     href = _resource_href(launch_resource)
     if not href:
-        raise ValueError("Launch resource is missing href")
+        raise ScormValidationError("Launch resource is missing href")
     launch_path = _normalize_relative_path(href)
     if not (extract_dir / launch_path).is_file():
-        raise ValueError(f"Launch file '{launch_path}' was not found in extracted package")
+        raise ScormValidationError(f"Launch file '{launch_path}' was not found in extracted package")
 
     return ManifestInfo(
         title=title,
@@ -325,7 +327,7 @@ def _process_scorm_package(package_id: str, staged_file_path: str) -> None:
             logger.info("[SCORM] Extracted package %s to %s", package_id, extract_dir)
             manifest_path = extract_dir / "imsmanifest.xml"
             if not manifest_path.is_file():
-                raise ValueError("imsmanifest.xml must exist at the root of the SCORM ZIP")
+                raise ScormValidationError("imsmanifest.xml must exist at the root of the SCORM ZIP")
 
             manifest = _parse_manifest(manifest_path, extract_dir)
             logger.info(
@@ -351,8 +353,11 @@ def _process_scorm_package(package_id: str, staged_file_path: str) -> None:
             package.processed_at = datetime.now(timezone.utc)
             db.commit()
             logger.info("[SCORM] Package %s is ready", package_id)
+    except ScormValidationError as exc:
+        logger.warning("[SCORM] Package %s rejected: %s", package_id, exc)
+        _mark_failed(package_id, str(exc))
     except Exception as exc:
-        logger.exception("[SCORM] Package %s failed", package_id)
+        logger.exception("[SCORM] Package %s failed due to system error", package_id)
         _mark_failed(package_id, str(exc))
         raise
     finally:

@@ -362,6 +362,37 @@ export function SubLessonScormTab({
         />
       )}
 
+      {canUpload && scormPackage && scormPackage.status === 'failed' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+          <div>
+            <p className="text-sm font-medium text-red-900">{t('scorm.failedTitle')}</p>
+            <p className="text-xs text-red-700 mt-0.5">
+              {scormPackage.error_message || t('scorm.failedFallback')}
+            </p>
+          </div>
+          <input
+            ref={reuploadInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={handleReupload}
+          />
+          <button
+            type="button"
+            className="btn btn-danger inline-flex items-center justify-center gap-2 shrink-0"
+            disabled={uploading}
+            onClick={() => reuploadInputRef.current?.click()}
+          >
+            {uploading ? (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Upload size={15} />
+            )}
+            {t('scorm.retryUpload')}
+          </button>
+        </div>
+      )}
+
       {canUpload && scormPackage && scormPackage.status === 'ready' && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
           <div>
