@@ -32,12 +32,21 @@ export const DIFFICULTY = {
 
 export type Difficulty = (typeof DIFFICULTY)[keyof typeof DIFFICULTY];
 
+export const QUESTION_CATEGORY = {
+  VOCABULARY: 'vocabulary',
+  GRAMMAR:    'grammar',
+  READING:    'reading',
+} as const;
+
+export type QuestionCategory = (typeof QUESTION_CATEGORY)[keyof typeof QUESTION_CATEGORY];
+
 export const CONTENT_MEDIA_TYPE = {
-  TEXT:       'text',
-  IMAGE:      'image',
-  AUDIO:      'audio',
-  TEXT_IMAGE: 'text_image',
-  TEXT_AUDIO: 'text_audio',
+  TEXT:             'text',
+  IMAGE:            'image',
+  AUDIO:            'audio',
+  TEXT_IMAGE:       'text_image',
+  TEXT_AUDIO:       'text_audio',
+  TEXT_IMAGE_AUDIO: 'text_image_audio',
 } as const;
 
 export type ContentMediaType = (typeof CONTENT_MEDIA_TYPE)[keyof typeof CONTENT_MEDIA_TYPE];
@@ -48,6 +57,12 @@ export const QUESTION_STATUS_COLORS: Record<QuestionStatus, string> = {
   [QUESTION_STATUS.DRAFT]:     'bg-slate-50 text-slate-600 border-slate-200',
   [QUESTION_STATUS.PUBLISHED]: 'bg-green-50 text-green-700 border-green-200',
   [QUESTION_STATUS.ARCHIVED]:  'bg-red-50 text-red-600 border-red-200',
+};
+
+export const QUESTION_CATEGORY_COLORS: Record<QuestionCategory, string> = {
+  [QUESTION_CATEGORY.VOCABULARY]: 'bg-violet-50 text-violet-700 border-violet-200',
+  [QUESTION_CATEGORY.GRAMMAR]:    'bg-cyan-50 text-cyan-700 border-cyan-200',
+  [QUESTION_CATEGORY.READING]:    'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 export const DIFFICULTY_COLORS: Record<Difficulty, string> = {
@@ -61,9 +76,17 @@ export const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 export interface ContentBlock {
   type: ContentMediaType;
   text?: string;
+  // single-media types
   media_key?: string;
   media_url?: string;             // presigned URL — only in responses
   original_filename?: string;
+  // text_image_audio dual-media
+  image_key?: string;
+  image_url?: string;             // presigned URL — only in responses
+  image_filename?: string;
+  audio_key?: string;
+  audio_url?: string;             // presigned URL — only in responses
+  audio_filename?: string;
 }
 
 // ─── Choice ───────────────────────────────────────────────────────────────────
@@ -108,8 +131,8 @@ export interface ApiQuestionResponse {
   id: string;
   sub_lesson_id: string | null;
   question_type: QuestionType;
+  category: QuestionCategory;
   difficulty: Difficulty;
-  tags: string[];
   stem: ContentBlock;
   explanation: ContentBlock | null;
   status: QuestionStatus;
@@ -124,8 +147,8 @@ export interface ApiQuestionResponse {
 export interface ApiQuestionCreate {
   sub_lesson_id?: string | null;
   question_type: QuestionType;
+  category?: QuestionCategory;
   difficulty?: Difficulty;
-  tags?: string[];
   stem: ContentBlock;
   explanation?: ContentBlock | null;
   order_index?: number;
@@ -134,8 +157,8 @@ export interface ApiQuestionCreate {
 }
 
 export interface ApiQuestionUpdate {
+  category?: QuestionCategory;
   difficulty?: Difficulty;
-  tags?: string[];
   stem?: ContentBlock;
   explanation?: ContentBlock | null;
   order_index?: number;
@@ -156,9 +179,15 @@ export interface ApiMediaUploadResponse {
   original_filename: string;
 }
 
-export type MediaUploadTarget = 'stem' | 'explanation' | 'choice';
+export type MediaUploadTarget = 'stem' | 'stem_image' | 'stem_audio' | 'explanation' | 'explanation_image' | 'explanation_audio' | 'choice';
 
 // ─── Question type metadata (for UI labels) ───────────────────────────────────
+
+export const QUESTION_CATEGORY_LABELS: Record<QuestionCategory, string> = {
+  [QUESTION_CATEGORY.VOCABULARY]: 'Từ Vựng',
+  [QUESTION_CATEGORY.GRAMMAR]:    'Ngữ Pháp',
+  [QUESTION_CATEGORY.READING]:    'Bài Khóa',
+};
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   [QUESTION_TYPE.TF]:         'Đúng / Sai',

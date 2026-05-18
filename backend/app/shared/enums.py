@@ -66,17 +66,24 @@ class QuestionStatus(str, enum.Enum):
 
 
 class ContentMediaType(str, enum.Enum):
-    TEXT       = "text"
-    IMAGE      = "image"
-    AUDIO      = "audio"
-    TEXT_IMAGE = "text_image"
-    TEXT_AUDIO = "text_audio"
+    TEXT             = "text"
+    IMAGE            = "image"
+    AUDIO            = "audio"
+    TEXT_IMAGE       = "text_image"
+    TEXT_AUDIO       = "text_audio"
+    TEXT_IMAGE_AUDIO = "text_image_audio"
 
 
 class DifficultyLevel(str, enum.Enum):
     EASY   = "easy"
     MEDIUM = "medium"
     HARD   = "hard"
+
+
+class QuestionCategory(str, enum.Enum):
+    VOCABULARY = "vocabulary"
+    GRAMMAR    = "grammar"
+    READING    = "reading"
 
 
 class ReviewAction(str, enum.Enum):

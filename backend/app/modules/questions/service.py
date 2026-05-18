@@ -45,13 +45,16 @@ def _is_expert(user: User) -> bool:
 
 
 def _resolve_content_block(block: dict | None) -> dict | None:
-    """Inject presigned media_url into a ContentBlock dict."""
+    """Inject presigned URLs into a ContentBlock dict."""
     if not block:
         return block
-    key = block.get("media_key")
-    if key:
-        block = dict(block)
-        block["media_url"] = storage_service.get_presigned_download_url(key)
+    block = dict(block)
+    if block.get("media_key"):
+        block["media_url"] = storage_service.get_presigned_download_url(block["media_key"])
+    if block.get("image_key"):
+        block["image_url"] = storage_service.get_presigned_download_url(block["image_key"])
+    if block.get("audio_key"):
+        block["audio_url"] = storage_service.get_presigned_download_url(block["audio_key"])
     return block
 
 
@@ -103,8 +106,8 @@ class QuestionService:
         q = Question(
             sub_lesson_id=data.sub_lesson_id,
             question_type=data.question_type,
+            category=data.category,
             difficulty=data.difficulty,
-            tags=data.tags,
             stem=data.stem.model_dump(exclude_none=True),
             explanation=data.explanation.model_dump(exclude_none=True) if data.explanation else None,
             order_index=data.order_index,
@@ -154,6 +157,7 @@ class QuestionService:
         user: User,
         sub_lesson_id: uuid.UUID | None,
         question_type: QuestionType | None,
+        category: str | None,
         status: QuestionStatus | None,
         difficulty: str | None,
         skip: int,
@@ -173,6 +177,8 @@ class QuestionService:
             stmt = stmt.where(Question.sub_lesson_id == sub_lesson_id)
         if question_type:
             stmt = stmt.where(Question.question_type == question_type)
+        if category:
+            stmt = stmt.where(Question.category == category)
         if status:
             stmt = stmt.where(Question.status == status)
         if difficulty:
@@ -199,10 +205,10 @@ class QuestionService:
         q = await self._get_or_404(question_id)
         self._assert_editable(q, user)
 
+        if data.category is not None:
+            q.category = data.category
         if data.difficulty is not None:
             q.difficulty = data.difficulty
-        if data.tags is not None:
-            q.tags = data.tags
         if data.stem is not None:
             q.stem = data.stem.model_dump(exclude_none=True)
         if data.explanation is not None:
@@ -275,9 +281,15 @@ class QuestionService:
         ext = MEDIA_EXT_MAP.get(content_type, Path(file.filename or "file").suffix)
         file_uuid = str(uuid.uuid4())
 
-        if target == "stem":
+        # target: stem | stem_image | stem_audio
+        #         explanation | explanation_image | explanation_audio
+        #         choice (+ choice_id)
+        base_target = target.split("_")[0] if target.startswith(("stem", "explanation")) else target
+        media_slot  = target[len(base_target) + 1:] if "_" in target else None  # "image" | "audio" | None
+
+        if base_target == "stem":
             s3_key = f"questions/{question_id}/stem/{file_uuid}{ext}"
-        elif target == "explanation":
+        elif base_target == "explanation":
             s3_key = f"questions/{question_id}/explanation/{file_uuid}{ext}"
         elif target == "choice" and choice_id:
             s3_key = f"questions/{question_id}/choices/{choice_id}/{file_uuid}{ext}"
@@ -288,15 +300,19 @@ class QuestionService:
         storage_service.upload_object(s3_key, content, content_type)
         media_url = storage_service.get_presigned_download_url(s3_key)
 
-        block_patch = {
-            "media_key": s3_key,
-            "original_filename": file.filename or f"{file_uuid}{ext}",
-        }
+        original_filename = file.filename or f"{file_uuid}{ext}"
 
-        if target == "stem":
+        if media_slot == "image":
+            block_patch = {"image_key": s3_key, "image_filename": original_filename}
+        elif media_slot == "audio":
+            block_patch = {"audio_key": s3_key, "audio_filename": original_filename}
+        else:
+            block_patch = {"media_key": s3_key, "original_filename": original_filename}
+
+        if base_target == "stem":
             q.stem = {**(q.stem or {}), **block_patch}
             q.updated_by = user.id
-        elif target == "explanation":
+        elif base_target == "explanation":
             q.explanation = {**(q.explanation or {}), **block_patch}
             q.updated_by = user.id
         elif target == "choice" and choice_id:
@@ -315,7 +331,7 @@ class QuestionService:
         return q_schema.MediaUploadResponse(
             media_key=s3_key,
             media_url=media_url,
-            original_filename=file.filename or f"{file_uuid}{ext}",
+            original_filename=original_filename,
         )
 
     async def delete_media(
@@ -330,11 +346,21 @@ class QuestionService:
         storage_service.delete_file(media_key)
 
         def _strip_media(block: dict | None) -> dict | None:
-            if block and block.get("media_key") == media_key:
-                block = dict(block)
+            if not block:
+                return block
+            block = dict(block)
+            if block.get("media_key") == media_key:
                 block.pop("media_key", None)
                 block.pop("media_url", None)
                 block.pop("original_filename", None)
+            if block.get("image_key") == media_key:
+                block.pop("image_key", None)
+                block.pop("image_url", None)
+                block.pop("image_filename", None)
+            if block.get("audio_key") == media_key:
+                block.pop("audio_key", None)
+                block.pop("audio_url", None)
+                block.pop("audio_filename", None)
             return block
 
         q.stem = _strip_media(q.stem)

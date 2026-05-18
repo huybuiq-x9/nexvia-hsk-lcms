@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { questionService } from '../../../services';
-import type { ApiQuestionResponse, Difficulty, QuestionStatus, QuestionType } from '../../../types/question';
+import type { ApiQuestionResponse, Difficulty, QuestionCategory, QuestionStatus, QuestionType } from '../../../types/question';
 
 interface Filters {
   sub_lesson_id?: string;
   question_type?: QuestionType;
+  category?: QuestionCategory;
   status?: QuestionStatus;
   difficulty?: Difficulty;
   skip?: number;

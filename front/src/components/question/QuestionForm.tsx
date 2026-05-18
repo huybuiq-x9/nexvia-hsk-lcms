@@ -20,8 +20,10 @@ import type {
 import {
   CONTENT_MEDIA_TYPE,
   DIFFICULTY,
+  QUESTION_CATEGORY,
   QUESTION_TYPE,
 } from '../../types/question';
+import type { QuestionCategory } from '../../types/question';
 import { questionService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -72,9 +74,8 @@ export default function QuestionForm({
   const toast = useToast();
   const { t } = useTranslation();
 
-  const [qType,      setQType]      = useState<QuestionType>(initialData?.question_type ?? QUESTION_TYPE.SC);
-  const [tags,       setTags]       = useState<string[]>(initialData?.tags ?? []);
-  const [tagInput,   setTagInput]   = useState('');
+  const [qType,    setQType]    = useState<QuestionType>(initialData?.question_type ?? QUESTION_TYPE.SC);
+  const [category, setCategory] = useState<QuestionCategory>(initialData?.category ?? QUESTION_CATEGORY.VOCABULARY);
   const [stem,       setStem]       = useState<ContentBlock>(initialData?.stem ?? emptyTextBlock());
   const [explanation, setExplanation] = useState<ContentBlock | null>(initialData?.explanation ?? null);
   const [choices,    setChoices]    = useState<ApiQuestionChoiceCreate[]>(
@@ -195,10 +196,22 @@ export default function QuestionForm({
       try {
         if (slot === 'stem') {
           const r = await uploadFile(id, 'stem', file);
-          updates['stem'] = { ...stem, media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
+          updates['stem'] = { ...(updates['stem'] ?? stem), media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
+        } else if (slot === 'stem_image') {
+          const r = await uploadFile(id, 'stem_image', file);
+          updates['stem'] = { ...(updates['stem'] ?? stem), image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename };
+        } else if (slot === 'stem_audio') {
+          const r = await uploadFile(id, 'stem_audio', file);
+          updates['stem'] = { ...(updates['stem'] ?? stem), audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename };
         } else if (slot === 'explanation') {
           const r = await uploadFile(id, 'explanation', file);
-          updates['explanation'] = { ...(explanation ?? emptyTextBlock()), media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
+          updates['explanation'] = { ...(updates['explanation'] ?? explanation ?? emptyTextBlock()), media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
+        } else if (slot === 'explanation_image') {
+          const r = await uploadFile(id, 'explanation_image', file);
+          updates['explanation'] = { ...(updates['explanation'] ?? explanation ?? emptyTextBlock()), image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename };
+        } else if (slot === 'explanation_audio') {
+          const r = await uploadFile(id, 'explanation_audio', file);
+          updates['explanation'] = { ...(updates['explanation'] ?? explanation ?? emptyTextBlock()), audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename };
         } else if (slot.startsWith('choice_')) {
           const idx = parseInt(slot.replace('choice_', ''), 10);
           const choiceId = savedQuestion.choices[idx]?.id;
@@ -230,7 +243,6 @@ export default function QuestionForm({
       sub_lesson_id: savedQuestion.sub_lesson_id,
       question_type: savedQuestion.question_type,
       difficulty:    savedQuestion.difficulty,
-      tags:          savedQuestion.tags,
       stem:          hasStemUpdate        ? updates['stem']        : savedQuestion.stem,
       explanation:   hasExplanationUpdate ? updates['explanation'] : savedQuestion.explanation ?? undefined,
       choices:       updatedChoices,
@@ -250,8 +262,8 @@ export default function QuestionForm({
       const payload: ApiQuestionCreate = {
         sub_lesson_id: subLessonId ?? null,
         question_type: qType,
+        category,
         difficulty: initialData?.difficulty ?? DIFFICULTY.MEDIUM,
-        tags,
         stem,
         explanation: explanation ?? undefined,
         choices: buildChoices(),
@@ -280,14 +292,6 @@ export default function QuestionForm({
     }
   }
 
-  function addTag(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  }
-
   // ── Build preview question ────────────────────────────────────────────────
 
   function buildPreviewQuestion(): ApiQuestionResponse {
@@ -302,8 +306,8 @@ export default function QuestionForm({
       id: savedId ?? 'preview',
       sub_lesson_id: subLessonId ?? null,
       question_type: qType,
+      category,
       difficulty: initialData?.difficulty ?? DIFFICULTY.MEDIUM,
-      tags,
       stem: stemPreview,
       explanation: explanationPreview,
       status: 'draft',
@@ -342,12 +346,30 @@ export default function QuestionForm({
           setStem(prev => ({ ...prev, media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename }));
           return r;
         },
+        onUploadImageFile: async (file: File) => {
+          const r = await uploadFile(savedId, 'stem_image', file);
+          setStem(prev => ({ ...prev, image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename }));
+          return r;
+        },
+        onUploadAudioFile: async (file: File) => {
+          const r = await uploadFile(savedId, 'stem_audio', file);
+          setStem(prev => ({ ...prev, audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename }));
+          return r;
+        },
       };
     }
     return {
       onPendingFile: (file: File, localUrl: string) => {
         setPending('stem', file);
         pendingLocalUrls.current.set('stem', localUrl);
+      },
+      onPendingImageFile: (file: File, localUrl: string) => {
+        setPending('stem_image', file);
+        pendingLocalUrls.current.set('stem_image', localUrl);
+      },
+      onPendingAudioFile: (file: File, localUrl: string) => {
+        setPending('stem_audio', file);
+        pendingLocalUrls.current.set('stem_audio', localUrl);
       },
     };
   }
@@ -360,12 +382,30 @@ export default function QuestionForm({
           setExplanation(prev => prev ? { ...prev, media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename } : prev);
           return r;
         },
+        onUploadImageFile: async (file: File) => {
+          const r = await uploadFile(savedId, 'explanation_image', file);
+          setExplanation(prev => prev ? { ...prev, image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename } : prev);
+          return r;
+        },
+        onUploadAudioFile: async (file: File) => {
+          const r = await uploadFile(savedId, 'explanation_audio', file);
+          setExplanation(prev => prev ? { ...prev, audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename } : prev);
+          return r;
+        },
       };
     }
     return {
       onPendingFile: (file: File, localUrl: string) => {
         setPending('explanation', file);
         pendingLocalUrls.current.set('explanation', localUrl);
+      },
+      onPendingImageFile: (file: File, localUrl: string) => {
+        setPending('explanation_image', file);
+        pendingLocalUrls.current.set('explanation_image', localUrl);
+      },
+      onPendingAudioFile: (file: File, localUrl: string) => {
+        setPending('explanation_audio', file);
+        pendingLocalUrls.current.set('explanation_audio', localUrl);
       },
     };
   }
@@ -395,7 +435,7 @@ export default function QuestionForm({
 
   const body = (
     <div className={`flex flex-col gap-6 ${cardMode ? 'p-4' : ''}`}>
-      {/* Question type + Tags */}
+      {/* Question type + Category */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-xs font-medium text-slate-600 block mb-1">{t('questions.questionType')}</label>
@@ -421,23 +461,16 @@ export default function QuestionForm({
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1">{t('questions.tags')}</label>
-          <div className="flex flex-wrap gap-1 border border-slate-200 rounded-lg px-2 py-1.5 min-h-[36px]">
-            {tags.map(tag => (
-              <span key={tag} className="flex items-center gap-1 bg-slate-100 text-xs text-slate-600 px-1.5 py-0.5 rounded">
-                {tag}
-                <button type="button" onClick={() => setTags(tags.filter(tg => tg !== tag))} className="text-slate-400 hover:text-red-500">✕</button>
-              </span>
-            ))}
-            <input
-              type="text"
-              value={tagInput}
-              onChange={e => setTagInput(e.target.value)}
-              onKeyDown={addTag}
-              placeholder={t('questions.tagsPlaceholder')}
-              className="text-xs outline-none flex-1 min-w-[100px] bg-transparent"
-            />
-          </div>
+          <label className="text-xs font-medium text-slate-600 block mb-1">{t('questions.category')}</label>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value as QuestionCategory)}
+            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value={QUESTION_CATEGORY.VOCABULARY}>{t('questions.category_vocabulary')}</option>
+            <option value={QUESTION_CATEGORY.GRAMMAR}>{t('questions.category_grammar')}</option>
+            <option value={QUESTION_CATEGORY.READING}>{t('questions.category_reading')}</option>
+          </select>
         </div>
       </div>
 

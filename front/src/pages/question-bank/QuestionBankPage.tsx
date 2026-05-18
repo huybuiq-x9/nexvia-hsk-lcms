@@ -3,10 +3,10 @@ import { Eye, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { QuestionViewer } from '../../components/question';
 import { useQuestions } from './hooks/useQuestions';
-import type { ApiQuestionResponse, Difficulty, QuestionStatus, QuestionType } from '../../types/question';
+import type { ApiQuestionResponse, QuestionCategory, QuestionStatus, QuestionType } from '../../types/question';
 import {
-  DIFFICULTY,
-  DIFFICULTY_COLORS,
+  QUESTION_CATEGORY,
+  QUESTION_CATEGORY_COLORS,
   QUESTION_STATUS,
   QUESTION_STATUS_COLORS,
   QUESTION_TYPE,
@@ -22,6 +22,13 @@ export default function QuestionBankPage() {
     ...Object.values(QUESTION_TYPE).map(v => ({ value: v, label: t(`questions.type.${v}`) })),
   ];
 
+  const CATEGORY_OPTIONS = [
+    { value: '' as const,                    label: t('questions.filter.allCategories') },
+    { value: QUESTION_CATEGORY.VOCABULARY,   label: t('questions.category_vocabulary') },
+    { value: QUESTION_CATEGORY.GRAMMAR,      label: t('questions.category_grammar') },
+    { value: QUESTION_CATEGORY.READING,      label: t('questions.category_reading') },
+  ];
+
   const STATUS_OPTIONS = [
     { value: '' as const,               label: t('questions.filter.allStatuses') },
     { value: QUESTION_STATUS.DRAFT,     label: t('questions.status_draft') },
@@ -29,23 +36,16 @@ export default function QuestionBankPage() {
     { value: QUESTION_STATUS.ARCHIVED,  label: t('questions.status_archived') },
   ];
 
-  const DIFFICULTY_OPTIONS = [
-    { value: '' as const,        label: t('questions.filter.allDifficulties') },
-    { value: DIFFICULTY.EASY,   label: t('questions.difficulty_easy') },
-    { value: DIFFICULTY.MEDIUM, label: t('questions.difficulty_medium') },
-    { value: DIFFICULTY.HARD,   label: t('questions.difficulty_hard') },
-  ];
-
-  const [typeFilter,       setTypeFilter]       = useState<QuestionType | ''>('');
-  const [statusFilter,     setStatusFilter]     = useState<QuestionStatus | ''>('');
-  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | ''>('');
-  const [page,             setPage]             = useState(0);
-  const [viewing,          setViewing]          = useState<ApiQuestionResponse | null>(null);
+  const [typeFilter,     setTypeFilter]     = useState<QuestionType | ''>('');
+  const [categoryFilter, setCategoryFilter] = useState<QuestionCategory | ''>('');
+  const [statusFilter,   setStatusFilter]   = useState<QuestionStatus | ''>('');
+  const [page,           setPage]           = useState(0);
+  const [viewing,        setViewing]        = useState<ApiQuestionResponse | null>(null);
 
   const { items, total, loading, error } = useQuestions({
-    question_type:  typeFilter       || undefined,
-    status:         statusFilter     || undefined,
-    difficulty:     difficultyFilter || undefined,
+    question_type: typeFilter    || undefined,
+    category:      categoryFilter || undefined,
+    status:        statusFilter  || undefined,
     skip:  page * PAGE_SIZE,
     limit: PAGE_SIZE,
   });
@@ -77,6 +77,13 @@ export default function QuestionBankPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <select
+          value={categoryFilter}
+          onChange={e => { setCategoryFilter(e.target.value as QuestionCategory | ''); setPage(0); }}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <select
           value={typeFilter}
           onChange={e => { setTypeFilter(e.target.value as QuestionType | ''); setPage(0); }}
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -89,13 +96,6 @@ export default function QuestionBankPage() {
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <select
-          value={difficultyFilter}
-          onChange={e => { setDifficultyFilter(e.target.value as Difficulty | ''); setPage(0); }}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {DIFFICULTY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
@@ -117,18 +117,15 @@ export default function QuestionBankPage() {
           >
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
               <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-xs font-medium border px-2 py-0.5 rounded ${QUESTION_CATEGORY_COLORS[q.category]}`}>
+                  {t(`questions.category_${q.category}`)}
+                </span>
                 <span className="text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">
                   {t(`questions.type.${q.question_type}`)}
-                </span>
-                <span className={`text-xs font-medium border px-2 py-0.5 rounded ${DIFFICULTY_COLORS[q.difficulty]}`}>
-                  {t(`questions.difficulty_${q.difficulty}`)}
                 </span>
                 <span className={`text-xs font-medium border px-2 py-0.5 rounded ${QUESTION_STATUS_COLORS[q.status]}`}>
                   {t(`questions.status_${q.status}`)}
                 </span>
-                {q.tags.map(tag => (
-                  <span key={tag} className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{tag}</span>
-                ))}
               </div>
               <p className="text-sm text-slate-700 line-clamp-2">
                 {q.stem.text ?? `[${q.stem.type}]`}

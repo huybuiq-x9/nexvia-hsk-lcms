@@ -153,8 +153,6 @@
     "cancel": "Cancel",
     "questionType": "Question type",
     "difficulty": "Difficulty",
-    "tags": "Tags",
-    "tagsPlaceholder": "Add tag, press Enter...",
     "stem": "Question",
     "explanation": "Answer explanation",
     "addExplanation": "+ Add explanation",
@@ -184,10 +182,15 @@
     "status_draft":     "Draft",
     "status_published": "Published",
     "status_archived":  "Archived",
+    "category":             "Content type",
+    "category_vocabulary":  "Vocabulary",
+    "category_grammar":     "Grammar",
+    "category_reading":     "Reading",
     "filter": {
       "allTypes":        "All types",
       "allStatuses":     "All statuses",
-      "allDifficulties": "All difficulties"
+      "allDifficulties": "All difficulties",
+      "allCategories":   "All categories"
     },
     "typeGroup": {
       "choice":   "Choice",

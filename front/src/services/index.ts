@@ -44,6 +44,7 @@ import type {
   ApiQuestionListResponse,
   ApiMediaUploadResponse,
   QuestionType,
+  QuestionCategory,
   QuestionStatus,
   Difficulty,
   MediaUploadTarget,
@@ -402,6 +403,7 @@ export const questionService = {
   async list(params?: {
     sub_lesson_id?: string;
     question_type?: QuestionType;
+    category?: QuestionCategory;
     status?: QuestionStatus;
     difficulty?: Difficulty;
     skip?: number;

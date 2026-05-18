@@ -155,9 +155,6 @@ export default function QuestionViewer({
           <span className={`text-xs font-medium border px-2 py-0.5 rounded ${DIFFICULTY_COLORS[question.difficulty]}`}>
             {t(`questions.difficulty_${question.difficulty}`)}
           </span>
-          {question.tags.map(tag => (
-            <span key={tag} className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{tag}</span>
-          ))}
         </div>
       )}
 

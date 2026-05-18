@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.base_model import BaseModel
-from app.shared.enums import DifficultyLevel, QuestionStatus, QuestionType
+from app.shared.enums import DifficultyLevel, QuestionCategory, QuestionStatus, QuestionType
 
 if TYPE_CHECKING:
     from app.modules.courses.model import SubLesson
@@ -30,11 +30,13 @@ class Question(BaseModel):
     difficulty: Mapped[DifficultyLevel] = mapped_column(
         String(10), default=DifficultyLevel.MEDIUM, nullable=False
     )
-    tags: Mapped[list] = mapped_column(ARRAY(Text), default=list, nullable=False)
     stem: Mapped[dict] = mapped_column(JSONB, nullable=False)
     explanation: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[QuestionStatus] = mapped_column(
         String(20), default=QuestionStatus.DRAFT, nullable=False
+    )
+    category: Mapped[QuestionCategory] = mapped_column(
+        String(20), default=QuestionCategory.VOCABULARY, nullable=False
     )
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 

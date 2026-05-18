@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import CurrentUser, get_db
 from app.modules.questions import schema as q_schema
 from app.modules.questions.service import QuestionService
-from app.shared.enums import DifficultyLevel, QuestionStatus, QuestionType
+from app.shared.enums import DifficultyLevel, QuestionCategory, QuestionStatus, QuestionType
 
 router = APIRouter()
 
@@ -31,14 +31,16 @@ async def list_questions(
     service: Annotated[QuestionService, Depends(get_service)],
     sub_lesson_id: uuid.UUID | None = Query(None),
     question_type: QuestionType | None = Query(None),
+    category: QuestionCategory | None = Query(None),
     status: QuestionStatus | None = Query(None),
     difficulty: DifficultyLevel | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
 ):
     return await service.list(
-        current_user, sub_lesson_id, question_type, status,
-        difficulty.value if difficulty else None, skip, limit,
+        current_user, sub_lesson_id, question_type,
+        category.value if category else None,
+        status, difficulty.value if difficulty else None, skip, limit,
     )
 
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-from app.shared.enums import ContentMediaType, DifficultyLevel, QuestionStatus, QuestionType
+from app.shared.enums import ContentMediaType, DifficultyLevel, QuestionCategory, QuestionStatus, QuestionType
 
 
 # ─── ContentBlock ─────────────────────────────────────────────────────────────
@@ -11,26 +11,30 @@ from app.shared.enums import ContentMediaType, DifficultyLevel, QuestionStatus, 
 class ContentBlock(BaseModel):
     type: ContentMediaType
     text: str | None = None
+    # single-media types (image / audio / text_image / text_audio)
     media_key: str | None = None
     media_url: str | None = None          # resolved at response time, not stored
     original_filename: str | None = None
+    # dual-media type (text_image_audio)
+    image_key: str | None = None
+    image_url: str | None = None          # resolved at response time, not stored
+    image_filename: str | None = None
+    audio_key: str | None = None
+    audio_url: str | None = None          # resolved at response time, not stored
+    audio_filename: str | None = None
 
     @field_validator("text")
     @classmethod
     def text_required_for_text_types(cls, v, info):
         t = info.data.get("type")
-        if t in (ContentMediaType.TEXT, ContentMediaType.TEXT_IMAGE, ContentMediaType.TEXT_AUDIO) and not v:
+        text_types = (
+            ContentMediaType.TEXT,
+            ContentMediaType.TEXT_IMAGE,
+            ContentMediaType.TEXT_AUDIO,
+            ContentMediaType.TEXT_IMAGE_AUDIO,
+        )
+        if t in text_types and not v:
             raise ValueError(f"text is required when type is '{t}'")
-        return v
-
-    @field_validator("media_key")
-    @classmethod
-    def media_key_required_for_media_types(cls, v, info):
-        t = info.data.get("type")
-        if t in (ContentMediaType.IMAGE, ContentMediaType.AUDIO,
-                 ContentMediaType.TEXT_IMAGE, ContentMediaType.TEXT_AUDIO) and not v:
-            # allow None on create — key is filled after upload
-            pass
         return v
 
 
@@ -77,8 +81,8 @@ class QuestionBlankResponse(BaseModel):
 class QuestionCreate(BaseModel):
     sub_lesson_id: uuid.UUID | None = None
     question_type: QuestionType
+    category: QuestionCategory = QuestionCategory.VOCABULARY
     difficulty: DifficultyLevel = DifficultyLevel.MEDIUM
-    tags: list[str] = Field(default_factory=list)
     stem: ContentBlock
     explanation: ContentBlock | None = None
     order_index: int = 0
@@ -87,8 +91,8 @@ class QuestionCreate(BaseModel):
 
 
 class QuestionUpdate(BaseModel):
+    category: QuestionCategory | None = None
     difficulty: DifficultyLevel | None = None
-    tags: list[str] | None = None
     stem: ContentBlock | None = None
     explanation: ContentBlock | None = None
     order_index: int | None = None
@@ -103,8 +107,8 @@ class QuestionResponse(BaseModel):
     id: uuid.UUID
     sub_lesson_id: uuid.UUID | None
     question_type: QuestionType
+    category: QuestionCategory
     difficulty: DifficultyLevel
-    tags: list[str]
     stem: Any
     explanation: Any | None
     status: QuestionStatus

@@ -153,8 +153,6 @@
     "cancel": "Hủy",
     "questionType": "Dạng câu hỏi",
     "difficulty": "Độ khó",
-    "tags": "Tags",
-    "tagsPlaceholder": "Thêm tag, nhấn Enter...",
     "stem": "Câu hỏi",
     "explanation": "Giải thích đáp án",
     "addExplanation": "+ Thêm giải thích",
@@ -184,10 +182,15 @@
     "status_draft":     "Bản nháp",
     "status_published": "Đã duyệt",
     "status_archived":  "Lưu trữ",
+    "category":             "Loại nội dung",
+    "category_vocabulary":  "Từ Vựng",
+    "category_grammar":     "Ngữ Pháp",
+    "category_reading":     "Bài Khóa",
     "filter": {
       "allTypes":        "Tất cả dạng",
       "allStatuses":     "Tất cả trạng thái",
-      "allDifficulties": "Tất cả độ khó"
+      "allDifficulties": "Tất cả độ khó",
+      "allCategories":   "Tất cả loại"
     },
     "typeGroup": {
       "choice": "Lựa chọn",
