@@ -526,18 +526,6 @@ export default function LessonDetailPage() {
         </div>
       </CollapsibleDrawer>
 
-      <div className="flex justify-end">
-        {canManageSubLessons && (
-          <button
-            onClick={() => setIsEditingSubLessons(true)}
-            className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
-          >
-            <Pencil size={14} />
-            {t('courses.edit')}
-          </button>
-        )}
-      </div>
-
       {/* Sub-lessons */}
       {(() => {
         const total = lesson.sub_lessons.length;
@@ -560,57 +548,84 @@ export default function LessonDetailPage() {
 
         return (
         <div className="card overflow-hidden">
-          <div className="p-5 border-b border-slate-100">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h2 className="font-semibold text-slate-900">{t('courses.lessonDetail.subLessons')}</h2>
-                <p className="text-xs text-slate-500 mt-0.5">{total} {t('courses.lessonDetail.subLessonCount')}</p>
-                {total > 0 && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
-                      <span>{approvedSl}/{total} {t('subLessons.status.approved')}</span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
+          <div className="px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Title + count */}
+              <h2 className="font-semibold text-slate-900 shrink-0">{t('courses.lessonDetail.subLessons')}</h2>
+
+              {/* Progress bar */}
               {total > 0 && (
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
-                    <span className="text-xs font-bold text-slate-700">{draftSl}</span>
-                    <span className="text-[11px] text-slate-500">{t('subLessons.status.draft')}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-400 tabular-nums shrink-0">{approvedSl}/{total} {t('subLessons.status.approved')}</span>
+                  <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden shrink-0">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                    <span className="text-xs font-bold text-blue-700">{inProgressSl}</span>
-                    <span className="text-[11px] text-blue-600">{t('subLessons.status.in_progress')}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
-                    <span className="text-xs font-bold text-amber-700">{reviewingSl}</span>
-                    <span className="text-[11px] text-amber-600">{t('subLessons.status.reviewing')}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
-                    <span className="text-xs font-bold text-violet-700">{convertingSl}</span>
-                    <span className="text-[11px] text-violet-600">{t('subLessons.status.converting')}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-cyan-500 shrink-0" />
-                    <span className="text-xs font-bold text-cyan-700">{scormReviewingSl}</span>
-                    <span className="text-[11px] text-cyan-600">{t('subLessons.status.scorm_reviewing')}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    <span className="text-xs font-bold text-emerald-700">{approvedSl}</span>
-                    <span className="text-[11px] text-emerald-600">{t('subLessons.status.approved')}</span>
-                  </div>
+                  <span className="text-xs text-slate-400 tabular-nums shrink-0">{pct}%</span>
                 </div>
               )}
+
+              {/* Status badges + Edit button — pushed to the right */}
+              <div className="flex items-center gap-1.5 ml-auto flex-wrap">
+                {total > 0 && (
+                  <>
+                    {draftSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />
+                        <span className="text-xs font-semibold text-slate-700">{draftSl}</span>
+                        <span className="text-[11px] text-slate-500">{t('subLessons.status.draft')}</span>
+                      </div>
+                    )}
+                    {inProgressSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                        <span className="text-xs font-semibold text-blue-700">{inProgressSl}</span>
+                        <span className="text-[11px] text-blue-600">{t('subLessons.status.in_progress')}</span>
+                      </div>
+                    )}
+                    {reviewingSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="text-xs font-semibold text-amber-700">{reviewingSl}</span>
+                        <span className="text-[11px] text-amber-600">{t('subLessons.status.reviewing')}</span>
+                      </div>
+                    )}
+                    {convertingSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-violet-500 shrink-0" />
+                        <span className="text-xs font-semibold text-violet-700">{convertingSl}</span>
+                        <span className="text-[11px] text-violet-600">{t('subLessons.status.converting')}</span>
+                      </div>
+                    )}
+                    {scormReviewingSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-cyan-100 bg-cyan-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 shrink-0" />
+                        <span className="text-xs font-semibold text-cyan-700">{scormReviewingSl}</span>
+                        <span className="text-[11px] text-cyan-600">{t('subLessons.status.scorm_reviewing')}</span>
+                      </div>
+                    )}
+                    {approvedSl > 0 && (
+                      <div className="flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="text-xs font-semibold text-emerald-700">{approvedSl}</span>
+                        <span className="text-[11px] text-emerald-600">{t('subLessons.status.approved')}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {canManageSubLessons && !isEditingSubLessons && (
+                  <button
+                    onClick={() => setIsEditingSubLessons(true)}
+                    className="btn btn-primary flex items-center gap-1.5 text-sm shrink-0"
+                  >
+                    <Pencil size={14} />
+                    {t('courses.edit')}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
