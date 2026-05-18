@@ -102,6 +102,7 @@ class ReviewAction(str, enum.Enum):
     SUBMIT_SCORM = "submit_scorm"
     APPROVE_SCORM = "approve_scorm"
     REJECT_SCORM = "reject_scorm"
+    REVERT = "revert"
 
 
 class NotificationEvent(str, enum.Enum):

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, CheckCircle, XCircle, UploadCloud, User, UserCheck, Users, PackageCheck, PackageX } from 'lucide-react';
+import { Send, CheckCircle, XCircle, UploadCloud, User, UserCheck, Users, PackageCheck, PackageX, RotateCcw } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { CollapsibleDrawer } from '../../../components/ui/CollapsibleDrawer';
 import { UserAvatar } from '../../../components/ui/UserAvatar';
@@ -11,12 +11,14 @@ interface SubLessonHeaderProps {
   canReview?: boolean;
   canSubmitScorm?: boolean;
   canReviewScorm?: boolean;
+  canRevert?: boolean;
   onSubmit?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
   onSubmitScorm?: () => void;
   onApproveScorm?: () => void;
   onRejectScorm?: () => void;
+  onRevert?: () => void;
 }
 
 export function SubLessonHeader({
@@ -24,15 +26,17 @@ export function SubLessonHeader({
   canReview,
   canSubmitScorm,
   canReviewScorm,
+  canRevert,
   onSubmit,
   onApprove,
   onReject,
   onSubmitScorm,
   onApproveScorm,
   onRejectScorm,
+  onRevert,
 }: SubLessonHeaderProps) {
   const { t } = useTranslation();
-  const hasActions = canSubmitForReview || canReview || canSubmitScorm || canReviewScorm;
+  const hasActions = canSubmitForReview || canReview || canSubmitScorm || canReviewScorm || canRevert;
 
   if (!hasActions) return null;
 
@@ -92,6 +96,15 @@ export function SubLessonHeader({
               {t('subLessons.actions.approveScorm')}
             </button>
           </>
+        )}
+        {canRevert && (
+          <button
+            onClick={onRevert}
+            className="btn flex items-center gap-1 text-xs border border-amber-300 text-amber-700 hover:bg-amber-50 py-1.5 px-2.5"
+          >
+            <RotateCcw size={12} />
+            {t('subLessons.actions.revert')}
+          </button>
         )}
       </div>
     </div>

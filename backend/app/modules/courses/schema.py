@@ -163,6 +163,11 @@ class SubLessonListItem(BaseModel):
     course_title: str | None = None
 
 
+class SubLessonRevertRequest(BaseModel):
+    target_status: SubLessonStatus
+    comment: str | None = None
+
+
 class SubLessonReviewRequest(BaseModel):
     action: ReviewAction
 

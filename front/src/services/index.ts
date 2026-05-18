@@ -286,6 +286,11 @@ export const courseService = {
     const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/review-scorm`, { action });
     return res.data;
   },
+
+  async revertSubLesson(sublessonId: string, targetStatus: string, comment?: string): Promise<ApiSubLessonResponse> {
+    const res = await client.post<ApiSubLessonResponse>(`/courses/sub-lessons/${sublessonId}/revert`, { target_status: targetStatus, comment: comment || null });
+    return res.data;
+  },
 };
 
 // ─── System ───────────────────────────────────────────────────────────────────

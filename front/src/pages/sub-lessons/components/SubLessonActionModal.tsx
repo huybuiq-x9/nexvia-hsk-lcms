@@ -1,23 +1,29 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, AlertCircle, CheckCircle, XCircle, PackageCheck } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle, XCircle, PackageCheck, RotateCcw } from 'lucide-react';
 import { useToast } from '../../../contexts/ToastContext';
 import { courseService } from '../../../services';
+import { SUB_LESSON_STATUS, SUB_LESSON_STATUSES } from '../../../types/api';
+import type { SubLessonStatus } from '../../../types/api';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm' | 'revert';
 
 interface SubLessonActionModalProps {
   type: ModalType;
   subLessonId: string;
+  currentStatus?: string;
   onClose: () => void;
   onDone: () => void;
 }
 
-export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: SubLessonActionModalProps) {
+export function SubLessonActionModal({ type, subLessonId, currentStatus, onClose, onDone }: SubLessonActionModalProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const revertableStatuses = SUB_LESSON_STATUSES.filter(s => s !== SUB_LESSON_STATUS.APPROVED && s !== currentStatus);
+  const [revertTarget, setRevertTarget] = useState<SubLessonStatus>(revertableStatuses[0] ?? SUB_LESSON_STATUS.IN_PROGRESS);
+  const [revertComment, setRevertComment] = useState('');
 
   const handleConfirm = async () => {
     setIsSaving(true);
@@ -47,6 +53,10 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
         await courseService.reviewScorm(subLessonId, 'reject_scorm');
         toast.success(t('courses.modal.rejectScormSuccess'));
         onDone();
+      } else if (type === 'revert') {
+        await courseService.revertSubLesson(subLessonId, revertTarget, revertComment || undefined);
+        toast.success(t('courses.modal.revertSuccess'));
+        onDone();
       }
     } catch (err: unknown) {
       const msg =
@@ -65,6 +75,7 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
     submit_scorm:  t('courses.modal.titleSubmitScorm'),
     approve_scorm: t('courses.modal.titleApproveScorm'),
     reject_scorm:  t('courses.modal.titleRejectScorm'),
+    revert:        t('courses.modal.titleRevert'),
   };
 
   const iconMap: Record<ModalType, React.ReactNode> = {
@@ -75,6 +86,7 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
     submit_scorm:  <PackageCheck size={20} className="text-blue-600" />,
     approve_scorm: <CheckCircle size={20} className="text-green-600" />,
     reject_scorm:  <XCircle size={20} className="text-red-600" />,
+    revert:        <RotateCcw size={20} className="text-amber-600" />,
   };
 
   const btnClassMap: Record<ModalType, string> = {
@@ -85,6 +97,7 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
     submit_scorm:  'btn-primary',
     approve_scorm: 'bg-green-600 hover:bg-green-700 text-white',
     reject_scorm:  'btn-danger',
+    revert:        'bg-amber-600 hover:bg-amber-700 text-white',
   };
 
   return (
@@ -125,6 +138,37 @@ export function SubLessonActionModal({ type, subLessonId, onClose, onDone }: Sub
           )}
           {type === 'reject_scorm' && (
             <p className="text-sm text-slate-600">{t('courses.modal.rejectScormDesc')}</p>
+          )}
+          {type === 'revert' && (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">{t('courses.modal.revertDesc')}</p>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {t('courses.modal.revertTargetLabel')}
+                </label>
+                <select
+                  value={revertTarget}
+                  onChange={e => setRevertTarget(e.target.value as SubLessonStatus)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  {revertableStatuses.map(s => (
+                    <option key={s} value={s}>{t(`subLessons.status.${s}`)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  {t('courses.modal.revertCommentLabel')}
+                </label>
+                <textarea
+                  value={revertComment}
+                  onChange={e => setRevertComment(e.target.value)}
+                  rows={3}
+                  placeholder={t('courses.modal.revertCommentPlaceholder')}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+            </div>
           )}
 
           {error && (

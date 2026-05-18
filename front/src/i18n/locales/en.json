@@ -395,7 +395,13 @@
       "approveScormDesc": "Approve this SCORM package.",
       "approveScormSuccess": "SCORM approved.",
       "rejectScormDesc": "Reject this SCORM package and return it to the converter for revision.",
-      "rejectScormSuccess": "SCORM rejected and returned to converter."
+      "rejectScormSuccess": "SCORM rejected and returned to converter.",
+      "titleRevert": "Revert Sub-Lesson Status",
+      "revertDesc": "Select the target status to revert this sub-lesson to.",
+      "revertTargetLabel": "Target status",
+      "revertCommentLabel": "Reason (optional)",
+      "revertCommentPlaceholder": "Describe why you are reverting this sub-lesson...",
+      "revertSuccess": "Sub-lesson status has been reverted."
     },
     "deleteModal": {
       "title": "Confirm Course Deletion",
@@ -628,7 +634,8 @@
       "reject": "Reject",
       "submitScorm": "Submit SCORM",
       "approveScorm": "Approve SCORM",
-      "rejectScorm": "Reject SCORM"
+      "rejectScorm": "Reject SCORM",
+      "revert": "Revert Status"
     },
     "delete": "Delete",
     "deleteModal": {

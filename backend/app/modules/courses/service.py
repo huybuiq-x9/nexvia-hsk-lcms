@@ -883,6 +883,43 @@ class SubLessonService:
         await self._db.refresh(sl)
         return _to_sublesson_response(sl)
 
+    async def revert(
+        self,
+        sublesson_id: uuid.UUID,
+        target_status: SubLessonStatus,
+        actor_id: uuid.UUID,
+        comment: str | None = None,
+    ) -> course_schema.SubLessonResponse:
+        from app.core.exceptions import InvalidStatusTransitionError
+
+        sl = await self._get_sublesson_orm(sublesson_id)
+        if sl.status == target_status:
+            raise InvalidStatusTransitionError(
+                f"Sub-lesson is already in '{target_status.value}' status."
+            )
+        if target_status == SubLessonStatus.APPROVED:
+            raise InvalidStatusTransitionError(
+                "Cannot revert to 'approved' status."
+            )
+
+        from_status = sl.status
+        sl.status = target_status
+        if target_status != SubLessonStatus.APPROVED:
+            sl.approved_at = None
+
+        _add_review_log(
+            self._db,
+            actor_id=actor_id,
+            sublesson=sl,
+            action=ReviewAction.REVERT,
+            from_status=from_status,
+            to_status=sl.status,
+            comment=comment,
+        )
+        await self._db.commit()
+        await self._db.refresh(sl)
+        return _to_sublesson_response(sl)
+
     async def delete(self, sublesson_id: uuid.UUID) -> None:
         sl = await self._get_sublesson_orm(sublesson_id)
         sl.deleted_at = datetime.now(timezone.utc)

@@ -14,7 +14,7 @@ import { SubLessonQuestionsTab } from './components/SubLessonQuestionsTab';
 import { SubLessonActionModal } from './components/SubLessonActionModal';
 import { SUB_LESSON_STATUS, type ApiScormPackage } from '../../types/api';
 
-type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm';
+type ModalType = 'submit' | 'approve' | 'reject' | 'upload' | 'submit_scorm' | 'approve_scorm' | 'reject_scorm' | 'revert';
 
 export default function SubLessonDetailPage() {
   const { t } = useTranslation();
@@ -65,6 +65,7 @@ export default function SubLessonDetailPage() {
 
   // Expert / Admin review CONTENT
   const canReview = isContentReviewing && (isAdmin || isExpert);
+  const canRevert = Boolean(subLesson) && isAdmin && subLesson?.status === SUB_LESSON_STATUS.APPROVED;
   const visibleTabs = useMemo<Tab[]>(() => [
     ...(canViewDocuments ? (['documents'] as Tab[]) : []),
     ...(canViewScorm ? (['scorm'] as Tab[]) : []),
@@ -117,12 +118,14 @@ export default function SubLessonDetailPage() {
         canReview={canReview}
         canSubmitScorm={canSubmitScorm}
         canReviewScorm={canReviewScorm}
+        canRevert={canRevert}
         onSubmit={() => setModal({ type: 'submit', show: true })}
         onApprove={() => setModal({ type: 'approve', show: true })}
         onReject={() => setModal({ type: 'reject', show: true })}
         onSubmitScorm={() => setModal({ type: 'submit_scorm', show: true })}
         onApproveScorm={() => setModal({ type: 'approve_scorm', show: true })}
         onRejectScorm={() => setModal({ type: 'reject_scorm', show: true })}
+        onRevert={() => setModal({ type: 'revert', show: true })}
       />
 
       <SubLessonInfoDrawer
@@ -183,6 +186,7 @@ export default function SubLessonDetailPage() {
         <SubLessonActionModal
           type={modal.type}
           subLessonId={subLesson.id}
+          currentStatus={subLesson.status}
           onClose={() => setModal(m => ({ ...m, show: false }))}
           onDone={() => {
             setModal(m => ({ ...m, show: false }));

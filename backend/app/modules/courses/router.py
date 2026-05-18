@@ -306,3 +306,16 @@ async def review_scorm_sublesson(
     current_user: ExpertReviewScormAccess,
 ):
     return await service.review_scorm(sublesson_id, data.action, current_user.id)
+
+
+@router.post(
+    "/sub-lessons/{sublesson_id}/revert",
+    response_model=course_schema.SubLessonResponse,
+)
+async def revert_sublesson(
+    sublesson_id: uuid.UUID,
+    data: course_schema.SubLessonRevertRequest,
+    service: Annotated[SubLessonService, Depends(get_sublesson_service)],
+    current_user: AdminOnly,
+):
+    return await service.revert(sublesson_id, data.target_status, current_user.id, data.comment)

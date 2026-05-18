@@ -395,7 +395,13 @@
       "approveScormDesc": "Xác nhận duyệt file SCORM này.",
       "approveScormSuccess": "Đã duyệt SCORM.",
       "rejectScormDesc": "Từ chối SCORM và gửi lại cho converter để chỉnh sửa.",
-      "rejectScormSuccess": "Đã từ chối SCORM và trả về cho converter."
+      "rejectScormSuccess": "Đã từ chối SCORM và trả về cho converter.",
+      "titleRevert": "Revert trạng thái Sub-Lesson",
+      "revertDesc": "Chọn trạng thái muốn revert về.",
+      "revertTargetLabel": "Trạng thái đích",
+      "revertCommentLabel": "Lý do (tùy chọn)",
+      "revertCommentPlaceholder": "Mô tả lý do revert...",
+      "revertSuccess": "Đã revert trạng thái sub-lesson."
     },
     "deleteModal": {
       "title": "Xác nhận xóa khóa học",
@@ -628,7 +634,8 @@
       "reject": "Từ chối",
       "submitScorm": "Gửi SCORM",
       "approveScorm": "Duyệt SCORM",
-      "rejectScorm": "Từ chối SCORM"
+      "rejectScorm": "Từ chối SCORM",
+      "revert": "Revert trạng thái"
     },
     "delete": "Xóa",
     "deleteModal": {
