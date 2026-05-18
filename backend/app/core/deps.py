@@ -141,12 +141,16 @@ async def _load_sublesson_for_access(
 def _can_view_documents(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
     if _is_admin(roles):
         return True
-    if _is_assigned_teacher(sublesson, user, roles):
-        return sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS)
-    if _is_assigned_expert(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.REVIEWING
-    if _is_assigned_converter(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.CONVERTING
+    # Each role has its own status window; a multi-role user gets access if ANY role qualifies.
+    if _is_assigned_teacher(sublesson, user, roles) and sublesson.status in (
+        SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS
+    ):
+        return True
+    if _is_assigned_expert(sublesson, user, roles) and sublesson.status in (
+        SubLessonStatus.REVIEWING, SubLessonStatus.SCORM_REVIEWING,
+        SubLessonStatus.CONVERTING, SubLessonStatus.APPROVED,
+    ):
+        return True
     return False
 
 
@@ -162,10 +166,10 @@ def _can_upload_documents(sublesson: SubLesson, user: User, roles: set[str]) -> 
 def _can_comment_documents(sublesson: SubLesson, user: User, roles: set[str]) -> bool:
     if _is_admin(roles):
         return True
-    if _is_assigned_teacher(sublesson, user, roles):
-        return sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS)
-    if _is_assigned_expert(sublesson, user, roles):
-        return sublesson.status == SubLessonStatus.REVIEWING
+    if _is_assigned_teacher(sublesson, user, roles) and sublesson.status in (SubLessonStatus.DRAFT, SubLessonStatus.IN_PROGRESS):
+        return True
+    if _is_assigned_expert(sublesson, user, roles) and sublesson.status == SubLessonStatus.REVIEWING:
+        return True
     return False
 
 

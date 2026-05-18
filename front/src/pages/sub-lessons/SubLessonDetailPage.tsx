@@ -42,11 +42,7 @@ export default function SubLessonDetailPage() {
   ) : false;
   const isScormReviewing = subLesson?.status === SUB_LESSON_STATUS.SCORM_REVIEWING;
 
-  const canViewDocuments = Boolean(subLesson) && (
-    isAdmin ||
-    (isTeacher && isDrafting) ||
-    (isExpert && isContentReviewing)
-  );
+  const canViewDocuments = Boolean(subLesson) && (isAdmin || isTeacher || isExpert);
   const canPreviewDocuments = canViewDocuments;
   const canDownloadDocuments = canViewDocuments;
   const canCommentDocuments = Boolean(subLesson) && (
