@@ -100,6 +100,7 @@
       "fullName": "Full Name",
       "fullNamePlaceholder": "Enter full name",
       "passwordPlaceholder": "At least 8 characters",
+      "randomPassword": "Generate random",
       "roles": "Roles",
       "status": "Status",
       "submitEdit": "Save Changes",
@@ -494,7 +495,8 @@
   "common": {
     "cancel": "Cancel",
     "clear": "Clear",
-    "saving": "Saving"
+    "saving": "Saving",
+    "copy": "Copy"
   },
   "profile": {
     "changePassword": "Change Password",

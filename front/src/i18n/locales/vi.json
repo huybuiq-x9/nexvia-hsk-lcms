@@ -100,6 +100,7 @@
       "fullName": "Họ và tên",
       "fullNamePlaceholder": "Nhập họ và tên",
       "passwordPlaceholder": "Ít nhất 8 ký tự",
+      "randomPassword": "Tạo ngẫu nhiên",
       "roles": "Vai trò",
       "status": "Trạng thái",
       "submitEdit": "Lưu thay đổi",
@@ -494,7 +495,8 @@
   "common": {
     "cancel": "Hủy",
     "clear": "Xóa lọc",
-    "saving": "Đang lưu"
+    "saving": "Đang lưu",
+    "copy": "Sao chép"
   },
   "profile": {
     "changePassword": "Đổi mật khẩu",

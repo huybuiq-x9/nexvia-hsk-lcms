@@ -12,6 +12,9 @@ import {
   Eye,
   EyeOff,
   Plus,
+  RefreshCw,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
@@ -33,7 +36,29 @@ const UserModal = ({
   const { success } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+
+  const generatePassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const special = '!@#$%&*';
+    const all = upper + lower + digits + special;
+    const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
+    const base = rand(upper) + rand(lower) + rand(digits) + rand(special);
+    const rest = Array.from({ length: 8 }, () => rand(all)).join('');
+    const pwd = (base + rest).split('').sort(() => Math.random() - 0.5).join('');
+    setForm(f => ({ ...f, password: pwd }));
+    setShowPassword(true);
+  };
+
+  const copyPassword = () => {
+    if (!form.password) return;
+    navigator.clipboard.writeText(form.password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const [form, setForm] = useState({
     email: user?.email ?? '',
     full_name: user?.full_name ?? '',
@@ -138,26 +163,50 @@ const UserModal = ({
 
           {!user && (
             <div>
-              <label className="label">{t('auth.password')} <span className="text-red-500">*</span></label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">{t('auth.password')} <span className="text-red-500">*</span></label>
+                <button
+                  type="button"
+                  onClick={generatePassword}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  tabIndex={-1}
+                >
+                  <RefreshCw size={12} />
+                  {t('users.modal.randomPassword')}
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder={t('users.modal.passwordPlaceholder')}
-                  className="input pr-9"
+                  className="input pr-16"
                   autoComplete="new-password"
                   minLength={8}
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {form.password && (
+                    <button
+                      type="button"
+                      onClick={copyPassword}
+                      className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                      tabIndex={-1}
+                      title={t('common.copy')}
+                    >
+                      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
             </div>
           )}
