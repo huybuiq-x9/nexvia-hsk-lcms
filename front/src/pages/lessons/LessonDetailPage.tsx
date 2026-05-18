@@ -25,7 +25,7 @@ import type {
   ApiSubLessonResponse,
   ApiUserWithRoles,
 } from '../../types/api';
-import { API_ROLE } from '../../types/api';
+
 
 // ─── User Badge ────────────────────────────────────────────────────────────────
 
