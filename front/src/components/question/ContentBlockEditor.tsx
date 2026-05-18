@@ -27,6 +27,10 @@ interface Props {
   label?: string;
   /** Hide the type selector (used when a shared selector is rendered externally) */
   hideTypeSelector?: boolean;
+  /** Convert stored text → display text in the textarea */
+  textDisplayTransform?: (text: string) => string;
+  /** Convert typed text → stored text on change */
+  textInputTransform?: (text: string) => string;
 }
 
 const ALL_TYPES: ContentMediaType[] = [
@@ -70,6 +74,8 @@ export default function ContentBlockEditor({
   placeholder,
   label,
   hideTypeSelector = false,
+  textDisplayTransform,
+  textInputTransform,
 }: Props) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('questions.contentPlaceholder');
@@ -252,8 +258,11 @@ export default function ContentBlockEditor({
       {needsText && (
         <textarea
           rows={2}
-          value={value.text ?? ''}
-          onChange={e => onChange({ ...value, text: e.target.value })}
+          value={textDisplayTransform ? textDisplayTransform(value.text ?? '') : (value.text ?? '')}
+          onChange={e => {
+            const raw = e.target.value;
+            onChange({ ...value, text: textInputTransform ? textInputTransform(raw) : raw });
+          }}
           placeholder={resolvedPlaceholder}
           className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
