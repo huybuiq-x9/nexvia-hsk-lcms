@@ -45,9 +45,9 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
-    role: UserRole | None = None,
+    roles: list[UserRole] = Query(default=[]),
 ):
-    return await svc.list_users(skip, limit, search, role)
+    return await svc.list_users(skip, limit, search, roles or None)
 
 
 @router.get("/{user_id}", response_model=user_schema.UserWithRoles)

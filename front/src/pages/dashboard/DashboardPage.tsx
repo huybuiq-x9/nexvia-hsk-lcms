@@ -2,12 +2,19 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, HelpCircle, Users, Bell, Cpu, HardDrive, Activity, Clock, Server } from 'lucide-react';
 import { systemService } from '../../services';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import type { ApiSystemStats } from '../../types/api';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
+  const { setPageHeader } = useBreadcrumbs();
   const [stats, setStats] = useState<ApiSystemStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setPageHeader(t('dashboard.title'), t('dashboard.welcome'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,11 +43,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">{t('dashboard.title')}</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{t('dashboard.welcome')}</p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {cards.map(card => (
           <div key={card.labelKey} className="card p-5 flex items-start gap-4">

@@ -44,6 +44,7 @@
       "confirmPassword": "Xác nhận mật khẩu mới",
       "confirmPasswordPlaceholder": "Nhập lại mật khẩu mới",
       "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự.",
+      "passwordWeak": "Mật khẩu chưa đáp ứng đủ các yêu cầu.",
       "passwordMismatch": "Mật khẩu mới không khớp.",
       "invalidToken": "Liên kết không hợp lệ",
       "tokenExpired": "Liên kết đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu đặt lại mật khẩu mới.",
@@ -83,6 +84,7 @@
     "add": "Thêm người dùng",
     "search": "Tìm theo tên hoặc email...",
     "allRoles": "Tất cả vai trò",
+    "filterByRole": "Lọc theo vai trò",
     "columnUser": "Người dùng",
     "columnRoles": "Vai trò",
     "columnStatus": "Trạng thái",
@@ -100,11 +102,18 @@
       "fullName": "Họ và tên",
       "fullNamePlaceholder": "Nhập họ và tên",
       "passwordPlaceholder": "Ít nhất 8 ký tự",
+      "randomPassword": "Tạo ngẫu nhiên",
       "roles": "Vai trò",
       "status": "Trạng thái",
       "submitEdit": "Lưu thay đổi",
       "submitCreate": "Tạo người dùng",
       "validationRequired": "Vui lòng điền đầy đủ thông tin bắt buộc.",
+      "validationPassword": "Mật khẩu chưa đáp ứng đủ các yêu cầu.",
+      "pwRule_upper": "Chữ hoa",
+      "pwRule_lower": "Chữ thường",
+      "pwRule_digit": "Chữ số",
+      "pwRule_special": "Ký tự đặc biệt",
+      "pwRule_length": "Ít nhất 8 ký tự",
       "errorGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
       "updateSuccess": "Cập nhật thành công!",
       "createSuccess": "Tạo người dùng thành công!"
@@ -494,7 +503,8 @@
   "common": {
     "cancel": "Hủy",
     "clear": "Xóa lọc",
-    "saving": "Đang lưu"
+    "saving": "Đang lưu",
+    "copy": "Sao chép"
   },
   "profile": {
     "changePassword": "Đổi mật khẩu",

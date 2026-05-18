@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, CheckCircle, Clock, FileText } from 'lucide-react';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { courseService, userService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
@@ -17,7 +18,8 @@ const PER_PAGE = 20;
 
 export default function LessonsPage() {
   const { t } = useTranslation();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
+  const { setPageHeader } = useBreadcrumbs();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [lessons, setLessons] = useState<ApiLessonListItem[]>([]);
@@ -37,6 +39,11 @@ export default function LessonsPage() {
   const [selectedConverterIds, setSelectedConverterIds] = useState<string[]>([]);
   const isFirst = useRef(true);
 
+  useEffect(() => {
+    setPageHeader(t('lessons.title'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
+
   const handleDeleteLesson = async (lessonId: string) => {
     await courseService.deleteLesson(lessonId);
     setLessons(prev => prev.filter(l => l.id !== lessonId));
@@ -49,15 +56,15 @@ export default function LessonsPage() {
 
   const loadExperts = () => {
     if (experts.length > 0) return;
-    userService.listUsers({ role: API_ROLE.EXPERT, limit: 100 }).then(res => setExperts(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.EXPERT], limit: 100 }).then(res => setExperts(res.items)).catch(() => {});
   };
   const loadTeachers = () => {
     if (teachers.length > 0) return;
-    userService.listUsers({ role: API_ROLE.TEACHER, limit: 100 }).then(res => setTeachers(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.TEACHER], limit: 100 }).then(res => setTeachers(res.items)).catch(() => {});
   };
   const loadConverters = () => {
     if (converters.length > 0) return;
-    userService.listUsers({ role: API_ROLE.CONVERTER, limit: 100 }).then(res => setConverters(res.items)).catch(() => {});
+    userService.listUsers({ roles: [API_ROLE.CONVERTER], limit: 100 }).then(res => setConverters(res.items)).catch(() => {});
   };
 
   useEffect(() => {
@@ -128,40 +135,29 @@ export default function LessonsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
-              <BookOpen size={22} />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('lessons.title')}</h1>
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                {isLoading ? '...' : `${total} ${t('lessons.totalLessons')}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
-              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-3 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">{isLoading ? '...' : `${total} ${t('lessons.totalLessons')}`}</p>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+              <CheckCircle size={18} className="shrink-0 text-emerald-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('lessons.status.approved')}</div>
+                <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('lessons.status.approved')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-              <Clock size={15} className="shrink-0 text-blue-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
+              <Clock size={18} className="shrink-0 text-blue-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('lessons.status.in_progress')}</div>
+                <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('lessons.status.in_progress')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
-              <FileText size={15} className="shrink-0 text-amber-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
+              <FileText size={18} className="shrink-0 text-amber-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-amber-700">{isLoading ? '—' : draftCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-amber-700">{t('lessons.status.draft')}</div>
+                <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('lessons.status.draft')}</div>
               </div>
             </div>
           </div>
@@ -179,7 +175,7 @@ export default function LessonsPage() {
           { key: 'course', label: t('lessons.filter.course'), value: selectedCourseId, options: courseOptions, onChange: setSelectedCourseId },
           { key: 'status', label: t('lessons.filter.status'), value: selectedStatus, options: statusOptions, onChange: setSelectedStatus },
         ]}
-        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+        extra={isAdmin ? (
           <RoleFilterDropdown
             experts={experts}
             teachers={teachers}
@@ -221,7 +217,7 @@ export default function LessonsPage() {
               expert={lesson.assigned_expert_id ? userCache[lesson.assigned_expert_id] : undefined}
               teacher={lesson.assigned_teacher_id ? userCache[lesson.assigned_teacher_id] : undefined}
               converter={lesson.assigned_converter_id ? userCache[lesson.assigned_converter_id] : undefined}
-              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? handleDeleteLesson : undefined}
+              onDelete={isAdmin ? handleDeleteLesson : undefined}
             />
           ))
         )}

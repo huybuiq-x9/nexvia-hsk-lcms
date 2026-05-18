@@ -6,19 +6,21 @@ import { courseService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserCache } from '../../hooks/useUserCache';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { CourseCard } from './components/CourseCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import FilterBar from '../../components/FilterBar';
 import type { ApiCourseWithLessons } from '../../types/api';
-import { API_ROLE, COURSE_STATUS } from '../../types/api';
+import { COURSE_STATUS } from '../../types/api';
 
 const PER_PAGE = 20;
 
 export default function CoursesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAdmin, selectedRole } = useAuth();
+  const { isAdmin } = useAuth();
+  const { setPageHeader } = useBreadcrumbs();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [courses, setCourses] = useState<ApiCourseWithLessons[]>([]);
@@ -30,6 +32,11 @@ export default function CoursesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const isFirst = useRef(true);
+
+  useEffect(() => {
+    setPageHeader(t('courses.title'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   const handleDeleteCourse = async () => {
     if (!deleteConfirm) return;
@@ -86,40 +93,29 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
-              <BookOpen size={22} />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('courses.title')}</h1>
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                {isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
-              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-3 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">{isLoading ? '...' : `${total} ${t('courses.totalCourses')}`}</p>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+              <CheckCircle size={18} className="shrink-0 text-emerald-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : publishedCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('courses.status.published')}</div>
+                <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : publishedCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('courses.status.published')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-              <Clock size={15} className="shrink-0 text-blue-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
+              <Clock size={18} className="shrink-0 text-blue-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('courses.status.in_progress')}</div>
+                <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('courses.status.in_progress')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <FileText size={15} className="shrink-0 text-slate-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+              <FileText size={18} className="shrink-0 text-slate-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-slate-700">{t('courses.status.draft')}</div>
+                <div className="text-xl font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-slate-700">{t('courses.status.draft')}</div>
               </div>
             </div>
           </div>
@@ -134,7 +130,7 @@ export default function CoursesPage() {
         onClearAll={clearAllFilters}
         layout="inline"
         filters={[]}
-        extra={isAdmin && selectedRole === API_ROLE.ADMIN ? (
+        extra={isAdmin ? (
           <button onClick={() => navigate('/courses/create')} className="btn btn-primary h-11 w-full justify-center gap-1.5 sm:w-auto">
             <Plus size={15} /><span>{t('courses.add')}</span>
           </button>
@@ -161,7 +157,7 @@ export default function CoursesPage() {
               key={course.id}
               course={course}
               expert={userCache[course.assigned_expert_id]}
-              onDelete={isAdmin && selectedRole === API_ROLE.ADMIN ? (id) => setDeleteConfirm({ id, title: course.title }) : undefined}
+              onDelete={isAdmin ? (id) => setDeleteConfirm({ id, title: course.title }) : undefined}
               isDeleting={deletingId === course.id}
             />
           ))

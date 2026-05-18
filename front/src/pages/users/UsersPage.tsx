@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
@@ -11,11 +12,15 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Plus,
+  RefreshCw,
+  Copy,
+  Check,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { API_ROLES, ROLE_COLORS, type ApiUserWithRoles, type ApiRole, type ApiUserCreate } from '../../types/api';
 
 const PER_PAGE = 10;
@@ -33,7 +38,38 @@ const UserModal = ({
   const { success } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+
+  const passwordRules = [
+    { key: 'upper',   test: (p: string) => /[A-Z]/.test(p) },
+    { key: 'lower',   test: (p: string) => /[a-z]/.test(p) },
+    { key: 'digit',   test: (p: string) => /[0-9]/.test(p) },
+    { key: 'special', test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+    { key: 'length',  test: (p: string) => p.length >= 8 },
+  ];
+  const passwordValid = (p: string) => passwordRules.every(r => r.test(p));
+
+  const generatePassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const special = '!@#$%&*';
+    const all = upper + lower + digits + special;
+    const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
+    const base = rand(upper) + rand(lower) + rand(digits) + rand(special);
+    const rest = Array.from({ length: 8 }, () => rand(all)).join('');
+    const pwd = (base + rest).split('').sort(() => Math.random() - 0.5).join('');
+    setForm(f => ({ ...f, password: pwd }));
+    setShowPassword(true);
+  };
+
+  const copyPassword = () => {
+    if (!form.password) return;
+    navigator.clipboard.writeText(form.password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const [form, setForm] = useState({
     email: user?.email ?? '',
     full_name: user?.full_name ?? '',
@@ -53,6 +89,10 @@ const UserModal = ({
     e.preventDefault();
     if (!form.email || !form.full_name || (!user && !form.password)) {
       setError(t('users.modal.validationRequired'));
+      return;
+    }
+    if (!user && !passwordValid(form.password)) {
+      setError(t('users.modal.validationPassword'));
       return;
     }
     setError('');
@@ -87,8 +127,8 @@ const UserModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
 
@@ -138,27 +178,65 @@ const UserModal = ({
 
           {!user && (
             <div>
-              <label className="label">{t('auth.password')} <span className="text-red-500">*</span></label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">{t('auth.password')} <span className="text-red-500">*</span></label>
+                <button
+                  type="button"
+                  onClick={generatePassword}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  tabIndex={-1}
+                >
+                  <RefreshCw size={12} />
+                  {t('users.modal.randomPassword')}
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder={t('users.modal.passwordPlaceholder')}
-                  className="input pr-9"
+                  className="input pr-16"
                   autoComplete="new-password"
-                  minLength={8}
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {form.password && (
+                    <button
+                      type="button"
+                      onClick={copyPassword}
+                      className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                      tabIndex={-1}
+                      title={t('common.copy')}
+                    >
+                      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
+              {form.password && (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {passwordRules.map(rule => {
+                    const ok = rule.test(form.password);
+                    return (
+                      <span key={rule.key} className={`flex items-center gap-1 text-xs ${ok ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${ok ? 'bg-emerald-100' : 'bg-slate-100'}`}>
+                          {ok ? <Check size={9} className="text-emerald-600" /> : <span className="w-1 h-1 rounded-full bg-slate-400 inline-block" />}
+                        </span>
+                        {t(`users.modal.pwRule_${rule.key}`)}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -241,7 +319,8 @@ const UserModal = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -302,8 +381,8 @@ const DeleteModal = ({
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
         <div className="p-6 text-center">
@@ -330,17 +409,20 @@ const DeleteModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 export default function UsersPage() {
   const { t, i18n } = useTranslation();
   const { isAdmin, user } = useAuth();
+  const { setPageHeader } = useBreadcrumbs();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<ApiRole | ''>('');
+  const [roleFilter, setRoleFilter] = useState<ApiRole[]>([]);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [editUser, setEditUser] = useState<ApiUserWithRoles | undefined>();
@@ -349,6 +431,11 @@ export default function UsersPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirst = useRef(true);
   const refreshRef = useRef(refreshKey);
+
+  useEffect(() => {
+    setPageHeader(t('users.title'), t('users.subtitle'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   // Keep refreshRef in sync
   useEffect(() => { refreshRef.current = refreshKey; }, [refreshKey]);
@@ -368,7 +455,7 @@ export default function UsersPage() {
         skip: (page - 1) * PER_PAGE,
         limit: PER_PAGE,
         search: search || undefined,
-        role: roleFilter || undefined,
+        roles: roleFilter.length > 0 ? roleFilter : undefined,
       })
       .then(res => {
         if (!cancelled && currentRefresh === refreshRef.current) {
@@ -387,25 +474,6 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('users.title')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
-            className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
-          >
-            <Plus size={15} className="sm:hidden" />
-            <UserPlus size={15} className="hidden sm:block" />
-            <span className="sm:hidden">{t('users.add')}</span>
-            <span className="hidden sm:inline">{t('users.add')}</span>
-          </button>
-        )}
-      </div>
-
       {/* Filters */}
       <div className="card p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -419,16 +487,56 @@ export default function UsersPage() {
               className="input pl-8 pr-3"
             />
           </div>
-          <select
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value as ApiRole | '')}
-            className="input sm:w-auto w-full"
-          >
-            <option value="">{t('users.allRoles')}</option>
-            {API_ROLES.map(r => (
-              <option key={r} value={r}>{t(`roles.${r}`)}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setRoleDropdownOpen(v => !v)}
+              className={`h-9 w-9 flex items-center justify-center rounded-lg border transition-colors ${roleDropdownOpen || roleFilter.length > 0 ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+              title={t('users.filterByRole')}
+            >
+              <SlidersHorizontal size={16} />
+              {roleFilter.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  {roleFilter.length}
+                </span>
+              )}
+            </button>
+
+            {roleDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setRoleDropdownOpen(false)} />
+                <div className="absolute top-full right-0 mt-1 z-20 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden w-44">
+                  <div className="p-1">
+                    {API_ROLES.map(r => {
+                      const checked = roleFilter.includes(r);
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRoleFilter(prev => checked ? prev.filter(x => x !== r) : [...prev, r])}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${checked ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                            {checked && <Check size={11} className="text-white" />}
+                          </span>
+                          {t(`roles.${r}`)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
+              className="btn btn-primary sm:w-auto flex justify-center gap-1.5"
+            >
+              <UserPlus size={15} />
+              <span>{t('users.add')}</span>
+            </button>
+          )}
         </div>
       </div>
 

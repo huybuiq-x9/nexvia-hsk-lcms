@@ -44,6 +44,7 @@
       "confirmPassword": "Confirm New Password",
       "confirmPasswordPlaceholder": "Re-enter new password",
       "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordWeak": "Password does not meet all requirements.",
       "passwordMismatch": "Passwords do not match.",
       "invalidToken": "Invalid link",
       "tokenExpired": "This link is expired or invalid. Please request a new password reset.",
@@ -83,6 +84,7 @@
     "add": "Add User",
     "search": "Search by name or email...",
     "allRoles": "All roles",
+    "filterByRole": "Filter by role",
     "columnUser": "User",
     "columnRoles": "Roles",
     "columnStatus": "Status",
@@ -100,11 +102,18 @@
       "fullName": "Full Name",
       "fullNamePlaceholder": "Enter full name",
       "passwordPlaceholder": "At least 8 characters",
+      "randomPassword": "Generate random",
       "roles": "Roles",
       "status": "Status",
       "submitEdit": "Save Changes",
       "submitCreate": "Create User",
       "validationRequired": "Please fill in all required fields.",
+      "validationPassword": "Password does not meet all requirements.",
+      "pwRule_upper": "Uppercase letter",
+      "pwRule_lower": "Lowercase letter",
+      "pwRule_digit": "Number",
+      "pwRule_special": "Special character",
+      "pwRule_length": "At least 8 characters",
       "errorGeneric": "An error occurred. Please try again.",
       "updateSuccess": "Updated successfully!",
       "createSuccess": "User created successfully!"
@@ -494,7 +503,8 @@
   "common": {
     "cancel": "Cancel",
     "clear": "Clear",
-    "saving": "Saving"
+    "saving": "Saving",
+    "copy": "Copy"
   },
   "profile": {
     "changePassword": "Change Password",
