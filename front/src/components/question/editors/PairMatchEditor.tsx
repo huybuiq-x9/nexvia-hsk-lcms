@@ -14,11 +14,15 @@ interface Props {
   pairs: Pair[];
   onStemChange: (b: ContentBlock) => void;
   onPairsChange: (pairs: Pair[]) => void;
-  onUploadFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  onPendingFile?: (file: File) => void;
+  onUploadFile?:      (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadImageFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadAudioFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingFile?:      (file: File, localUrl: string) => void;
+  onPendingImageFile?: (file: File, localUrl: string) => void;
+  onPendingAudioFile?: (file: File, localUrl: string) => void;
 }
 
-export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChange, onUploadFile, onPendingFile }: Props) {
+export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChange, onUploadFile, onUploadImageFile, onUploadAudioFile, onPendingFile, onPendingImageFile, onPendingAudioFile }: Props) {
   const { t } = useTranslation();
 
   function addPair() {
@@ -46,7 +50,11 @@ export default function PairMatchEditor({ stem, pairs, onStemChange, onPairsChan
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
+        onUploadImageFile={onUploadImageFile}
+        onUploadAudioFile={onUploadAudioFile}
         onPendingFile={onPendingFile}
+        onPendingImageFile={onPendingImageFile}
+        onPendingAudioFile={onPendingAudioFile}
         placeholder={t('questions.stemPlaceholderPAIR')}
       />
 

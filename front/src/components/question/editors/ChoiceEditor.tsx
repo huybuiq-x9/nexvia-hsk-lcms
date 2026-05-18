@@ -28,17 +28,27 @@ interface Props {
   multiple: boolean;
   onStemChange: (b: ContentBlock) => void;
   onChoicesChange: (choices: ApiQuestionChoiceCreate[]) => void;
-  onUploadFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  onPendingFile?: (file: File) => void;
-  onUploadChoice?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  onPendingChoice?: (idx: number, file: File, localUrl: string) => void;
+  onUploadFile?:      (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadImageFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadAudioFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingFile?:      (file: File, localUrl: string) => void;
+  onPendingImageFile?: (file: File, localUrl: string) => void;
+  onPendingAudioFile?: (file: File, localUrl: string) => void;
+  onUploadChoice?:      (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadChoiceImage?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadChoiceAudio?: (idx: number, file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingChoice?:      (idx: number, file: File, localUrl: string) => void;
+  onPendingChoiceImage?: (idx: number, file: File, localUrl: string) => void;
+  onPendingChoiceAudio?: (idx: number, file: File, localUrl: string) => void;
 }
 
 export default function ChoiceEditor({
   stem, choices, multiple,
   onStemChange, onChoicesChange,
-  onUploadFile, onPendingFile,
-  onUploadChoice, onPendingChoice,
+  onUploadFile, onUploadImageFile, onUploadAudioFile,
+  onPendingFile, onPendingImageFile, onPendingAudioFile,
+  onUploadChoice, onUploadChoiceImage, onUploadChoiceAudio,
+  onPendingChoice, onPendingChoiceImage, onPendingChoiceAudio,
 }: Props) {
   const { t } = useTranslation();
 
@@ -96,10 +106,18 @@ export default function ChoiceEditor({
 
   function choiceUploadProps(idx: number) {
     if (onUploadChoice) {
-      return { onUploadFile: (f: File) => onUploadChoice(idx, f) };
+      return {
+        onUploadFile:      (f: File) => onUploadChoice(idx, f),
+        onUploadImageFile: onUploadChoiceImage ? (f: File) => onUploadChoiceImage(idx, f) : undefined,
+        onUploadAudioFile: onUploadChoiceAudio ? (f: File) => onUploadChoiceAudio(idx, f) : undefined,
+      };
     }
     if (onPendingChoice) {
-      return { onPendingFile: (f: File, localUrl: string) => onPendingChoice(idx, f, localUrl) };
+      return {
+        onPendingFile:      (f: File, url: string) => onPendingChoice(idx, f, url),
+        onPendingImageFile: onPendingChoiceImage ? (f: File, url: string) => onPendingChoiceImage(idx, f, url) : undefined,
+        onPendingAudioFile: onPendingChoiceAudio ? (f: File, url: string) => onPendingChoiceAudio(idx, f, url) : undefined,
+      };
     }
     return {};
   }
@@ -111,7 +129,11 @@ export default function ChoiceEditor({
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
+        onUploadImageFile={onUploadImageFile}
+        onUploadAudioFile={onUploadAudioFile}
         onPendingFile={onPendingFile}
+        onPendingImageFile={onPendingImageFile}
+        onPendingAudioFile={onPendingAudioFile}
         placeholder={t('questions.stemPlaceholder')}
       />
 

@@ -9,11 +9,15 @@ interface Props {
   blanks: ApiQuestionBlankCreate[];
   onStemChange: (b: ContentBlock) => void;
   onBlanksChange: (blanks: ApiQuestionBlankCreate[]) => void;
-  onUploadFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  onPendingFile?: (file: File) => void;
+  onUploadFile?:      (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadImageFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadAudioFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingFile?:      (file: File, localUrl: string) => void;
+  onPendingImageFile?: (file: File, localUrl: string) => void;
+  onPendingAudioFile?: (file: File, localUrl: string) => void;
 }
 
-export default function FillEditor({ questionType, stem, blanks, onStemChange, onBlanksChange, onUploadFile, onPendingFile }: Props) {
+export default function FillEditor({ questionType, stem, blanks, onStemChange, onBlanksChange, onUploadFile, onUploadImageFile, onUploadAudioFile, onPendingFile, onPendingImageFile, onPendingAudioFile }: Props) {
   const { t } = useTranslation();
 
   function addAnswer(blankIdx: number, answer: string) {
@@ -62,7 +66,11 @@ export default function FillEditor({ questionType, stem, blanks, onStemChange, o
           value={stem}
           onChange={onStemChange}
           onUploadFile={onUploadFile}
+          onUploadImageFile={onUploadImageFile}
+          onUploadAudioFile={onUploadAudioFile}
           onPendingFile={onPendingFile}
+          onPendingImageFile={onPendingImageFile}
+          onPendingAudioFile={onPendingAudioFile}
           placeholder={stemHint}
         />
         <p className="text-xs text-slate-400 mt-1">{stemHint}</p>

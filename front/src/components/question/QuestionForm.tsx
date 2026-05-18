@@ -212,12 +212,28 @@ export default function QuestionForm({
         } else if (slot === 'explanation_audio') {
           const r = await uploadFile(id, 'explanation_audio', file);
           updates['explanation'] = { ...(updates['explanation'] ?? explanation ?? emptyTextBlock()), audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename };
+        } else if (slot.startsWith('choice_image_')) {
+          const idx = parseInt(slot.replace('choice_image_', ''), 10);
+          const choiceId = savedQuestion.choices[idx]?.id;
+          if (choiceId) {
+            const r = await uploadFile(id, 'choice', file, choiceId);
+            const base = updates[`choice_${idx}`] ?? savedQuestion.choices[idx].content;
+            updates[`choice_${idx}`] = { ...base, image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename };
+          }
+        } else if (slot.startsWith('choice_audio_')) {
+          const idx = parseInt(slot.replace('choice_audio_', ''), 10);
+          const choiceId = savedQuestion.choices[idx]?.id;
+          if (choiceId) {
+            const r = await uploadFile(id, 'choice', file, choiceId);
+            const base = updates[`choice_${idx}`] ?? savedQuestion.choices[idx].content;
+            updates[`choice_${idx}`] = { ...base, audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename };
+          }
         } else if (slot.startsWith('choice_')) {
           const idx = parseInt(slot.replace('choice_', ''), 10);
           const choiceId = savedQuestion.choices[idx]?.id;
           if (choiceId) {
             const r = await uploadFile(id, 'choice', file, choiceId);
-            updates[slot] = { ...savedQuestion.choices[idx].content, media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
+            updates[slot] = { ...(updates[slot] ?? savedQuestion.choices[idx].content), media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename };
           }
         }
       } catch {
@@ -228,7 +244,7 @@ export default function QuestionForm({
     // If we have any updates, patch the question
     const hasStemUpdate        = 'stem' in updates;
     const hasExplanationUpdate = 'explanation' in updates;
-    const choiceKeys           = Object.keys(updates).filter(k => k.startsWith('choice_'));
+    const choiceKeys           = Object.keys(updates).filter(k => /^choice_\d+$/.test(k));
 
     if (!hasStemUpdate && !hasExplanationUpdate && choiceKeys.length === 0) return savedQuestion;
 
@@ -296,12 +312,17 @@ export default function QuestionForm({
 
   function buildPreviewQuestion(): ApiQuestionResponse {
     const urls = pendingLocalUrls.current;
-    const stemPreview = urls.has('stem')
-      ? { ...stem, media_url: urls.get('stem') }
-      : stem;
-    const explanationPreview = explanation
-      ? (urls.has('explanation') ? { ...explanation, media_url: urls.get('explanation') } : explanation)
-      : null;
+    let stemPreview = { ...stem };
+    if (urls.has('stem'))       stemPreview = { ...stemPreview, media_url:  urls.get('stem') };
+    if (urls.has('stem_image')) stemPreview = { ...stemPreview, image_url:  urls.get('stem_image') };
+    if (urls.has('stem_audio')) stemPreview = { ...stemPreview, audio_url:  urls.get('stem_audio') };
+
+    let explanationPreview: typeof explanation = explanation ?? null;
+    if (explanation) {
+      if (urls.has('explanation'))       explanationPreview = { ...explanation, media_url: urls.get('explanation') };
+      if (urls.has('explanation_image')) explanationPreview = { ...(explanationPreview ?? explanation), image_url: urls.get('explanation_image') };
+      if (urls.has('explanation_audio')) explanationPreview = { ...(explanationPreview ?? explanation), audio_url: urls.get('explanation_audio') };
+    }
     return {
       id: savedId ?? 'preview',
       sub_lesson_id: subLessonId ?? null,
@@ -316,10 +337,16 @@ export default function QuestionForm({
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       choices: buildChoices().map((c, i) => {
-        const localUrl = urls.get(`choice_${i}`);
+        let content = { ...c.content };
+        const localUrl      = urls.get(`choice_${i}`);
+        const localImageUrl = urls.get(`choice_image_${i}`);
+        const localAudioUrl = urls.get(`choice_audio_${i}`);
+        if (localUrl)      content = { ...content, media_url: localUrl };
+        if (localImageUrl) content = { ...content, image_url: localImageUrl };
+        if (localAudioUrl) content = { ...content, audio_url: localAudioUrl };
         return {
           id: `preview-choice-${i}`,
-          content: localUrl ? { ...c.content, media_url: localUrl } : c.content,
+          content,
           is_correct: c.is_correct ?? null,
           order_index: c.order_index ?? i,
           correct_order: c.correct_order ?? null,
@@ -492,6 +519,34 @@ export default function QuestionForm({
               setPending(`choice_${idx}`, file);
               pendingLocalUrls.current.set(`choice_${idx}`, localUrl);
             }}
+            onPendingChoiceImage={(idx, file, localUrl) => {
+              setPending(`choice_image_${idx}`, file);
+              pendingLocalUrls.current.set(`choice_image_${idx}`, localUrl);
+            }}
+            onPendingChoiceAudio={(idx, file, localUrl) => {
+              setPending(`choice_audio_${idx}`, file);
+              pendingLocalUrls.current.set(`choice_audio_${idx}`, localUrl);
+            }}
+            {...(savedId ? {
+              onUploadChoice: async (idx, file) => {
+                const choiceId = initialData?.choices[idx]?.id;
+                const r = await uploadFile(savedId, 'choice', file, choiceId);
+                setChoices(prev => prev.map((c, i) => i === idx ? { ...c, content: { ...c.content, media_key: r.media_key, media_url: r.media_url, original_filename: r.original_filename } } : c));
+                return r;
+              },
+              onUploadChoiceImage: async (idx, file) => {
+                const choiceId = initialData?.choices[idx]?.id;
+                const r = await uploadFile(savedId, 'choice', file, choiceId);
+                setChoices(prev => prev.map((c, i) => i === idx ? { ...c, content: { ...c.content, image_key: r.media_key, image_url: r.media_url, image_filename: r.original_filename } } : c));
+                return r;
+              },
+              onUploadChoiceAudio: async (idx, file) => {
+                const choiceId = initialData?.choices[idx]?.id;
+                const r = await uploadFile(savedId, 'choice', file, choiceId);
+                setChoices(prev => prev.map((c, i) => i === idx ? { ...c, content: { ...c.content, audio_key: r.media_key, audio_url: r.media_url, audio_filename: r.original_filename } } : c));
+                return r;
+              },
+            } : {})}
           />
         )}
         {(qType === 'fit' || qType === 'fits' || qType === 'fib') && (

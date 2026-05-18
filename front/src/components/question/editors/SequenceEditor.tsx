@@ -9,11 +9,15 @@ interface Props {
   choices: ApiQuestionChoiceCreate[];
   onStemChange: (b: ContentBlock) => void;
   onChoicesChange: (choices: ApiQuestionChoiceCreate[]) => void;
-  onUploadFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
-  onPendingFile?: (file: File) => void;
+  onUploadFile?:      (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadImageFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onUploadAudioFile?: (file: File) => Promise<{ media_key: string; media_url: string; original_filename: string }>;
+  onPendingFile?:      (file: File, localUrl: string) => void;
+  onPendingImageFile?: (file: File, localUrl: string) => void;
+  onPendingAudioFile?: (file: File, localUrl: string) => void;
 }
 
-export default function SequenceEditor({ stem, choices, onStemChange, onChoicesChange, onUploadFile, onPendingFile }: Props) {
+export default function SequenceEditor({ stem, choices, onStemChange, onChoicesChange, onUploadFile, onUploadImageFile, onUploadAudioFile, onPendingFile, onPendingImageFile, onPendingAudioFile }: Props) {
   const { t } = useTranslation();
 
   function addItem() {
@@ -47,7 +51,11 @@ export default function SequenceEditor({ stem, choices, onStemChange, onChoicesC
         value={stem}
         onChange={onStemChange}
         onUploadFile={onUploadFile}
+        onUploadImageFile={onUploadImageFile}
+        onUploadAudioFile={onUploadAudioFile}
         onPendingFile={onPendingFile}
+        onPendingImageFile={onPendingImageFile}
+        onPendingAudioFile={onPendingAudioFile}
         placeholder={t('questions.stemPlaceholderSQ')}
       />
 
