@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { QuestionViewer } from '../../components/question';
 import { useQuestions } from './hooks/useQuestions';
 import type { ApiQuestionResponse, QuestionCategory, QuestionStatus, QuestionType } from '../../types/question';
@@ -16,6 +17,12 @@ const PAGE_SIZE = 20;
 
 export default function QuestionBankPage() {
   const { t } = useTranslation();
+  const { setPageHeader } = useBreadcrumbs();
+
+  useEffect(() => {
+    setPageHeader(t('questions.title'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   const TYPE_OPTIONS = [
     { value: '' as const, label: t('questions.filter.allTypes') },
@@ -68,12 +75,6 @@ export default function QuestionBankPage() {
 
   return (
     <div className="p-6 flex flex-col gap-4">
-      {/* Header */}
-      <div>
-        <h1 className="text-lg font-semibold text-slate-800">{t('questions.title')}</h1>
-        <p className="text-sm text-slate-500">{total} {t('questions.total')}</p>
-      </div>
-
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <select

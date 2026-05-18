@@ -400,7 +400,7 @@ function PasswordChangeModal({ onClose }: { onClose: () => void }) {
 function Header() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const { breadcrumbs } = useBreadcrumbs();
+  const { breadcrumbs, pageTitle, pageSubtitle } = useBreadcrumbs();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -413,9 +413,16 @@ function Header() {
   const closeDropdown = () => setShowDropdown(false);
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+    <header className="sticky top-0 z-20 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {breadcrumbs.length > 0 && (
+        {pageTitle ? (
+          <div className="flex items-baseline gap-2.5 min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 truncate leading-none">{pageTitle}</h1>
+            {pageSubtitle && (
+              <span className="text-xs text-slate-400 truncate hidden sm:block">{pageSubtitle}</span>
+            )}
+          </div>
+        ) : breadcrumbs.length > 0 ? (
           <nav className="flex items-center gap-1.5 text-sm text-slate-500 overflow-hidden">
             {breadcrumbs.map((item, idx) => (
               <span key={idx} className="flex items-center gap-1.5 shrink-0">
@@ -437,7 +444,7 @@ function Header() {
               </span>
             ))}
           </nav>
-        )}
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

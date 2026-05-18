@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { BookOpen, CheckCircle, Clock, FileText, Layers, Trash2, User, UserCheck, Users } from 'lucide-react';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { courseService, userService } from '../../services';
 import RoleFilterDropdown from '../../components/RoleFilterDropdown';
 import { useAuth } from '../../contexts/AuthContext';
@@ -91,6 +92,7 @@ function getSubLessonTone(status: ApiSubLessonListItem['status']) {
 export default function SubLessonsPage() {
   const { t } = useTranslation();
   const { isAdmin } = useAuth();
+  const { setPageHeader } = useBreadcrumbs();
   const { cache: userCache, loadUser } = useUserCache();
 
   const [subLessons, setSubLessons] = useState<ApiSubLessonListItem[]>([]);
@@ -113,6 +115,11 @@ export default function SubLessonsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const isFirst = useRef(true);
+
+  useEffect(() => {
+    setPageHeader(t('subLessons.title'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   const handleDeleteSubLesson = async () => {
     if (!deleteConfirm) return;
@@ -229,61 +236,50 @@ export default function SubLessonsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-100/50">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-200">
-              <FileText size={22} />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{t('subLessons.title')}</h1>
-              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                {isLoading ? '...' : `${total} ${t('subLessons.totalSubLessons')}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap lg:justify-end">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <FileText size={15} className="shrink-0 text-slate-500" />
+      <div className="rounded-lg border border-blue-100 bg-white px-5 py-3 shadow-sm shadow-blue-100/50">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500">{isLoading ? '...' : `${total} ${t('subLessons.totalSubLessons')}`}</p>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+              <FileText size={18} className="shrink-0 text-slate-500" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-slate-600">{t('subLessons.status.draft')}</div>
+                <div className="text-xl font-bold leading-none text-slate-700">{isLoading ? '—' : draftCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-slate-600">{t('subLessons.status.draft')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-              <Layers size={15} className="shrink-0 text-blue-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2.5">
+              <Layers size={18} className="shrink-0 text-blue-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-blue-700">{t('subLessons.status.in_progress')}</div>
+                <div className="text-xl font-bold leading-none text-blue-700">{isLoading ? '—' : inProgressCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-blue-700">{t('subLessons.status.in_progress')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
-              <Clock size={15} className="shrink-0 text-amber-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-2.5">
+              <Clock size={18} className="shrink-0 text-amber-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-amber-700">{isLoading ? '—' : reviewingCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-amber-700">{t('subLessons.status.reviewing')}</div>
+                <div className="text-xl font-bold leading-none text-amber-700">{isLoading ? '—' : reviewingCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-amber-700">{t('subLessons.status.reviewing')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-violet-100 bg-violet-50 px-3 py-2">
-              <Layers size={15} className="shrink-0 text-violet-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50 px-4 py-2.5">
+              <Layers size={18} className="shrink-0 text-violet-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-violet-700">{isLoading ? '—' : convertingCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-violet-700">{t('subLessons.status.converting')}</div>
+                <div className="text-xl font-bold leading-none text-violet-700">{isLoading ? '—' : convertingCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-violet-700">{t('subLessons.status.converting')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-2">
-              <Clock size={15} className="shrink-0 text-cyan-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-2.5">
+              <Clock size={18} className="shrink-0 text-cyan-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-cyan-700">{isLoading ? '—' : scormReviewingCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-cyan-700">{t('subLessons.status.scorm_reviewing')}</div>
+                <div className="text-xl font-bold leading-none text-cyan-700">{isLoading ? '—' : scormReviewingCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-cyan-700">{t('subLessons.status.scorm_reviewing')}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
-              <CheckCircle size={15} className="shrink-0 text-emerald-600" />
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+              <CheckCircle size={18} className="shrink-0 text-emerald-600" />
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
-                <div className="mt-1 truncate text-[11px] font-medium text-emerald-700">{t('subLessons.status.approved')}</div>
+                <div className="text-xl font-bold leading-none text-emerald-700">{isLoading ? '—' : approvedCount}</div>
+                <div className="mt-1 truncate text-xs font-medium text-emerald-700">{t('subLessons.status.approved')}</div>
               </div>
             </div>
           </div>

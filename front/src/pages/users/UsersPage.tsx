@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Plus,
   RefreshCw,
   Copy,
   Check,
@@ -21,6 +20,7 @@ import {
 import { userService } from '../../services';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBreadcrumbs } from '../../contexts/BreadcrumbContext';
 import { API_ROLES, ROLE_COLORS, type ApiUserWithRoles, type ApiRole, type ApiUserCreate } from '../../types/api';
 
 const PER_PAGE = 10;
@@ -390,6 +390,7 @@ const DeleteModal = ({
 export default function UsersPage() {
   const { t, i18n } = useTranslation();
   const { isAdmin, user } = useAuth();
+  const { setPageHeader } = useBreadcrumbs();
   const [users, setUsers] = useState<ApiUserWithRoles[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -403,6 +404,11 @@ export default function UsersPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirst = useRef(true);
   const refreshRef = useRef(refreshKey);
+
+  useEffect(() => {
+    setPageHeader(t('users.title'), t('users.subtitle'));
+    return () => setPageHeader('');
+  }, [t, setPageHeader]);
 
   // Keep refreshRef in sync
   useEffect(() => { refreshRef.current = refreshKey; }, [refreshKey]);
@@ -441,28 +447,18 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900">{t('users.title')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{t('users.subtitle')}</p>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
-            className="btn btn-primary w-full sm:w-auto flex justify-center gap-1.5"
-          >
-            <Plus size={15} className="sm:hidden" />
-            <UserPlus size={15} className="hidden sm:block" />
-            <span className="sm:hidden">{t('users.add')}</span>
-            <span className="hidden sm:inline">{t('users.add')}</span>
-          </button>
-        )}
-      </div>
-
       {/* Filters */}
       <div className="card p-3 sm:p-4">
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {isAdmin && (
+            <button
+              onClick={() => { setModalKey(k => k + 1); setEditUser({} as ApiUserWithRoles); }}
+              className="btn btn-primary sm:w-auto flex justify-center gap-1.5"
+            >
+              <UserPlus size={15} />
+              <span>{t('users.add')}</span>
+            </button>
+          )}
           <div className="relative flex-1 min-w-0">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
